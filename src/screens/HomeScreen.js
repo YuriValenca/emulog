@@ -105,7 +105,7 @@ export default function HomeScreen({ navigation }) {
         <MaterialCommunityIcons name="logout" size={24} color="#FFFFFF" />
         <Text style={[styles.buttonText, { marginLeft: 10 }]}>Desconectar</Text>
       </TouchableOpacity>
-      <Text style={styles.versionText}>Versão: 1.1.1</Text>
+      <Text style={styles.versionText}>Versão: 1.1.2</Text>
     </View>
   );
 }
