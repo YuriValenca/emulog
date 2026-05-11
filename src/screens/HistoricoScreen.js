@@ -249,14 +249,14 @@ export default function HistoricoScreen() {
   };
 
   const gerarNumerosPaginas = () => {
-    if (totalPaginas <= 7) {
+    if (totalPaginas < 7) {
       return Array.from({ length: totalPaginas }, (_, i) => i + 1);
     }
-    if (paginaAtual <= 4) {
-      return [1, 2, 3, 4, 5, '...', totalPaginas];
+    if (paginaAtual < 4) {
+      return [1, 2, 3, 4, '...', totalPaginas];
     }
-    if (paginaAtual >= totalPaginas - 3) {
-      return [1, '...', totalPaginas - 4, totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
+    if (paginaAtual > totalPaginas - 3) {
+      return [1, '...', totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
     }
     return [1, '...', paginaAtual - 1, paginaAtual, paginaAtual + 1, '...', totalPaginas];
   };
@@ -413,7 +413,7 @@ export default function HistoricoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#FFF', paddingTop: 72 },
+  container: { flex: 1, padding: 16, backgroundColor: '#FFF', paddingTop: 72, paddingBottom: 64 },
 
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingPaginaContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 40 },
