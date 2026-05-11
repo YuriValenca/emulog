@@ -62,13 +62,12 @@ export default function DetalheProjetoScreen() {
     return !!(info.numeroNF || info.kgPrevisto || info.kgAplicado || info.caminhao || (info.equipe && info.equipe.length > 0));
   };
 
-  console.log(projeto)
   const gerarNomeArquivoPDF = () => {
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
-    return `relatorio-de-operacao-${d}-${m}-${y}`;
+    return `${projeto.nomeProjeto} - ${d}-${m}-${y}`;
   };
 
   const gerarPDF = async () => {
@@ -402,8 +401,8 @@ const styles = StyleSheet.create({
   calibragemValor: { fontSize: 14, fontWeight: '600', color: '#333' },
 
   adicionarInfoBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginTop: 16, padding: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 16, padding: 16,
     borderWidth: 1.5, borderColor: '#E75F07', borderStyle: 'dashed',
     borderRadius: 10,
   },

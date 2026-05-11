@@ -268,7 +268,7 @@ function NovaAmostraScreenInner() {
   const prepararDadosDoProjetoParaSalvar = () => {
     const amostrasPlanificadas = amostras.map((amostra, i) => ({ amostraId: i, pesagens: amostra }));
     return {
-      nomeProjeto,
+      nomeProjeto: nomeProjeto.trim(),
       dataCriacao: new Date(),
       uidUsuario,
       calibragem: {
@@ -326,7 +326,7 @@ function NovaAmostraScreenInner() {
   };
 
   const finalizarOuSalvar = async () => {
-    if (!nomeProjeto) {
+    if (!nomeProjeto.trim()) {
       setMensagemAviso("O nome do projeto não pode estar vazio.");
       setModalAvisoVisivel(true);
       return;
