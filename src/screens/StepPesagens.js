@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   label: { fontWeight: 'bold', marginBottom: 5 },
   amostrasContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   amostraBtn: { backgroundColor: '#ddd', padding: 15, borderRadius: 5, marginVertical: 5, alignItems: 'center' },
-  amostraBtnMobile: { width: Dimensions.get('window').width - 60 },
+  amostraBtnMobile: { width: Dimensions.get('window').width - 40 },
   amostraBtnSelecionado: { backgroundColor: '#E75F07' },
   amostraBtnConcluida: { backgroundColor: '#A5A5A5' },
   amostraBtnTexto: { color: '#FFF', fontWeight: 'bold', textAlign: 'center' },
