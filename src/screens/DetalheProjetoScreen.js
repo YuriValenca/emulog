@@ -8,6 +8,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { printToFileAsync } from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
@@ -57,9 +58,16 @@ export default function DetalheProjetoScreen() {
     setProjeto(prev => ({ ...prev, informacoesOperacao: novaInfo }));
   };
 
-  const temInformacoesAdicionais = (info) => {
+  const hasAdditionalInfo = (info) => {
     if (!info) return false;
-    return !!(info.numeroNF || info.kgPrevisto || info.kgAplicado || info.caminhao || (info.equipe && info.equipe.length > 0));
+    return !!(
+      info.numeroNF?.trim() ||
+      info.kgPrevisto?.trim() ||
+      info.kgAplicado?.trim() ||
+      info.caminhao ||
+      (info.equipe && info.equipe.length > 0) ||
+      info.informacoesGerais?.trim()
+    );
   };
 
   const gerarNomeArquivoPDF = () => {
@@ -73,7 +81,12 @@ export default function DetalheProjetoScreen() {
   const gerarPDF = async () => {
     if (!projeto) return;
 
-    const logoBase64 = 'data:image/png;base64,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';
+      const asset = Asset.fromModule(require('../../assets/pdfIcon.png'));
+      await asset.downloadAsync();
+      const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const logoBase64 = `data:image/png;base64,${base64}`;
 
     const info = projeto.informacoesOperacao;
     const observacao = projeto.observacao || 'Sem observações';
@@ -117,7 +130,7 @@ export default function DetalheProjetoScreen() {
         </div>
       </div>
 
-      ${info ? `
+      ${hasAdditionalInfo(info) ? `
       <div class="info-box">
         <div class="info-header">Informações da Operação</div>
         <table>
@@ -231,7 +244,6 @@ export default function DetalheProjetoScreen() {
   };
 
   const renderizarInformacoesAdicionais = (info) => {
-    if (!temInformacoesAdicionais(info)) return null;
     return (
       <View style={styles.infoAdicionalBox}>
         <Text style={styles.infoAdicionalTitulo}>Informações da Operação</Text>
@@ -271,7 +283,6 @@ export default function DetalheProjetoScreen() {
             </View>
           </View>
         ) : null}
-
         <TouchableOpacity
           style={styles.editarInfoBtn}
           onPress={() => setModalInfoVisivel(true)}
@@ -336,7 +347,7 @@ export default function DetalheProjetoScreen() {
         </View>
       </View>
 
-      {temInformacoesAdicionais(infoAtual)
+      {hasAdditionalInfo(infoAtual)
         ? renderizarInformacoesAdicionais(infoAtual)
         : (
           <TouchableOpacity
