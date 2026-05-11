@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador de Balança</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .header svg { flex-shrink: 0; }
+
+    h1 {
+      font-size: 22px;
+      color: #222;
+    }
+
+    h1 span {
+      display: block;
+      font-size: 13px;
+      font-weight: 400;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    /* Badge de status */
+    #status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #ddd;
+      color: #999;
+      background: #fafafa;
+      margin-bottom: 24px;
+      transition: all 0.3s;
+    }
+
+    #status.connected   { color: #4CAF50; border-color: #4CAF50; background: #f0faf0; }
+    #status.error       { color: #f44336; border-color: #f44336; background: #fff5f5; }
+    #status.sending     { color: #FF9621; border-color: #FF9621; background: #fff8f0; }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    /* Campo de IP */
+    #ip-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #ip-input:focus { border-color: #1A73E8; }
+
+    #btn-connect {
+      width: 100%;
+      padding: 13px;
+      background: #1A73E8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 24px;
+      transition: background 0.2s;
+    }
+    #btn-connect:hover { background: #1558b0; }
+    #btn-connect:disabled { background: #aaa; cursor: not-allowed; }
+
+    hr { border: none; border-top: 1px solid #eee; margin-bottom: 24px; }
+
+    /* Display do peso */
+    .weight-display {
+      background: #f5f5f5;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .weight-display p {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 6px;
+    }
+
+    #weight-show {
+      font-size: 52px;
+      font-weight: 700;
+      color: #FF5C00;
+      line-height: 1;
+    }
+
+    /* Slider */
+    input[type=range] {
+      width: 100%;
+      accent-color: #FF5C00;
+      margin-bottom: 20px;
+    }
+
+    /* Botões de ação */
+    .actions { display: flex; gap: 10px; }
+
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+
+    #btn-random { background: #FF9621; color: #fff; }
+    #btn-send   { background: #4CAF50; color: #fff; }
+
+    /* Histórico */
+    #history {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #888;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #history p { padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+    #history p:last-child { border: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <!-- Ícone de balança -->
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#FF5C00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v18M3 9l9-6 9 6M5 21h14"/>
+      <path d="M8 21v-3a4 4 0 0 1 8 0v3"/>
+    </svg>
+    <h1>Simulador de Balança <span>Envia pesos para o app Expo</span></h1>
+  </div>
+
+  <!-- Status da conexão -->
+  <div id="status">
+    <div class="dot"></div>
+    <span id="status-text">Desconectado</span>
+  </div>
+
+  <!-- Conexão -->
+  <label for="ip-input">Endereço IP do seu computador</label>
+  <input id="ip-input" type="text" placeholder="ex: 192.168.1.100" />
+  <button id="btn-connect">Conectar</button>
+
+  <hr />
+
+  <!-- Peso -->
+  <div class="weight-display">
+    <p>Peso atual</p>
+    <div id="weight-show">0.000 <small style="font-size:22px;color:#aaa">kg</small></div>
+  </div>
+
+  <input id="slider" type="range" min="0" max="200" step="0.1" value="0" disabled />
+
+  <div class="actions">
+    <button class="btn" id="btn-random" disabled>🎲 Aleatório</button>
+    <button class="btn" id="btn-send"   disabled>📤 Enviar</button>
+  </div>
+
+  <!-- Histórico de envios -->
+  <div id="history"></div>
+
+</div>
+
+<script>
+  // ─── Referências DOM ──────────────────────────────────────────────────────
+  const statusEl   = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+  const ipInput    = document.getElementById('ip-input');
+  const btnConnect = document.getElementById('btn-connect');
+  const slider     = document.getElementById('slider');
+  const weightShow = document.getElementById('weight-show');
+  const btnRandom  = document.getElementById('btn-random');
+  const btnSend    = document.getElementById('btn-send');
+  const historyEl  = document.getElementById('history');
+
+  let ws = null;
+
+  // ─── Atualiza o display do peso conforme o slider move ───────────────────
+  slider.addEventListener('input', () => {
+    weightShow.innerHTML = `${parseFloat(slider.value).toFixed(3)} <small style="font-size:22px;color:#aaa">kg</small>`;
+  });
+
+  // ─── Conectar ao servidor WebSocket ──────────────────────────────────────
+  btnConnect.addEventListener('click', () => {
+    const ip = ipInput.value.trim();
+    if (!ip) { alert('Digite o IP do seu computador.'); return; }
+
+    if (ws) { ws.close(); } // Fecha conexão anterior se existir
+
+    const url = `ws://${ip}:8765`;
+    setStatus('connecting');
+    btnConnect.disabled = true;
+    btnConnect.textContent = 'Conectando...';
+
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      setStatus('connected');
+      btnConnect.textContent = 'Desconectar';
+      btnConnect.disabled = false;
+      btnConnect.onclick = disconnect;
+      slider.disabled  = false;
+      btnRandom.disabled = false;
+      btnSend.disabled = false;
+    };
+
+    ws.onerror = () => {
+      setStatus('error');
+      btnConnect.textContent = 'Tentar novamente';
+      btnConnect.disabled = false;
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected');
+      btnConnect.textContent = 'Conectar';
+      btnConnect.disabled = false;
+      btnConnect.onclick = null; // Restaura o listener original
+      slider.disabled = true;
+      btnRandom.disabled = true;
+      btnSend.disabled = true;
+    };
+  });
+
+  function disconnect() {
+    if (ws) ws.close();
+    btnConnect.onclick = null;
+  }
+
+  // ─── Gerar peso aleatório ─────────────────────────────────────────────────
+  btnRandom.addEventListener('click', () => {
+    const random = (Math.random() * 150 + 10).toFixed(3); // 10.000 – 160.000 kg
+    slider.value = Math.min(random, 200);
+    weightShow.innerHTML = `${random} <small style="font-size:22px;color:#aaa">kg</small>`;
+  });
+
+  // ─── Enviar peso ──────────────────────────────────────────────────────────
+  btnSend.addEventListener('click', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    const peso = parseFloat(slider.value).toFixed(3);
+    const payload = { tipo: 'pesagem', peso: parseFloat(peso), unidade: 'kg', timestamp: new Date().toISOString() };
+
+    setStatus('sending');
+    ws.send(JSON.stringify(payload));
+
+    // Registra no histórico
+    const hora = new Date().toLocaleTimeString('pt-BR');
+    const entry = document.createElement('p');
+    entry.textContent = `${hora} → ${peso} kg enviado`;
+    historyEl.prepend(entry);
+
+    // Volta status para connected após 600ms
+    setTimeout(() => setStatus('connected'), 600);
+  });
+
+  // ─── Helper de status ─────────────────────────────────────────────────────
+  function setStatus(state) {
+    statusEl.className = '';
+    const map = {
+      connecting:   ['',          'Conectando...'],
+      connected:    ['connected', 'Conectado'],
+      error:        ['error',     'Erro na conexão — verifique o IP e o servidor'],
+      disconnected: ['',          'Desconectado'],
+      sending:      ['sending',   'Enviando...'],
+    };
+    const [cls, label] = map[state] || ['', state];
+    if (cls) statusEl.classList.add(cls);
+    statusText.textContent = label;
+  }
+</script>
+</body>
+</html>
