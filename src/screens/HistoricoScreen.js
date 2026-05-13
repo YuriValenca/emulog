@@ -23,7 +23,6 @@ import ScrollToTopButton from './ScrollToTopButton';
 import NetInfo from '@react-native-community/netinfo';
 
 const PROJETOS_POR_PAGINA = 20;
-const ADMIN_UID = 'vuEvlau2E0by5HmJ5Im88bIVXg23';
 
 export default function HistoricoScreen() {
   // Lista completa de metadados para busca/filtro (id + nomeProjeto + dataCriacao)
@@ -118,7 +117,7 @@ export default function HistoricoScreen() {
     if (state.isConnected) {
       try {
         // Busca só os campos necessários para metadados
-        const baseQuery = usuarioLogadoUID === ADMIN_UID
+        const baseQuery = usuarioLogadoUID === process.env.EXPO_PUBLIC_ADMIN_UUID
           ? query(collection(db, 'projetos'))
           : query(collection(db, 'projetos'), where('uidUsuario', '==', usuarioLogadoUID));
 

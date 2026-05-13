@@ -14,7 +14,7 @@ export default function HomeScreen({ navigation }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Verifica se o usuário é o admin master
-        if (user.uid === "vuEvlau2E0by5HmJ5Im88bIVXg23") {
+        if (user.uid === process.env.EXPO_PUBLIC_ADMIN_UUID) {
           setIsAdmin(true);
           setUserName('Admin Master');
         } else {
