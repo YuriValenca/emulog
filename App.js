@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, View, Text, TouchableOpacity, StatusBar } from 'react-native';
@@ -12,13 +12,12 @@ import DetalheProjetoScreen from './src/screens/DetalheProjetoScreen';
 import GerenciarUsuarios from './src/screens/GerenciarUsuarios';
 import ScaleConnect from './src/screens/ScaleConnect';
 import { BleProvider, useBle } from './src/context/context';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { firebaseApp, auth } from './src/firebaseConfig';
+import { AuthProvider, useAppAuth } from './src/context/auth';
 import { checkConnectionAndSync } from './src/db';
+import { useEffect, useRef, useState } from 'react';
 
 const Stack = createNativeStackNavigator();
 
-// ─── BANNER DE STATUS BLE ─────────────────────────────────────────────────────
 function BleStatusBar({ navigation }) {
   const { bleStatus, connectedDevice, weight } = useBle();
 
@@ -29,40 +28,39 @@ function BleStatusBar({ navigation }) {
   const isSleeping     = bleStatus === 'sleeping';
   const isConnected    = bleStatus === 'connected';
 
-  // ── Variáveis visuais por status ──────────────────────────────────────────
   const config = {
     connected: {
-      bg:         '#4CAF50',
-      border:     null,
-      statusBar:  'light-content',
-      iconColor:  '#fff',
-      labelColor: '#fff',
-      weightColor:'rgba(255,255,255,0.85)',
+      bg:          '#4CAF50',
+      border:      null,
+      statusBar:   'light-content',
+      iconColor:   '#fff',
+      labelColor:  '#fff',
+      weightColor: 'rgba(255,255,255,0.85)',
       chevronColor:'#fff',
-      icon:       'scale',
-      label:      connectedDevice?.name ?? 'Balança conectada',
+      icon:        'scale',
+      label:       connectedDevice?.name ?? 'Balança conectada',
     },
     sleeping: {
-      bg:         '#1A3A5C',         // azul escuro — indica "pareado mas inativo"
-      border:     null,
-      statusBar:  'light-content',
-      iconColor:  'rgba(255,255,255,0.55)',
-      labelColor: 'rgba(255,255,255,0.85)',
+      bg:          '#1A3A5C',
+      border:      null,
+      statusBar:   'light-content',
+      iconColor:   'rgba(255,255,255,0.55)',
+      labelColor:  'rgba(255,255,255,0.85)',
       weightColor: null,
       chevronColor:'rgba(255,255,255,0.55)',
-      icon:       'sleep',
-      label:      'Balança em espera',
+      icon:        'sleep',
+      label:       'Balança em espera',
     },
     reconnecting: {
-      bg:         '#fff8e1',
-      border:     '#FF9621',
-      statusBar:  'dark-content',
-      iconColor:  '#FF9621',
-      labelColor: '#FF9621',
+      bg:          '#fff8e1',
+      border:      '#FF9621',
+      statusBar:   'dark-content',
+      iconColor:   '#FF9621',
+      labelColor:  '#FF9621',
       weightColor: null,
       chevronColor:'#FF9621',
-      icon:       'bluetooth-off',
-      label:      'Balança desconectada — aguardando...',
+      icon:        'bluetooth-off',
+      label:       'Balança desconectada — aguardando...',
     },
   }[bleStatus];
 
@@ -104,20 +102,23 @@ function BleStatusBar({ navigation }) {
   );
 }
 
-// ─── APP ROOT ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [initializing, setInitializing] = useState(true);
-  const [user, setUser] = useState(null);
-  const [navReady, setNavReady] = useState(false);
-  const navigationRef = React.useRef(null);
+function LicenseBlockScreen() {
+  return (
+    <View style={licenseStyles.container}>
+      <MaterialCommunityIcons name="shield-lock-outline" size={64} color="#FF5C00" />
+      <Text style={licenseStyles.title}>Dispositivo sem licença ativa</Text>
+      <Text style={licenseStyles.body}>
+        A licença deste aparelho expirou ou não foi encontrada.{'\n'}
+        Contate a administração para renovar e poder acessar o app.
+      </Text>
+    </View>
+  );
+}
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
-      setUser(currentUser);
-      if (initializing) setInitializing(false);
-    });
-    return unsubscribe;
-  }, [initializing]);
+function AppNavigator() {
+  const { authUser, initializing, licenseError } = useAppAuth();
+  const [navReady, setNavReady] = useState(false);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     checkConnectionAndSync();
@@ -125,35 +126,47 @@ export default function App() {
 
   if (initializing) return null;
 
-  return (
-    <BleProvider>
-      <NavigationContainer ref={navigationRef} onReady={() => setNavReady(true)}>
-        <View style={styles.root}>
-          <Stack.Navigator
-            screenOptions={{
-              headerShown: false,
-              contentStyle: styles.screenContent,
-            }}
-          >
-            {user ? (
-              <>
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="NovaAmostra" component={NovaAmostraScreen} />
-                <Stack.Screen name="Historico" component={HistoricoScreen} />
-                <Stack.Screen name="Calibragem" component={CalibragemScreen} />
-                <Stack.Screen name="DetalheProjeto" component={DetalheProjetoScreen} />
-                <Stack.Screen name="GerenciarUsuarios" component={GerenciarUsuarios} />
-                <Stack.Screen name="ScaleConnect" component={ScaleConnect} />
-              </>
-            ) : (
-              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            )}
-          </Stack.Navigator>
+  if (licenseError === 'no-license') {
+    return <LicenseBlockScreen />;
+  }
 
-          {user && navReady && <BleStatusBar navigation={navigationRef.current} />}
-        </View>
-      </NavigationContainer>
-    </BleProvider>
+  return (
+    <NavigationContainer ref={navigationRef} onReady={() => setNavReady(true)}>
+      <View style={styles.root}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: styles.screenContent,
+          }}
+        >
+          {authUser ? (
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="NovaAmostra" component={NovaAmostraScreen} />
+              <Stack.Screen name="Historico" component={HistoricoScreen} />
+              <Stack.Screen name="Calibragem" component={CalibragemScreen} />
+              <Stack.Screen name="DetalheProjeto" component={DetalheProjetoScreen} />
+              <Stack.Screen name="GerenciarUsuarios" component={GerenciarUsuarios} />
+              <Stack.Screen name="ScaleConnect" component={ScaleConnect} />
+            </>
+          ) : (
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          )}
+        </Stack.Navigator>
+
+        {authUser && navReady && <BleStatusBar navigation={navigationRef.current} />}
+      </View>
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BleProvider>
+        <AppNavigator />
+      </BleProvider>
+    </AuthProvider>
   );
 }
 
@@ -176,17 +189,30 @@ const bannerStyles = StyleSheet.create({
     paddingTop: (StatusBar.currentHeight ?? 24) + 4,
     gap: 10,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
+  label:    { fontSize: 13, fontWeight: '600' },
+  weight:   { fontSize: 11, marginTop: 1 },
+  sleepSub: { fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 },
+});
+
+const licenseStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    gap: 20,
   },
-  weight: {
-    fontSize: 11,
-    marginTop: 1,
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#222',
+    textAlign: 'center',
   },
-  sleepSub: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.45)',
-    marginTop: 1,
+  body: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });
