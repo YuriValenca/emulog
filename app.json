@@ -52,7 +52,8 @@
           ],
           "bluetoothAlwaysPermission": "Permitir que o app acesse o Bluetooth para conectar à balança"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
