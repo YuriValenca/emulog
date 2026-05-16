@@ -12,6 +12,7 @@ import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
+import { LOGO_BASE_64 } from '../assets/base64Logo';
 
 const db = getFirestore();
 
@@ -81,13 +82,6 @@ export default function DetalheProjetoScreen() {
   const gerarPDF = async () => {
     if (!projeto) return;
 
-    const asset = Asset.fromModule(require('../assets/logo.png'));
-    await asset.downloadAsync();
-    const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    const logoBase64 = `data:image/png;base64,${base64}`;
-
     const info = projeto.informacoesOperacao;
     const observacao = projeto.observacao || 'Sem observações';
 
@@ -117,7 +111,7 @@ export default function DetalheProjetoScreen() {
     </head>
     <body>
       <div class="header-container">
-        <img src="${logoBase64}" class="logo" alt="Logo" />
+        <img src="${LOGO_BASE_64}" class="logo" alt="Logo" />
         <div class="project-details">
           <h1>Projeto: ${projeto.nomeProjeto}</h1>
           <p><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
@@ -166,11 +160,12 @@ export default function DetalheProjetoScreen() {
   const gerarConteudoAmostrasPDF = (amostras) => {
     return amostras.map((amostra, index) => {
       if (amostra.pesagens && Array.isArray(amostra.pesagens)) {
+        const pesagensValidas = amostra.pesagens.filter(p => p.peso !== '' && p.densidade !== '');
         return `
           ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
           <div class="amostra-box">
             <div class="amostra-header">Amostra ${amostra.amostraId + 1}</div>
-            ${amostra.pesagens.map((p, i) => `
+            ${pesagensValidas.map((p, i) => `
               <div class="pesagem-row">
                 <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${p.timestamp}
               </div>`).join('')}
@@ -204,21 +199,21 @@ export default function DetalheProjetoScreen() {
         <View key={index} style={styles.amostraContainer}>
           <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
           {amostra.pesagens
-            .filter(pesagem => pesagem.peso !== "" && pesagem.densidade !== "")
+            .filter(pesagem => pesagem.peso !== '' && pesagem.densidade !== '')
             .map((pesagem, i) => (
-            <View key={i} style={styles.pesagemContainer}>
-              <View style={styles.pesagemRowHeader}>
-                <Text style={styles.pesagemHeader}>Pesagem {i + 1}</Text>
-                <Text style={styles.pesagemHeader}>Densidade</Text>
-                <Text style={styles.pesagemHeader}>Hora</Text>
+              <View key={i} style={styles.pesagemContainer}>
+                <View style={styles.pesagemRowHeader}>
+                  <Text style={styles.pesagemHeader}>Pesagem {i + 1}</Text>
+                  <Text style={styles.pesagemHeader}>Densidade</Text>
+                  <Text style={styles.pesagemHeader}>Hora</Text>
+                </View>
+                <View style={styles.pesagemRow}>
+                  <Text style={styles.pesagemText}>{pesagem.peso} g</Text>
+                  <Text style={styles.pesagemText}>{pesagem.densidade} g/cm³</Text>
+                  <Text style={styles.pesagemText}>{pesagem.timestamp}</Text>
+                </View>
               </View>
-              <View style={styles.pesagemRow}>
-                <Text style={styles.pesagemText}>{pesagem.peso} g</Text>
-                <Text style={styles.pesagemText}>{pesagem.densidade} g/cm³</Text>
-                <Text style={styles.pesagemText}>{pesagem.timestamp}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
         </View>
       ));
     }
@@ -403,7 +398,6 @@ const styles = StyleSheet.create({
   titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, marginTop: 8, color: '#E75F07' },
   label: { fontSize: 15, fontWeight: '700', color: '#444', marginTop: 16, marginBottom: 6 },
   valor: { fontSize: 15, color: '#333' },
-
   calibragemBox: { borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
   calibragemRow: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -412,7 +406,6 @@ const styles = StyleSheet.create({
   },
   calibragemLabel: { fontSize: 14, color: '#555' },
   calibragemValor: { fontSize: 14, fontWeight: '600', color: '#333' },
-
   adicionarInfoBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 16, padding: 16,
@@ -420,7 +413,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   adicionarInfoBtnTexto: { fontSize: 14, color: '#E75F07', fontWeight: '600' },
-
   infoAdicionalBox: { marginTop: 16, borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
   infoAdicionalTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', backgroundColor: '#E75F07', paddingHorizontal: 12, paddingVertical: 8 },
   infoRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
@@ -434,10 +426,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
   },
   editarInfoBtnTexto: { fontSize: 13, color: '#E75F07', fontWeight: '600' },
-
   observacaoBox: { backgroundColor: '#f9f9f9', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#e2e2e2' },
   input: { backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1, borderRadius: 5, padding: 10, marginTop: 20, marginBottom: 10, fontSize: 16 },
-
   amostraContainer: { marginTop: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 8, borderWidth: 1, borderColor: '#e2e2e2' },
   amostraTitulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#333' },
   pesagemContainer: { marginTop: 8 },
@@ -446,7 +436,6 @@ const styles = StyleSheet.create({
   pesagemText: { fontSize: 13, color: '#333' },
   pesagemHeader: { fontSize: 13, fontWeight: 'bold', color: '#333' },
   vazioTexto: { color: '#aaa', fontStyle: 'italic' },
-
   pdfButton: {
     backgroundColor: '#E75F07', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

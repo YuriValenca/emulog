@@ -44,7 +44,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('./logo.png')}  // Certifique-se de que o caminho está correto
+        source={require('../assets/logo.png')}
         resizeMode="contain"
         style={styles.logo}
       />
