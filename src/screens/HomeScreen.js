@@ -1,55 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // Importa o pacote de ícones
-import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Importa as funções do Firestore
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getAuth, signOut } from 'firebase/auth';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { useAppAuth } from '../context/auth';
 
 export default function HomeScreen({ navigation }) {
-  const [isAdmin, setIsAdmin] = useState(false); // Estado para controlar se o usuário é admin
-  const [userName, setUserName] = useState(''); // Estado para armazenar o nome do usuário
+  const { role, isSuperadmin, isCompanyAdmin, authUser } = useAppAuth();
+  const [userName, setUserName] = useState('');
+
+  const isAdmin = isSuperadmin || isCompanyAdmin;
 
   useEffect(() => {
-    const auth = getAuth();
-    // Observa mudanças no estado de autenticação
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Verifica se o usuário é o admin master
-        if (user.uid === process.env.EXPO_PUBLIC_ADMIN_UUID) {
-          setIsAdmin(true);
-          setUserName('Admin Master');
-        } else {
-          setIsAdmin(false);
-          // Se não for admin master, busca o nome do usuário no Firestore
-          const db = getFirestore();
-          const usersCollectionRef = collection(db, 'users');
-          const q = query(usersCollectionRef, where('uid', '==', user.uid));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            querySnapshot.forEach((doc) => {
-              setUserName(doc.data().nome);
-            });
-          } else {
-            console.log('Nenhum documento correspondente encontrado.');
-          }
-        }
-      } else {
-        // Se não estiver logado, não é admin
-        setIsAdmin(false);
+    if (!authUser) return;
+
+    if (isSuperadmin) {
+      setUserName('Admin Master');
+      return;
+    }
+
+    const fetchName = async () => {
+      const db = getFirestore();
+      const q = query(collection(db, 'users'), where('uid', '==', authUser.uid));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setUserName(snap.docs[0].data().nome);
       }
-    });
+    };
 
-    // Limpeza ao desmontar o componente
-    return () => unsubscribe();
-  }, []);
+    fetchName();
+  }, [authUser, isSuperadmin]);
 
-  // Função de logout
   const handleLogout = () => {
     const auth = getAuth();
-    signOut(auth).then(() => {
-      // Redireciona para a tela de login após o logout
-      navigation.replace('Login');
-    }).catch((error) => {
-      // Trata erros aqui
+    signOut(auth).catch((error) => {
       console.log('Erro ao fazer logout', error);
     });
   };
@@ -58,7 +42,7 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       {isAdmin && (
         <TouchableOpacity
-          style={[styles.buttonContainer, styles.adminButton]} // Estilos para o botão
+          style={[styles.buttonContainer, styles.adminButton]}
           onPress={() => navigation.navigate('GerenciarUsuarios')}>
           <MaterialCommunityIcons name="account-group" size={24} color="#FFFFFF" />
           <Text style={styles.adminButtonText}>Gerenciar Usuários</Text>
@@ -90,7 +74,6 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.buttonText}>Histórico</Text>
       </TouchableOpacity>
 
-      {/* Botão que navega para a tela de conexão com a balança */}
       <TouchableOpacity
         style={[styles.buttonContainer, { backgroundColor: "#1A73E8", flexDirection: 'row' }]}
         onPress={() => navigation.navigate('ScaleConnect')}>
@@ -99,7 +82,7 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.buttonContainer, styles.logoutButton, { width: '70%' }]} // Ajuste para a largura ser 70%
+        style={[styles.buttonContainer, styles.logoutButton, { width: '70%' }]}
         onPress={handleLogout}
       >
         <MaterialCommunityIcons name="logout" size={24} color="#FFFFFF" />
