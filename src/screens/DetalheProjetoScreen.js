@@ -81,15 +81,12 @@ export default function DetalheProjetoScreen() {
   const gerarPDF = async () => {
     if (!projeto) return;
 
-  const asset = Asset.fromModule(require('../../assets/pdfIcon.png'));
-  await asset.downloadAsync();
-
-  const assetUri = asset.localUri ?? asset.uri;
-
-  const base64 = await FileSystem.readAsStringAsync(assetUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  logoBase64 = `data:image/png;base64,${base64}`;
+    const asset = Asset.fromModule(require('../assets/logo.png'));
+    await asset.downloadAsync();
+    const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const logoBase64 = `data:image/png;base64,${base64}`;
 
     const info = projeto.informacoesOperacao;
     const observacao = projeto.observacao || 'Sem observações';
@@ -206,7 +203,9 @@ export default function DetalheProjetoScreen() {
       return amostras.map((amostra, index) => (
         <View key={index} style={styles.amostraContainer}>
           <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
-          {amostra.pesagens.map((pesagem, i) => (
+          {amostra.pesagens
+            .filter(pesagem => pesagem.peso !== "" && pesagem.densidade !== "")
+            .map((pesagem, i) => (
             <View key={i} style={styles.pesagemContainer}>
               <View style={styles.pesagemRowHeader}>
                 <Text style={styles.pesagemHeader}>Pesagem {i + 1}</Text>
