@@ -21,6 +21,7 @@ export default function StepPesagens({
   onAdicionarAmostra,
   onAvancar,
   todasPesagensConcluidas,
+  podeAvancar,
   temporizador,
   amostraPesquisa, setAmostraPesquisa,
   historicoFiltrado,
@@ -40,6 +41,7 @@ export default function StepPesagens({
   const amostraArray = amostras[amostraAtual] || [];
   const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
   const proximaPesagem = pesagensFeitas + 1;
+  const amostraAtualConcluida = pesagensFeitas >= 4;
 
   return (
     <>
@@ -117,8 +119,8 @@ export default function StepPesagens({
           {Array.from({ length: quantidadeAmostras }, (_, i) => {
             const amostra = amostras[i] || [];
             const feitas = amostra.filter(p => p.peso !== '').length;
-            const pesagensFaltantes = 5 - feitas;
-            const amostraConcluida = feitas === 5;
+            const pesagensFaltantes = 4 - feitas;
+            const amostraConcluida = feitas >= 4;
             return (
               <TouchableOpacity
                 key={i}
@@ -129,7 +131,7 @@ export default function StepPesagens({
                   Platform.OS !== 'web' && styles.amostraBtnMobile,
                 ]}
                 onPress={() => {
-                  if (amostraConcluida) {
+                  if (amostraConcluida && feitas === 5) {
                     setMensagemAviso('Pesagens concluídas para esta amostra.');
                     setModalAvisoVisivel(true);
                   } else {
@@ -141,7 +143,11 @@ export default function StepPesagens({
                 }}
               >
                 <Text style={styles.amostraBtnTexto}>Amostra {i + 1}</Text>
-                <Text style={styles.amostraBtnTextoMenor}>{pesagensFaltantes} pesagens faltando</Text>
+                <Text style={styles.amostraBtnTextoMenor}>
+                  {feitas >= 4
+                    ? feitas === 5 ? 'Concluída' : `${feitas}/4 + opcional`
+                    : `${pesagensFaltantes} pesage${pesagensFaltantes !== 1 ? 'ns' : 'm'} faltando`}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -149,7 +155,7 @@ export default function StepPesagens({
       </View>
 
       <View style={styles.selectContainer}>
-        <Text style={styles.label}>Pesagem: {proximaPesagem}/5</Text>
+        <Text style={styles.label}>Pesagem: {proximaPesagem}/5{proximaPesagem === 5 ? ' (opcional)' : ''}</Text>
       </View>
 
       <TextInput
@@ -180,7 +186,7 @@ export default function StepPesagens({
       <View style={styles.historicoContainer}>{historicoFiltrado}</View>
 
       <TouchableOpacity
-        style={[styles.avancarBtn, !todasPesagensConcluidas && styles.avancarBtnDisabled]}
+        style={[styles.avancarBtn, !podeAvancar && styles.avancarBtnDisabled]}
         onPress={onAvancar}
         activeOpacity={0.8}
       >

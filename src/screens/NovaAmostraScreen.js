@@ -66,6 +66,10 @@ function NovaAmostraScreenInner() {
     a => a && a.filter(p => p.peso !== '').length === 5
   );
 
+  const podeAvancar = amostras.every(
+    a => a && a.filter(p => p.peso !== '').length >= 4
+  );
+
   useEffect(() => {
     if (
       readingStatus === 'stable' &&
@@ -226,11 +230,15 @@ function NovaAmostraScreenInner() {
     setAmostras(novasAmostras);
     setPeso('');
 
-    const todasConcluidas = novasAmostras.every(a => a && a.filter(p => p.peso !== '').length === 5);
+    const todasConcluidas = novasAmostras.every(a => a && a.filter(p => p.peso !== '').length >= 4);
 
     if (pesagemCorreta < 5) {
       setPesagemAtual(pesagemCorreta + 1);
-      setModalMensagem(`Amostra ${amostraAtual + 1} - Pesagem ${pesagemCorreta} concluída.`);
+      if (pesagemCorreta === 4) {
+        setModalMensagem(`Amostra ${amostraAtual + 1} - Pesagem ${pesagemCorreta} concluída. A 5ª pesagem é opcional.`);
+      } else {
+        setModalMensagem(`Amostra ${amostraAtual + 1} - Pesagem ${pesagemCorreta} concluída.`);
+      }
     } else if (amostraAtual < quantidadeAmostras - 1) {
       setAmostraAtual(amostraAtual + 1);
       setPesagemAtual(1);
@@ -254,8 +262,11 @@ function NovaAmostraScreenInner() {
     const msgs = amostras
       .map((amostra, index) => {
         if (amostra) {
-          const faltam = 5 - amostra.filter(p => p.peso !== '').length;
-          if (faltam > 0) return `Amostra ${index + 1}: faltam ${faltam} pesagens.`;
+          const feitas = amostra.filter(p => p.peso !== '').length;
+          if (feitas < 4) {
+            const faltam = 4 - feitas;
+            return `Amostra ${index + 1}: faltam ${faltam} pesagem${faltam !== 1 ? 'ns' : ''} obrigatória${faltam !== 1 ? 's' : ''}.`;
+          }
         } else {
           return `Amostra ${index + 1} está vazia ou corrompida.`;
         }
@@ -331,9 +342,9 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return;
     }
-    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length === 5);
+    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
     if (!algumaAmostraCompleta) {
-      setMensagemAviso("Pelo menos uma amostra completa é necessária.");
+      setMensagemAviso("Pelo menos uma amostra com 4 pesagens é necessária.");
       setModalAvisoVisivel(true);
       return;
     }
@@ -367,9 +378,9 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return;
     }
-    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length === 5);
+    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
     if (!algumaAmostraCompleta) {
-      setMensagemAviso("Pelo menos uma amostra completa é necessária para avançar.");
+      setMensagemAviso("Pelo menos uma amostra com 4 pesagens é necessária para avançar.");
       setModalAvisoVisivel(true);
       return;
     }
@@ -464,6 +475,7 @@ function NovaAmostraScreenInner() {
           onAdicionarAmostra={adicionarAmostra}
           onAvancar={handleAvancarStep}
           todasPesagensConcluidas={todasPesagensConcluidas}
+          podeAvancar={podeAvancar}
           temporizador={temporizador}
           amostraPesquisa={amostraPesquisa}
           setAmostraPesquisa={setAmostraPesquisa}
@@ -493,7 +505,7 @@ function NovaAmostraScreenInner() {
               </View>
               <Text style={styles.bleModalTitle}>Peso estabilizado</Text>
               <Text style={styles.bleModalSubtitle}>
-                Amostra {amostraAtual + 1} — Pesagem {proximaPesagem}/5
+                Amostra {amostraAtual + 1} — Pesagem {proximaPesagem}/5{proximaPesagem === 5 ? ' (opcional)' : ''}
               </Text>
             </View>
             <View style={styles.bleModalWeightRow}>
@@ -609,7 +621,11 @@ function NovaAmostraScreenInner() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.cancelarButton]}
-              onPress={() => { resetarFormulario(); setModalProjetoExistenteVisivel(false); }}
+              onPress={() => {
+                resetarFormulario();
+                setModalProjetoExistenteVisivel(false);
+                setCurrentStep(1);
+              }}
             >
               <Ionicons name="refresh-circle" size={24} color="#FFF" />
               <Text style={styles.textStyle}>Iniciar Novo</Text>
