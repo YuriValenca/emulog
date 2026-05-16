@@ -81,12 +81,15 @@ export default function DetalheProjetoScreen() {
   const gerarPDF = async () => {
     if (!projeto) return;
 
-      const asset = Asset.fromModule(require('../../assets/pdfIcon.png'));
-      await asset.downloadAsync();
-      const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const logoBase64 = `data:image/png;base64,${base64}`;
+  const asset = Asset.fromModule(require('../../assets/pdfIcon.png'));
+  await asset.downloadAsync();
+
+  const assetUri = asset.localUri ?? asset.uri;
+
+  const base64 = await FileSystem.readAsStringAsync(assetUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  logoBase64 = `data:image/png;base64,${base64}`;
 
     const info = projeto.informacoesOperacao;
     const observacao = projeto.observacao || 'Sem observações';
