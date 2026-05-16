@@ -1,9 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProjetoFormContext = createContext(null);
 
 export function ProjetoFormProvider({ children }) {
+  const inicializado = useRef(false);
+
   const [nomeProjeto, setNomeProjeto] = useState('');
   const [quantidadeAmostras, setQuantidadeAmostras] = useState(1);
   const [amostras, setAmostras] = useState(
@@ -39,6 +41,20 @@ export function ProjetoFormProvider({ children }) {
       console.error("Erro ao salvar estado do projeto:", error);
     }
   };
+
+  useEffect(() => {
+    if (!inicializado.current) {
+      inicializado.current = true;
+      return;
+    }
+    salvarEstadoDoProjeto();
+  }, [
+    nomeProjeto, quantidadeAmostras, amostras,
+    amostraAtual, pesagemAtual, peso, observacao,
+    numeroNF, kgPrevisto, kgAplicado,
+    caminhaoSelecionado, equipeSelecionada,
+    informacoesGerais,
+  ]);
 
   const limparEstadoDoProjeto = async () => {
     try {
