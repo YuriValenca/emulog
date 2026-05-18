@@ -51,7 +51,6 @@ function NovaAmostraScreenInner() {
     amostraAtual, setAmostraAtual,
     pesagemAtual, setPesagemAtual,
     peso, setPeso,
-    observacao,
     ultimaCalibragem, setUltimaCalibragem,
     uidUsuario, setUidUsuario,
     numeroNF, kgPrevisto, kgAplicado,
@@ -291,7 +290,6 @@ function NovaAmostraScreenInner() {
       },
       quantidadeAmostras,
       amostras: amostrasPlanificadas,
-      observacao,
       informacoesOperacao: {
         numeroNF,
         kgPrevisto,

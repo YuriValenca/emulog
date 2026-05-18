@@ -16,7 +16,6 @@ export function ProjetoFormProvider({ children }) {
   const [amostraAtual, setAmostraAtual] = useState(0);
   const [pesagemAtual, setPesagemAtual] = useState(1);
   const [peso, setPeso] = useState('');
-  const [observacao, setObservacao] = useState('');
   const [ultimaCalibragem, setUltimaCalibragem] = useState(null);
   const [uidUsuario, setUidUsuario] = useState(null);
 
@@ -30,7 +29,7 @@ export function ProjetoFormProvider({ children }) {
   const salvarEstadoDoProjeto = async () => {
     const projeto = {
       nomeProjeto, quantidadeAmostras, amostras,
-      amostraAtual, pesagemAtual, peso, observacao,
+      amostraAtual, pesagemAtual, peso,
       numeroNF, kgPrevisto, kgAplicado,
       caminhaoSelecionado, equipeSelecionada,
       informacoesGerais,
@@ -50,7 +49,7 @@ export function ProjetoFormProvider({ children }) {
     salvarEstadoDoProjeto();
   }, [
     nomeProjeto, quantidadeAmostras, amostras,
-    amostraAtual, pesagemAtual, peso, observacao,
+    amostraAtual, pesagemAtual, peso,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
     informacoesGerais,
@@ -73,7 +72,6 @@ export function ProjetoFormProvider({ children }) {
     setAmostraAtual(0);
     setPesagemAtual(1);
     setPeso('');
-    setObservacao('');
     setNumeroNF('');
     setKgPrevisto('');
     setKgAplicado('');
@@ -93,7 +91,6 @@ export function ProjetoFormProvider({ children }) {
       setAmostraAtual(projeto.amostraAtual || 0);
       setPesagemAtual(projeto.pesagemAtual || 1);
       setPeso(projeto.peso || '');
-      setObservacao(projeto.observacao || '');
       setNumeroNF(projeto.numeroNF || '');
       setKgPrevisto(projeto.kgPrevisto || '');
       setKgAplicado(projeto.kgAplicado || '');
@@ -147,7 +144,6 @@ export function ProjetoFormProvider({ children }) {
       amostraAtual, setAmostraAtual,
       pesagemAtual, setPesagemAtual,
       peso, setPeso,
-      observacao, setObservacao,
       ultimaCalibragem, setUltimaCalibragem,
       uidUsuario, setUidUsuario,
       numeroNF, setNumeroNF,

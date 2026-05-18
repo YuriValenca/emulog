@@ -83,7 +83,7 @@ export default function DetalheProjetoScreen() {
     if (!projeto) return;
 
     const info = projeto.informacoesOperacao;
-    const observacao = projeto.observacao || 'Sem observações';
+    const informacoesGerais = info.informacoesGerais || 'Sem observações';
 
     const htmlContent = `
     <html>
@@ -103,8 +103,8 @@ export default function DetalheProjetoScreen() {
         .amostra-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-bottom: 10px; }
         .pesagem-row { margin-bottom: 5px; }
         .content-box { border: 2px solid orange; padding: 10px; border-radius: 5px; color: black; margin-top: 20px; }
-        .observacao-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-        .observacao-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
+        .informacoesGerais-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
+        .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
         .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
         .info-header { background-color: #FF5C00; color: #fff; padding: 6px 10px; font-weight: bold; }
       </style>
@@ -142,9 +142,9 @@ export default function DetalheProjetoScreen() {
         <h2 style="color: orange;">Observação Técnica:</h2>
         <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da Explog.</p>
       </div>
-      <div class="observacao-box">
-        <div class="observacao-header">Observação sobre o projeto</div>
-        <p>${observacao}</p>
+      <div class="informacoesGerais-box">
+        <div class="informacoesGerais-header">Observação sobre o projeto</div>
+        <p>${informacoesGerais}</p>
       </div>
       <h2>Quantidade de Amostras: ${projeto.quantidadeAmostras}</h2>
       ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
@@ -360,7 +360,7 @@ export default function DetalheProjetoScreen() {
 
       <Text style={styles.label}>Observação sobre o projeto</Text>
       <View style={styles.observacaoBox}>
-        <Text style={styles.valor}>{projeto.observacao || 'Sem observações'}</Text>
+        <Text style={styles.valor}>{projeto.informacoesOperacao.informacoesGerais || 'Sem observações'}</Text>
       </View>
 
       <TextInput
