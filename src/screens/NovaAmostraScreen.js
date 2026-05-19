@@ -55,6 +55,7 @@ function NovaAmostraScreenInner() {
     uidUsuario, setUidUsuario,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
+    informacoesGerais,
     salvarEstadoDoProjeto,
     limparEstadoDoProjeto,
     resetarFormulario,
@@ -296,6 +297,7 @@ function NovaAmostraScreenInner() {
         kgAplicado,
         caminhao: caminhaoSelecionado,
         equipe: equipeSelecionada,
+        informacoesGerais
       },
     };
   };
