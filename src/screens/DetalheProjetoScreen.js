@@ -66,8 +66,7 @@ export default function DetalheProjetoScreen() {
       info.kgPrevisto?.trim() ||
       info.kgAplicado?.trim() ||
       info.caminhao ||
-      (info.equipe && info.equipe.length > 0) ||
-      info.informacoesGerais?.trim()
+      (info.equipe && info.equipe.length > 0)
     );
   };
 
@@ -83,7 +82,7 @@ export default function DetalheProjetoScreen() {
     if (!projeto) return;
 
     const info = projeto.informacoesOperacao;
-    const informacoesGerais = info.informacoesGerais || 'Sem observações';
+    const informacoesGerais = info.informacoesGerais;
 
     const htmlContent = `
     <html>
@@ -142,10 +141,10 @@ export default function DetalheProjetoScreen() {
         <h2 style="color: orange;">Observação Técnica:</h2>
         <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da Explog.</p>
       </div>
-      <div class="informacoesGerais-box">
+      ${informacoesGerais ? `<div class="informacoesGerais-box">
         <div class="informacoesGerais-header">Observação sobre o projeto</div>
         <p>${informacoesGerais}</p>
-      </div>
+      </div>` : ''}
       <h2>Quantidade de Amostras: ${projeto.quantidadeAmostras}</h2>
       ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
     </body>
@@ -344,24 +343,16 @@ export default function DetalheProjetoScreen() {
         </View>
       </View>
 
-      {hasAdditionalInfo(infoAtual)
-        ? renderizarInformacoesAdicionais(infoAtual)
-        : (
-          <TouchableOpacity
-            style={styles.adicionarInfoBtn}
-            onPress={() => setModalInfoVisivel(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-circle-outline" size={20} color="#E75F07" />
-            <Text style={styles.adicionarInfoBtnTexto}>Adicionar informações da operação</Text>
-          </TouchableOpacity>
-        )
+      {infoAtual.informacoesGerais?.trim() &&
+        <>
+          <Text style={styles.label}>Observação sobre o projeto</Text>
+          <View style={styles.observacaoBox}>
+            <Text style={styles.valor}>{projeto.informacoesOperacao.informacoesGerais || 'Sem observações'}</Text>
+          </View>
+        </>
       }
 
-      <Text style={styles.label}>Observação sobre o projeto</Text>
-      <View style={styles.observacaoBox}>
-        <Text style={styles.valor}>{projeto.informacoesOperacao.informacoesGerais || 'Sem observações'}</Text>
-      </View>
+      {renderizarInformacoesAdicionais(infoAtual)}
 
       <TextInput
         style={styles.input}
@@ -406,13 +397,6 @@ const styles = StyleSheet.create({
   },
   calibragemLabel: { fontSize: 14, color: '#555' },
   calibragemValor: { fontSize: 14, fontWeight: '600', color: '#333' },
-  adicionarInfoBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginTop: 16, padding: 16,
-    borderWidth: 1.5, borderColor: '#E75F07', borderStyle: 'dashed',
-    borderRadius: 10,
-  },
-  adicionarInfoBtnTexto: { fontSize: 14, color: '#E75F07', fontWeight: '600' },
   infoAdicionalBox: { marginTop: 16, borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
   infoAdicionalTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', backgroundColor: '#E75F07', paddingHorizontal: 12, paddingVertical: 8 },
   infoRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
