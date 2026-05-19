@@ -207,7 +207,7 @@ function NovaAmostraScreenInner() {
 
     if (pesagemCorreta !== pesagemAtual) setPesagemAtual(pesagemCorreta);
 
-    if (pesagemCorreta > 1 && pesagemCorreta < 5) {
+    if (pesagemCorreta > 1 && pesagemCorreta <= 5) {
       const pesagemAnterior = amostraArray[pesagemCorreta - 2];
       if (pesagemAnterior?.peso && pesoFloat > parseFloat(pesagemAnterior.peso)) {
         setMensagemAviso(
