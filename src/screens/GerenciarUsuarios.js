@@ -3,18 +3,17 @@ import {
   View, Text, TextInput, StyleSheet, Alert, TouchableOpacity,
   ScrollView, Modal,
 } from 'react-native';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import {
-  getAuth, createUserWithEmailAndPassword,
-  onAuthStateChanged, deleteUser as deleteAuthUser,
-} from 'firebase/auth';
-import {
-  getFirestore, collection, addDoc, getDocs,
-  deleteDoc, updateDoc, doc, getDoc,
+  collection, addDoc, getDocs,
+  deleteDoc, updateDoc, doc, getDoc, query, where,
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
+import { useAppAuth } from '../context/auth';
+import { auth, db } from '../firebaseConfig';
 
 const ABAS = ['Usuários', 'Caminhões', 'Operadores'];
 
@@ -44,31 +43,35 @@ export default function GerenciarUsuarios() {
   const [pendingDeletion, setPendingDeletion] = useState(null);
 
   const navigation = useNavigation();
-  const auth = getAuth();
-  const db = getFirestore();
   const scrollViewRef = useRef(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setCurrentUserUid(user.uid);
-        await carregarUsuarios();
-        await registrarUltimoLogin(user.uid);
-      } else {
-        setUsuarios([]);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  const { role, companyId, authUser } = useAppAuth();
+
+  const buildCollectionQuery = (collectionName) => {
+    if (role === 'superadmin') {
+      return collection(db, collectionName);
+    }
+    return query(collection(db, collectionName), where('companyId', '==', companyId));
+  };
 
   useEffect(() => {
+    if (!role || (role !== 'superadmin' && !companyId)) return;
+    if (authUser) {
+      setCurrentUserUid(authUser.uid);
+      carregarUsuarios();
+      registrarUltimoLogin(authUser.uid);
+    }
+  }, [role, companyId]);
+
+  useEffect(() => {
+    if (!role || (role !== 'superadmin' && !companyId)) return;
     if (abaAtiva === 1) carregarCaminhoes();
     if (abaAtiva === 2) carregarOperadores();
   }, [abaAtiva]);
 
   const carregarUsuarios = async () => {
     try {
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await getDocs(buildCollectionQuery('users'));
       setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar usuários:', e);
@@ -77,7 +80,7 @@ export default function GerenciarUsuarios() {
 
   const carregarCaminhoes = async () => {
     try {
-      const snap = await getDocs(collection(db, 'caminhoes'));
+      const snap = await getDocs(buildCollectionQuery('caminhoes'));
       setCaminhoes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar caminhões:', e);
@@ -86,7 +89,7 @@ export default function GerenciarUsuarios() {
 
   const carregarOperadores = async () => {
     try {
-      const snap = await getDocs(collection(db, 'operadores'));
+      const snap = await getDocs(buildCollectionQuery('operadores'));
       setOperadores(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar operadores:', e);
@@ -113,6 +116,8 @@ export default function GerenciarUsuarios() {
         uid: cred.user.uid,
         email,
         nome: nomeUsuario,
+        companyId,
+        role: 'user',
         ultimoLogin: new Date().toISOString(),
       });
       await auth.updateCurrentUser(admin);
@@ -134,6 +139,7 @@ export default function GerenciarUsuarios() {
       await addDoc(collection(db, 'caminhoes'), {
         placa: placaCaminhao.trim().toUpperCase(),
         descricao: `Caminhão — ${placaCaminhao.trim().toUpperCase()}`,
+        companyId,
         criadoEm: new Date().toISOString(),
       });
       setPlacaCaminhao('');
@@ -154,6 +160,7 @@ export default function GerenciarUsuarios() {
       await addDoc(collection(db, 'operadores'), {
         nome: nomeOperador.trim(),
         cargo: cargoOperador.trim(),
+        companyId,
         criadoEm: new Date().toISOString(),
       });
       setNomeOperador(''); setCargoOperador('');

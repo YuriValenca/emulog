@@ -5,29 +5,24 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
   collection,
   query,
   where,
   getDocs,
-  orderBy,
-  limit,
-  startAfter,
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
 import NetInfo from '@react-native-community/netinfo';
+import { useAppAuth } from '../context/auth';
 
 const PROJETOS_POR_PAGINA = 20;
 
 export default function HistoricoScreen() {
-  // Lista completa de metadados para busca/filtro (id + nomeProjeto + dataCriacao)
   const [todosMetadados, setTodosMetadados] = useState([]);
-  // Projetos da página atual (completos, vindos do Firestore ou offline)
   const [projetosDaPagina, setProjetosDaPagina] = useState([]);
 
   const [ordem, setOrdem] = useState('recente');
@@ -41,19 +36,13 @@ export default function HistoricoScreen() {
   const [modalErroVisivel, setModalErroVisivel] = useState(false);
   const [erroLogs, setErroLogs] = useState('');
 
-  // Cursores do Firestore por página (página 1 não precisa de cursor)
-  // cursores[N] = snapshot do último doc da página N → usado para buscar página N+1
   const cursoresRef = useRef({});
-  // Projetos offline em cache local
   const offlineRef = useRef([]);
 
   const navigation = useNavigation();
-  const auth = getAuth();
-  const usuarioLogadoUID = auth.currentUser?.uid;
+  const { uid, role, companyId } = useAppAuth();
   const flatListRef = useRef(null);
   const db = getFirestore();
-
-  // ─── Helpers ────────────────────────────────────────────────────────────────
 
   const getTimestamp = (dataCriacao) => {
     if (dataCriacao?.seconds) return dataCriacao.seconds * 1000;
@@ -84,20 +73,25 @@ export default function HistoricoScreen() {
     setModalErroVisivel(true);
   };
 
-  // ─── 1. Carga inicial: busca só metadados (id, nomeProjeto, dataCriacao) ────
-  //
-  // Firestore não suporta busca por substring, então trazemos apenas os campos
-  // leves de todos os documentos para poder filtrar/ordenar localmente e montar
-  // a paginação. Os dados completos são buscados apenas para a página exibida.
+  const buildBaseQuery = () => {
+    console.log('uid', uid)
+    const ref = collection(db, 'projetos');
+    if (role === 'superadmin') {
+      return query(ref);
+    }
+    if (role === 'companyAdmin') {
+      return query(ref, where('companyId', '==', companyId));
+    }
+    return query(ref, where('uidUsuario', '==', uid));
+  };
 
   const buscarMetadados = useCallback(async () => {
     setIsLoadingMeta(true);
-    cursoresRef.current = {}; // reseta cursores ao recarregar metadados
+    cursoresRef.current = {};
 
     let metaOffline = [];
     let metaOnline = [];
 
-    // Offline
     try {
       const stored = await AsyncStorage.getItem('offlineProjects');
       const offline = stored ? JSON.parse(stored) : [];
@@ -112,16 +106,10 @@ export default function HistoricoScreen() {
       logErro(`Erro ao ler offline: ${e.message}`);
     }
 
-    // Online
     const state = await NetInfo.fetch();
     if (state.isConnected) {
       try {
-        // Busca só os campos necessários para metadados
-        const baseQuery = usuarioLogadoUID === process.env.EXPO_PUBLIC_ADMIN_UUID
-          ? query(collection(db, 'projetos'))
-          : query(collection(db, 'projetos'), where('uidUsuario', '==', usuarioLogadoUID));
-
-        const snap = await getDocs(baseQuery);
+        const snap = await getDocs(buildBaseQuery());
         const idsOffline = new Set(metaOffline.map(p => p.id));
 
         metaOnline = snap.docs
@@ -139,13 +127,11 @@ export default function HistoricoScreen() {
 
     setTodosMetadados([...metaOffline, ...metaOnline]);
     setIsLoadingMeta(false);
-  }, [usuarioLogadoUID]);
+  }, [uid, role, companyId]);
 
   useEffect(() => {
     buscarMetadados();
   }, [buscarMetadados]);
-
-  // ─── 2. Metadados filtrados e ordenados (apenas IDs + timestamps) ───────────
 
   const metadataFiltrada = React.useMemo(() => {
     let resultado = [...todosMetadados];
@@ -172,14 +158,10 @@ export default function HistoricoScreen() {
     setTotalFiltrado(metadataFiltrada.length);
   }, [metadataFiltrada]);
 
-  // ─── 3. Ao mudar filtro/ordem, reseta para página 1 ─────────────────────────
-
   useEffect(() => {
-    cursoresRef.current = {}; // cursores invalidados com nova ordenação/filtro
+    cursoresRef.current = {};
     setPaginaAtual(1);
   }, [busca, ordem]);
-
-  // ─── 4. Busca os 20 projetos completos da página atual ───────────────────────
 
   const buscarPagina = useCallback(async (pagina) => {
     setIsLoadingPagina(true);
@@ -196,17 +178,14 @@ export default function HistoricoScreen() {
       .filter(m => m.origem === 'offline')
       .map(m => m.id);
 
-    // Projetos offline já estão em memória
     const projetosOffline = offlineRef.current
       .filter(p => idsOfflinePagina.includes(p.id));
 
-    // Projetos online: busca só os IDs necessários
     let projetosOnline = [];
     const state = await NetInfo.fetch();
 
     if (state.isConnected && idsOnline.length > 0) {
       try {
-        // Firestore suporta 'in' com até 30 itens; a paginação garante <= 20
         const q = query(
           collection(db, 'projetos'),
           where('__name__', 'in', idsOnline)
@@ -218,7 +197,6 @@ export default function HistoricoScreen() {
       }
     }
 
-    // Une e reordena conforme a ordem dos metadados filtrados
     const todosCompletos = [...projetosOffline, ...projetosOnline];
     const mapa = Object.fromEntries(todosCompletos.map(p => [p.id, p]));
     const ordenados = metaPagina
@@ -239,8 +217,6 @@ export default function HistoricoScreen() {
       buscarPagina(paginaAtual);
     }
   }, [paginaAtual, metadataFiltrada, isLoadingMeta]);
-
-  // ─── Paginação ───────────────────────────────────────────────────────────────
 
   const irParaPagina = (pagina) => {
     if (pagina < 1 || pagina > totalPaginas) return;
@@ -263,8 +239,6 @@ export default function HistoricoScreen() {
   const handleScroll = (e) => setShowScrollButton(e.nativeEvent.contentOffset.y > 200);
   const scrollToTop = () => flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
 
-  // ─── Renders ─────────────────────────────────────────────────────────────────
-
   if (isLoadingMeta) {
     return (
       <View style={styles.loadingContainer}>
@@ -279,7 +253,6 @@ export default function HistoricoScreen() {
       <BackButton onPress={() => navigation.goBack()} />
       <Text style={styles.titulo}>Histórico de Projetos</Text>
 
-      {/* Filtros em coluna */}
       <View style={styles.filtroContainer}>
         <TextInput
           style={styles.filtroInput}
