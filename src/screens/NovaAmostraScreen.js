@@ -18,10 +18,12 @@ import { useBle } from '../context/context';
 import { ProjetoFormProvider, useProjetoForm } from '../context/form';
 import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
+import { useAppAuth } from '../context/auth';
 
 function NovaAmostraScreenInner() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const { companyId } = useAppAuth();
 
+  const [currentStep, setCurrentStep] = useState(1);
   const [modalVisivel, setModalVisivel] = useState(false);
   const [modalMensagem, setModalMensagem] = useState('');
   const [modalDensidade, setModalDensidade] = useState('');
@@ -291,6 +293,7 @@ function NovaAmostraScreenInner() {
       },
       quantidadeAmostras,
       amostras: amostrasPlanificadas,
+      companyId,
       informacoesOperacao: {
         numeroNF,
         kgPrevisto,

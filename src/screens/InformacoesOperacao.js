@@ -5,8 +5,9 @@ import {
   Alert, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, where } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
+import { useAppAuth } from '../context/auth';
 
 export default function InformacoesOperacao({
   // Modo inline (StepInformacoes)
@@ -20,6 +21,8 @@ export default function InformacoesOperacao({
   projetoId,
   infoInicial,
 }) {
+  const { companyId } = useAppAuth();
+
   // Estado local — usado apenas no modoModal (edição de projeto existente)
   const [nfLocal, setNfLocal] = useState('');
   const [kgPrevistoLocal, setKgPrevistoLocal] = useState('');
@@ -73,8 +76,8 @@ export default function InformacoesOperacao({
       setCarregando(true);
       try {
         const [snapC, snapO] = await Promise.all([
-          getDocs(collection(db, 'caminhoes')),
-          getDocs(collection(db, 'operadores')),
+          getDocs(collection(db, 'caminhoes'), where('companyId', '==', companyId)),
+          getDocs(collection(db, 'operadores'), where('companyId', '==', companyId)),
         ]);
         setCaminhoes(snapC.docs.map(d => ({ id: d.id, ...d.data() })));
         setOperadores(snapO.docs.map(d => ({ id: d.id, ...d.data() })));

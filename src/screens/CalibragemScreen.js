@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
+import { useAppAuth } from '../context/auth';
 
 export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
@@ -16,6 +17,8 @@ export default function CalibragemScreen() {
   const [tara, setTara] = useState('');
   const auth = getAuth();
   const navigation = useNavigation();
+
+  const { companyId } = useAppAuth();
 
   // ─── INTEGRAÇÃO BLE ───────────────────────────────────────────────────────
   const { bleStatus, connectedDevice, weight, readingStatus, resumeMonitor } = useBle();
@@ -103,7 +106,10 @@ export default function CalibragemScreen() {
         timestamp: new Date(),
         userId: auth.currentUser.uid,
       };
-      await addDoc(collection(db, 'calibragens'), calibragem);
+      await addDoc(collection(db, 'calibragens'), {
+        ...calibragem,
+        companyId,
+      });
       await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify(calibragem));
       Alert.alert("Sucesso", "Calibragem registrada com sucesso.");
       navigation.goBack();
