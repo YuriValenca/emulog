@@ -461,6 +461,8 @@ function NovaAmostraScreenInner() {
       {currentStep === 1 ? (
         <StepPesagens
           ultimaCalibragem={ultimaCalibragem}
+          calibragemCarregada={ultimaCalibragem !== null}
+          modalAvisoVisivel={modalAvisoVisivel}
           modalAvisoVisivel={modalAvisoVisivel}
           setModalAvisoVisivel={setModalAvisoVisivel}
           mensagemAviso={mensagemAviso}

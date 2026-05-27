@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Dimensions, Modal,
+  StyleSheet, Platform, Dimensions, Modal, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { useBle } from '../context/context';
 
 export default function StepPesagens({
   ultimaCalibragem,
+  calibragemCarregada,
   modalAvisoVisivel, setModalAvisoVisivel,
   mensagemAviso, setMensagemAviso,
   modalVisivel, setModalVisivel,
@@ -43,6 +44,8 @@ export default function StepPesagens({
   const proximaPesagem = pesagensFeitas + 1;
   const amostraAtualConcluida = pesagensFeitas >= 4;
 
+  const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
+
   return (
     <>
       <TouchableOpacity
@@ -67,7 +70,14 @@ export default function StepPesagens({
         )}
       </TouchableOpacity>
 
-      {ultimaCalibragem ? (
+      {!calibragemCarregada ? (
+        <View style={styles.calibragemCarregandoContainer}>
+          <ActivityIndicator size="small" color="#FF9621" />
+          <Text style={styles.calibragemCarregandoTexto}>
+            Carregando calibragem... aguarde antes de pesar.
+          </Text>
+        </View>
+      ) : ultimaCalibragem ? (
         <View style={styles.calibragemView}>
           <Text style={styles.infoText}>
             Última Calibragem: {ultimaCalibragem.timestamp.toLocaleDateString()}
@@ -76,9 +86,8 @@ export default function StepPesagens({
             {ultimaCalibragem.necessitaCalibragem ? 'Necessita nova calibragem' : 'Calibragem OK'}
           </Text>
         </View>
-      ) : (
-        <Text>Carregando dados da calibragem...</Text>
-      )}
+      ) : null}
+
       <TextInput
         style={styles.input}
         placeholder="Nome do Projeto/Cliente"
@@ -169,12 +178,18 @@ export default function StepPesagens({
       />
 
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#ff9621' }]}
+        style={[styles.button, { backgroundColor: confirmarDesabilitado ? '#ccc' : '#ff9621' }]}
         onPress={onConfirmarPesagem}
-        disabled={temporizador || todasPesagensConcluidas}
+        disabled={confirmarDesabilitado}
       >
-        <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-        <Text style={styles.buttonText}>Confirmar Pesagem</Text>
+        {!calibragemCarregada ? (
+          <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+        ) : (
+          <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+        )}
+        <Text style={styles.buttonText}>
+          {!calibragemCarregada ? 'Aguardando calibragem...' : 'Confirmar Pesagem'}
+        </Text>
       </TouchableOpacity>
 
       <TextInput
@@ -269,6 +284,14 @@ const styles = StyleSheet.create({
   bleDisconnected: { backgroundColor: '#f5f5f5', borderWidth: 1, borderColor: '#e0e0e0' },
   bleStatusText: { flex: 1, fontSize: 13, fontWeight: '600', color: '#fff' },
   blePulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.7)' },
+  calibragemCarregandoContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#FF9621',
+    borderRadius: 10, padding: 12, marginBottom: 16,
+  },
+  calibragemCarregandoTexto: {
+    flex: 1, fontSize: 13, fontWeight: '600', color: '#FF9621',
+  },
   calibragemView: { marginBottom: 20 },
   infoText: { fontSize: 16 },
   alertText: { fontSize: 16, color: 'red', fontWeight: 'bold' },
@@ -297,10 +320,6 @@ const styles = StyleSheet.create({
   amostraBtnTexto: { color: '#FFF', fontWeight: 'bold', textAlign: 'center' },
   amostraBtnTextoMenor: { color: '#FFF', fontSize: 12, textAlign: 'center' },
   historicoContainer: { marginTop: 20 },
-  historicoGrupo: { marginBottom: 15 },
-  historicoTitulo: { fontWeight: 'bold', fontSize: 18, color: '#333', marginBottom: 5 },
-  tableRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  historicoPesagemBold: { fontSize: 16, color: '#333', fontWeight: 'bold' },
   avancarBtn: {
     backgroundColor: '#E75F07', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
