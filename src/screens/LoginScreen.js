@@ -1,43 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';  // Importa a configuração do Firebase
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importa o AsyncStorage
+import { auth, db } from '../firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function LoginScreen({ navigation }) {
+const atualizarUltimoLoginEmBackground = (email) => {
+  getDocs(query(collection(db, 'users'), where('email', '==', email)))
+    .then((snap) => {
+      if (!snap.empty) {
+        updateDoc(doc(db, 'users', snap.docs[0].id), { ultimoLogin: serverTimestamp() })
+          .then(() => console.log('Último login atualizado:', new Date().toISOString()))
+          .catch((e) => console.warn('Falha ao atualizar ultimoLogin:', e.message));
+      }
+    })
+    .catch((e) => console.warn('Falha ao buscar usuário para ultimoLogin:', e.message));
+};
+
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [carregando, setCarregando] = useState(false);
+
+  const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
 
   const handleLogin = async () => {
+    setCarregando(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, senha);
       const user = userCredential.user;
 
-      // Armazenar o uid do usuário no AsyncStorage para usar offline
       await AsyncStorage.setItem('uidUsuario', user.uid);
 
-      // Consulta a coleção 'users' para obter o documento correspondente ao email do usuário
-      const usersCollectionRef = collection(db, 'users');
-      const usersQuery = query(usersCollectionRef, where("email", "==", email));
-      const querySnapshot = await getDocs(usersQuery);
+      atualizarUltimoLoginEmBackground(email);
 
-      if (!querySnapshot.empty) {
-        // Atualiza o documento do usuário com a data e hora do último login
-        const userDocRef = doc(db, 'users', querySnapshot.docs[0].id);
-        await updateDoc(userDocRef, {
-          ultimoLogin: serverTimestamp() // Utiliza serverTimestamp para garantir precisão
-        });
-
-        console.log('Último login atualizado com sucesso:', new Date().toISOString());
-      } else {
-        console.log('Usuário não encontrado na coleção "users"');
-      }
-      
-      navigation.replace('Home');
     } catch (error) {
-      const errorMessage = error.message;
-      Alert.alert("Erro de Login", errorMessage);
+      setCarregando(false);
+      Alert.alert('Erro de Login', error.message);
     }
   };
 
@@ -53,8 +52,10 @@ export default function LoginScreen({ navigation }) {
         style={styles.input}
         placeholder="Email"
         keyboardType="email-address"
+        autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
+        editable={!carregando}
       />
       <TextInput
         style={styles.input}
@@ -62,12 +63,17 @@ export default function LoginScreen({ navigation }) {
         secureTextEntry
         value={senha}
         onChangeText={setSenha}
+        editable={!carregando}
       />
       <TouchableOpacity
-        style={styles.button}
+        style={[styles.button, (!podeTentar || carregando) && styles.buttonDesabilitado]}
         onPress={handleLogin}
+        disabled={!podeTentar || carregando}
+        activeOpacity={0.8}
       >
-        <Text style={styles.buttonText}>Entrar</Text>
+        {carregando
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.buttonText}>Entrar</Text>}
       </TouchableOpacity>
     </View>
   );
@@ -98,15 +104,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 5,
-    borderWidth: 1, 
-    borderColor: '#D3D3D3', 
+    borderWidth: 1,
+    borderColor: '#D3D3D3',
   },
   button: {
     width: '100%',
-    backgroundColor: '#525659', 
+    backgroundColor: '#525659',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
+  },
+  buttonDesabilitado: {
+    backgroundColor: '#b0b0b0',
   },
   buttonText: {
     color: '#FFFFFF',
