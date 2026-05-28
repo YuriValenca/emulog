@@ -60,6 +60,7 @@ export function AuthProvider({ children }) {
   const [companyId, setCompanyId]       = useState(null);
   const [uid, setUid]                   = useState(null);
   const [role, setRole]                 = useState(null);
+  const [name, setName]                 = useState(null);
   const [deviceId, setDeviceId]         = useState(null);
   const [initializing, setInitializing] = useState(true);
   const [licenseError, setLicenseError] = useState(null);
@@ -89,6 +90,7 @@ export function AuthProvider({ children }) {
           setAuthUser(user);
           setCompanyId(null);
           setUid(null);
+          setName('Yuri - admin')
           setRole('superadmin');
           setLicenseError(null);
           return;
@@ -106,11 +108,11 @@ export function AuthProvider({ children }) {
           const did = await getOrCreateDeviceId();
           await claimLicense(db, userData.companyId, did);
         }
-
         setAuthUser(user);
         setCompanyId(userData.companyId);
         setUid(userData.uid);
         setRole(userData.role ?? 'user');
+        setName(userData.nome ?? null)
         setLicenseError(null);
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
@@ -129,6 +131,7 @@ export function AuthProvider({ children }) {
       companyId,
       uid,
       role,
+      name,
       deviceId,
       initializing,
       licenseError,
