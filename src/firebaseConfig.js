@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
 import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,12 +26,17 @@ if (!getApps().length) {
 
   db = initializeFirestore(firebaseApp, {
     experimentalForceLongPolling: true,
-    cacheSizeBytes: 1048576
+    cacheSizeBytes: 1048576,
   });
 } else {
   firebaseApp = getApps()[0];
   auth = getAuth(firebaseApp);
   db = getFirestore(firebaseApp);
 }
+
+const secondaryApp = getApps().find(a => a.name === 'secondary')
+  ?? initializeApp(firebaseConfig, 'secondary');
+
+export const secondaryAuth = getAuth(secondaryApp);
 
 export { firebaseApp, auth, db, firebaseConfig };

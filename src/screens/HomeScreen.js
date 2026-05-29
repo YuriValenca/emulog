@@ -1,35 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAppAuth } from '../context/auth';
 
 export default function HomeScreen({ navigation }) {
-  const { role, isSuperadmin, isCompanyAdmin, authUser } = useAppAuth();
-  const [userName, setUserName] = useState('');
+  const { name, role } = useAppAuth();
 
-  const isAdmin = isSuperadmin || isCompanyAdmin;
-
-  useEffect(() => {
-    if (!authUser) return;
-
-    if (isSuperadmin) {
-      setUserName('Admin Master');
-      return;
-    }
-
-    const fetchName = async () => {
-      const db = getFirestore();
-      const q = query(collection(db, 'users'), where('uid', '==', authUser.uid));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        setUserName(snap.docs[0].data().nome);
-      }
-    };
-
-    fetchName();
-  }, [authUser, isSuperadmin]);
+  const isSuperadmin = role === 'superadmin';
+  const isCompanyAdmin = role === 'companyAdmin';
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -40,43 +19,58 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {isAdmin && (
+      {isSuperadmin && (
+        <TouchableOpacity
+          style={[styles.buttonContainer, styles.superadminButton]}
+          onPress={() => navigation.navigate('SuperadminPanel')}
+        >
+          <MaterialCommunityIcons name="shield-crown" size={24} color="#FFFFFF" />
+          <Text style={styles.adminButtonText}>Painel Administrativo</Text>
+        </TouchableOpacity>
+      )}
+
+      {isCompanyAdmin && !isSuperadmin && (
         <TouchableOpacity
           style={[styles.buttonContainer, styles.adminButton]}
-          onPress={() => navigation.navigate('GerenciarUsuarios')}>
+          onPress={() => navigation.navigate('GerenciarUsuarios')}
+        >
           <MaterialCommunityIcons name="account-group" size={24} color="#FFFFFF" />
           <Text style={styles.adminButtonText}>Gerenciar Usuários</Text>
         </TouchableOpacity>
       )}
 
-      {userName ? (
+      {name ? (
         <>
           <Text style={styles.text}>Bem-vindo,</Text>
-          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userName}>{name}</Text>
         </>
       ) : (
         <Text style={styles.text}>Carregando...</Text>
       )}
 
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: "#FF9621" }]}
-        onPress={() => navigation.navigate('Calibragem')}>
+        style={[styles.buttonContainer, { backgroundColor: '#FF9621' }]}
+        onPress={() => navigation.navigate('Calibragem')}
+      >
         <Text style={styles.buttonText}>Calibragem</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: "#FF5C00" }]}
-        onPress={() => navigation.navigate('NovaAmostra')}>
+        style={[styles.buttonContainer, { backgroundColor: '#FF5C00' }]}
+        onPress={() => navigation.navigate('NovaAmostra')}
+      >
         <Text style={styles.buttonText}>Novo Projeto</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: "#505050" }]}
-        onPress={() => navigation.navigate('Historico')}>
+        style={[styles.buttonContainer, { backgroundColor: '#505050' }]}
+        onPress={() => navigation.navigate('Historico')}
+      >
         <Text style={styles.buttonText}>Histórico</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: "#1A73E8", flexDirection: 'row' }]}
-        onPress={() => navigation.navigate('ScaleConnect')}>
+        style={[styles.buttonContainer, { backgroundColor: '#1A73E8', flexDirection: 'row' }]}
+        onPress={() => navigation.navigate('ScaleConnect')}
+      >
         <MaterialCommunityIcons name="bluetooth" size={24} color="#FFFFFF" />
         <Text style={[styles.buttonText, { marginLeft: 10 }]}>Conectar Balança</Text>
       </TouchableOpacity>
@@ -135,17 +129,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#787878',
     marginTop: 20,
   },
+  superadminButton: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A2E',
+    marginTop: 20,
+    width: '70%',
+    marginBottom: 20,
+  },
   adminButton: {
     flexDirection: 'row',
     backgroundColor: '#505050',
     marginTop: 20,
     width: '70%',
+    height: 50,
     marginBottom: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 5,
   },
   adminButtonText: {
     color: '#FFFFFF',
@@ -157,5 +154,5 @@ const styles = StyleSheet.create({
     fontSize: 9,
     textAlign: 'center',
     marginTop: 16,
-  }
+  },
 });

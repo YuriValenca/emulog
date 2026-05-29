@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   getFirestore, collection, query, where,
-  getDocs, doc, getDoc, updateDoc, runTransaction,
+  getDocs, doc, getDoc, runTransaction,
 } from 'firebase/firestore';
 import { getOrCreateDeviceId } from '../deviceId';
 
@@ -56,14 +56,14 @@ async function claimLicense(db, companyId, deviceId) {
 }
 
 export function AuthProvider({ children }) {
-  const [authUser, setAuthUser]         = useState(null);
-  const [companyId, setCompanyId]       = useState(null);
-  const [uid, setUid]                   = useState(null);
-  const [role, setRole]                 = useState(null);
-  const [name, setName]                 = useState(null);
-  const [deviceId, setDeviceId]         = useState(null);
-  const [initializing, setInitializing] = useState(true);
-  const [licenseError, setLicenseError] = useState(null);
+  const [authUser, setAuthUser]       = useState(null);
+  const [authStatus, setAuthStatus]   = useState('loading');
+  const [debugError, setDebugError]   = useState(null);
+  const [companyId, setCompanyId]     = useState(null);
+  const [uid, setUid]                 = useState(null);
+  const [role, setRole]               = useState(null);
+  const [name, setName]               = useState(null);
+  const [deviceId, setDeviceId]       = useState(null);
 
   const db = getFirestore();
 
@@ -82,25 +82,26 @@ export function AuthProvider({ children }) {
           setCompanyId(null);
           setUid(null);
           setRole(null);
-          setLicenseError(null);
+          setName(null);
+          setDebugError(null);
+          setAuthStatus('unauthenticated');
           return;
         }
 
         if (user.uid === SUPERADMIN_UID) {
           setAuthUser(user);
           setCompanyId(null);
-          setUid(null);
-          setName('Yuri - admin')
+          setUid(user.uid);
+          setName('Yuri - admin');
           setRole('superadmin');
-          setLicenseError(null);
+          setDebugError(null);
+          setAuthStatus('authenticated');
           return;
         }
 
         const userData = await fetchUserData(db, user.uid);
 
-        if (!userData.companyId) {
-          throw new Error('company-not-assigned');
-        }
+        if (!userData.companyId) throw new Error('company-not-assigned');
 
         const companyData = await fetchCompanyData(db, userData.companyId);
 
@@ -108,17 +109,29 @@ export function AuthProvider({ children }) {
           const did = await getOrCreateDeviceId();
           await claimLicense(db, userData.companyId, did);
         }
+
         setAuthUser(user);
         setCompanyId(userData.companyId);
         setUid(userData.uid);
         setRole(userData.role ?? 'user');
-        setName(userData.nome ?? null)
-        setLicenseError(null);
+        setName(userData.nome ?? null);
+        setDebugError(null);
+        setAuthStatus('authenticated');
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
-        setLicenseError(e.message);
-      } finally {
-        setInitializing(false);
+        setDebugError(e.message);
+
+        if (e.message === 'no-license') {
+          setAuthStatus('no-license');
+        } else if (
+          e.message === 'user-not-found' ||
+          e.message === 'company-not-found' ||
+          e.message === 'company-not-assigned'
+        ) {
+          setAuthStatus('config-error');
+        } else {
+          setAuthStatus('error');
+        }
       }
     });
 
@@ -128,13 +141,13 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       authUser,
+      authStatus,
+      debugError,
       companyId,
       uid,
       role,
       name,
       deviceId,
-      initializing,
-      licenseError,
       isSuperadmin: role === 'superadmin',
       isCompanyAdmin: role === 'companyAdmin',
     }}>

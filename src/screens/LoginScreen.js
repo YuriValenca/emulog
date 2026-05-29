@@ -5,8 +5,8 @@ import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } fr
 import { auth, db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const atualizarUltimoLoginEmBackground = (email) => {
-  getDocs(query(collection(db, 'users'), where('email', '==', email)))
+const atualizarUltimoLoginEmBackground = (uid) => {
+  getDocs(query(collection(db, 'users'), where('uid', '==', uid)))
     .then((snap) => {
       if (!snap.empty) {
         updateDoc(doc(db, 'users', snap.docs[0].id), { ultimoLogin: serverTimestamp() })
@@ -15,6 +15,15 @@ const atualizarUltimoLoginEmBackground = (email) => {
       }
     })
     .catch((e) => console.warn('Falha ao buscar usuário para ultimoLogin:', e.message));
+};
+
+const ERROS_LOGIN = {
+  'auth/invalid-email':           'Insira um e-mail válido.',
+  'auth/invalid-credential':      'E-mail ou senha incorretos.',
+  'auth/user-not-found':          'Usuário não encontrado.',
+  'auth/wrong-password':          'Senha incorreta.',
+  'auth/network-request-failed':  'Sem conexão com a internet. Verifique sua rede e tente novamente.',
+  'auth/too-many-requests':       'Muitas tentativas. Aguarde alguns minutos.',
 };
 
 export default function LoginScreen() {
@@ -27,16 +36,14 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setCarregando(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), senha);
       const user = userCredential.user;
-
       await AsyncStorage.setItem('uidUsuario', user.uid);
-
-      atualizarUltimoLoginEmBackground(email);
-
+      atualizarUltimoLoginEmBackground(user.uid);
     } catch (error) {
+      Alert.alert('Erro de Login', ERROS_LOGIN[error.code] ?? error.message);
+    } finally {
       setCarregando(false);
-      Alert.alert('Erro de Login', error.message);
     }
   };
 
