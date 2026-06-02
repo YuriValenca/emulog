@@ -219,7 +219,8 @@ export default function GerenciarUsuarios() {
   const scrollToTop = () => scrollViewRef.current?.scrollTo({ y: 0, animated: true });
 
   const usuariosFiltrados = usuarios
-  .filter(u =>u.nome?.toLowerCase().includes(termoBuscaUsuario.toLowerCase()));
+    .filter(u => u.nome?.toLowerCase().includes(termoBuscaUsuario.toLowerCase()))
+    .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
 
   const caminhoesFiltrados = caminhoes
   .filter(c => c.placa?.toLowerCase().includes(termoBuscaCaminhao.toLowerCase()));
@@ -227,6 +228,13 @@ export default function GerenciarUsuarios() {
   const operadoresFiltrados = operadores
     .filter(o => o.nome?.toLowerCase().includes(termoBuscaOperador.toLowerCase()))
     .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
+  
+  const formatarData = (valor) => {
+    if (!valor) return 'Não logado';
+    if (valor?.seconds) return new Date(valor.seconds * 1000).toLocaleString('pt-BR');
+    if (typeof valor === 'string') return new Date(valor).toLocaleString('pt-BR');
+    return 'Não disponível';
+  };
 
   return (
     <ScrollView
@@ -284,7 +292,7 @@ export default function GerenciarUsuarios() {
                 <Text style={styles.cardNome}>{usuario.nome}</Text>
                 <Text style={styles.cardSub}>{usuario.email}</Text>
                 <Text style={styles.cardMeta}>
-                  Último login: {usuario.ultimoLogin ? new Date(usuario.ultimoLogin).toLocaleString() : 'Não disponível'}
+                  Último login: {formatarData(usuario.ultimoLogin)}
                 </Text>
               </View>
               {usuario.uid !== currentUserUid && (
