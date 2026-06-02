@@ -244,6 +244,33 @@ export default function SuperadminPanel() {
     }
   };
 
+  const handleSalvarUsuario = async (userData) => {
+    setSaving(true);
+    try {
+      const userRef = doc(db, 'users', userData.id);
+      await updateDoc(userRef, {
+        nome: userData.nome,
+        email: userData.email,
+        role: userData.role,
+      });
+
+      setUsers(prev =>
+        prev.map(u =>
+          u.id === userData.id
+            ? { ...u, nome: userData.nome, email: userData.email, role: userData.role }
+            : u
+        )
+      );
+
+      Alert.alert('Sucesso', 'Usuário atualizado com sucesso.');
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Erro', 'Não foi possível atualizar o usuário.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleExcluirUsuario = async (user) => {
     Alert.alert('Remover Usuário', `Deseja permanentemente excluir o acesso de ${user.nome}?`, [
       { text: 'Cancelar', style: 'cancel' },
@@ -269,7 +296,6 @@ export default function SuperadminPanel() {
   }, [companies, licenseCompanyFilter]);
 
   const dashStats = useMemo(() => {
-    console.log(licenses)
     return {
       totalCompanies: companies.length,
       activeCompanies: companies.filter(c => c.active || c.founding).length,
@@ -349,6 +375,7 @@ export default function SuperadminPanel() {
             users={users}
             companies={companies}
             onAddPress={() => setModalUsuarioVisivel(true)}
+            onSaveEdit={handleSalvarUsuario}
             onDeletePress={handleExcluirUsuario}
           />
         )}
