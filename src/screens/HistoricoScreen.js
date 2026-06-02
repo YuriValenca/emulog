@@ -5,17 +5,10 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
-import ScrollToTopButton from './ScrollToTopButton';
 import NetInfo from '@react-native-community/netinfo';
 import { useAppAuth } from '../context/auth';
 import { db } from '../firebaseConfig';
@@ -28,24 +21,25 @@ export default function HistoricoScreen() {
 
   const [ordem, setOrdem] = useState('recente');
   const [busca, setBusca] = useState('');
+  const [buscaInput, setBuscaInput] = useState('');
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalFiltrado, setTotalFiltrado] = useState(0);
 
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
   const [isLoadingPagina, setIsLoadingPagina] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [modalErroVisivel, setModalErroVisivel] = useState(false);
   const [erroLogs, setErroLogs] = useState('');
 
-  const cursoresRef = useRef({});
   const offlineRef = useRef([]);
+  const flatListRef = useRef(null);
+  const debounceRef = useRef(null);
 
   const navigation = useNavigation();
   const { uid, role, companyId } = useAppAuth();
-  const flatListRef = useRef(null);
 
   const getTimestamp = (dataCriacao) => {
     if (dataCriacao?.seconds) return dataCriacao.seconds * 1000;
+    if (dataCriacao?._seconds) return dataCriacao._seconds * 1000;
     if (typeof dataCriacao === 'string') return new Date(dataCriacao).getTime();
     return 0;
   };
@@ -54,6 +48,8 @@ export default function HistoricoScreen() {
     let date;
     if (dataCriacao?.seconds) {
       date = new Date(dataCriacao.seconds * 1000);
+    } else if (dataCriacao?._seconds) {
+      date = new Date(dataCriacao._seconds * 1000);
     } else if (typeof dataCriacao === 'string') {
       date = new Date(dataCriacao);
     } else {
@@ -73,20 +69,21 @@ export default function HistoricoScreen() {
     setModalErroVisivel(true);
   };
 
-  const buildBaseQuery = () => {
-    const ref = collection(db, 'projetos');
-    if (role === 'superadmin') {
-      return query(ref);
-    }
-    if (role === 'company_admin') {
-      return query(ref, where('companyId', '==', companyId));
-    }
-    return query(ref, where('uidUsuario', '==', uid));
+  const handleBusca = (text) => {
+    setBuscaInput(text);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setBusca(text), 300);
+  };
+
+  const buildMetaQuery = () => {
+    const ref = collection(db, 'projetos_meta');
+    if (role === 'superadmin') return query(ref, orderBy('dataCriacao', 'desc'));
+    if (role === 'company_admin') return query(ref, where('companyId', '==', companyId), orderBy('dataCriacao', 'desc'));
+    return query(ref, where('uidUsuario', '==', uid), orderBy('dataCriacao', 'desc'));
   };
 
   const buscarMetadados = useCallback(async () => {
     setIsLoadingMeta(true);
-    cursoresRef.current = {};
 
     let metaOffline = [];
     let metaOnline = [];
@@ -108,19 +105,22 @@ export default function HistoricoScreen() {
     const state = await NetInfo.fetch();
     if (state.isConnected) {
       try {
-        const snap = await getDocs(buildBaseQuery());
+        const snap = await getDocs(buildMetaQuery());
         const idsOffline = new Set(metaOffline.map(p => p.id));
 
         metaOnline = snap.docs
           .filter(d => !idsOffline.has(d.id))
-          .map(d => ({
-            id: d.id,
-            nomeProjeto: d.data().nomeProjeto,
-            dataCriacao: d.data().dataCriacao,
-            origem: 'online',
-          }));
+          .map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              nomeProjeto: data.nomeProjeto,
+              dataCriacao: data.dataCriacao,
+              origem: 'online',
+            };
+          });
       } catch (e) {
-        logErro(`Erro ao buscar online: ${e.message}`);
+        logErro(`Erro ao buscar metadados: ${e.message}`);
       }
     }
 
@@ -158,7 +158,6 @@ export default function HistoricoScreen() {
   }, [metadataFiltrada]);
 
   useEffect(() => {
-    cursoresRef.current = {};
     setPaginaAtual(1);
   }, [busca, ordem]);
 
@@ -169,35 +168,29 @@ export default function HistoricoScreen() {
     const fim = inicio + PROJETOS_POR_PAGINA;
     const metaPagina = metadataFiltrada.slice(inicio, fim);
 
-    const idsOnline = metaPagina
-      .filter(m => m.origem === 'online')
-      .map(m => m.id);
+    const idsOnline = metaPagina.filter(m => m.origem === 'online').map(m => m.id);
+    const idsOfflinePagina = metaPagina.filter(m => m.origem === 'offline').map(m => m.id);
 
-    const idsOfflinePagina = metaPagina
-      .filter(m => m.origem === 'offline')
-      .map(m => m.id);
-
-    const projetosOffline = offlineRef.current
-      .filter(p => idsOfflinePagina.includes(p.id));
+    const projetosOffline = offlineRef.current.filter(p => idsOfflinePagina.includes(p.id));
 
     let projetosOnline = [];
     const state = await NetInfo.fetch();
 
     if (state.isConnected && idsOnline.length > 0) {
       try {
-        const q = query(
-          collection(db, 'projetos'),
-          where('__name__', 'in', idsOnline)
+        const snap = await getDocs(
+          query(collection(db, 'projetos'), where('__name__', 'in', idsOnline))
         );
-        const snap = await getDocs(q);
         projetosOnline = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       } catch (e) {
         logErro(`Erro ao buscar página ${pagina}: ${e.message}`);
       }
     }
 
-    const todosCompletos = [...projetosOffline, ...projetosOnline];
-    const mapa = Object.fromEntries(todosCompletos.map(p => [p.id, p]));
+    const mapa = Object.fromEntries(
+      [...projetosOffline, ...projetosOnline].map(p => [p.id, p])
+    );
+
     const ordenados = metaPagina
       .map(m => mapa[m.id])
       .filter(Boolean)
@@ -209,7 +202,7 @@ export default function HistoricoScreen() {
     setProjetosDaPagina(ordenados);
     setIsLoadingPagina(false);
     flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
-  }, [metadataFiltrada, db]);
+  }, [metadataFiltrada]);
 
   useEffect(() => {
     if (!isLoadingMeta) {
@@ -223,19 +216,14 @@ export default function HistoricoScreen() {
   };
 
   const gerarNumerosPaginas = () => {
-    if (totalPaginas < 7) {
-      return Array.from({ length: totalPaginas }, (_, i) => i + 1);
-    }
-    if (paginaAtual < 4) {
-      return [1, 2, 3, 4, '...', totalPaginas];
-    }
+    if (totalPaginas < 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1);
+    if (paginaAtual < 4) return [1, 2, 3, 4, '...', totalPaginas];
     if (paginaAtual > totalPaginas - 3) {
       return [1, '...', totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
     }
     return [1, '...', paginaAtual - 1, paginaAtual, paginaAtual + 1, '...', totalPaginas];
   };
 
-  const handleScroll = (e) => setShowScrollButton(e.nativeEvent.contentOffset.y > 200);
   const scrollToTop = () => flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
 
   if (isLoadingMeta) {
@@ -256,8 +244,8 @@ export default function HistoricoScreen() {
         <TextInput
           style={styles.filtroInput}
           placeholder="Buscar por nome"
-          value={busca}
-          onChangeText={setBusca}
+          value={buscaInput}
+          onChangeText={handleBusca}
           returnKeyType="search"
           clearButtonMode="while-editing"
         />
@@ -306,7 +294,6 @@ export default function HistoricoScreen() {
               </TouchableOpacity>
             </View>
           )}
-          onScroll={handleScroll}
           scrollEventThrottle={16}
           ListEmptyComponent={
             <View style={styles.vazioContainer}>
@@ -357,8 +344,6 @@ export default function HistoricoScreen() {
         />
       )}
 
-      {showScrollButton && <ScrollToTopButton onPress={scrollToTop} />}
-
       <Modal
         animationType="slide"
         transparent
@@ -384,7 +369,7 @@ export default function HistoricoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#FFF', paddingTop: 72, paddingBottom: 64 },
+  container: { flex: 1, padding: 16, backgroundColor: '#FFF', paddingTop: 72, paddingBottom: 12 },
 
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingPaginaContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 40 },
