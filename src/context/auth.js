@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
-  getFirestore, collection, query, where,
+  collection, query, where,
   getDocs, doc, getDoc, runTransaction,
 } from 'firebase/firestore';
+import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
 
 const SUPERADMIN_UID = process.env.EXPO_PUBLIC_ADMIN_UUID;
@@ -16,20 +17,20 @@ export function useAppAuth() {
   return ctx;
 }
 
-async function fetchUserData(db, uid) {
+async function fetchUserData(uid) {
   const q = query(collection(db, 'users'), where('uid', '==', uid));
   const snap = await getDocs(q);
   if (snap.empty) throw new Error('user-not-found');
   return snap.docs[0].data();
 }
 
-async function fetchCompanyData(db, companyId) {
+async function fetchCompanyData(companyId) {
   const snap = await getDoc(doc(db, 'companies', companyId));
   if (!snap.exists()) throw new Error('company-not-found');
   return snap.data();
 }
 
-async function claimLicense(db, companyId, deviceId) {
+async function claimLicense(companyId, deviceId) {
   const licensesRef = collection(db, 'companies', companyId, 'licenses');
 
   const claimedQ = query(licensesRef, where('deviceId', '==', deviceId), where('status', '==', 'active'));
@@ -56,16 +57,14 @@ async function claimLicense(db, companyId, deviceId) {
 }
 
 export function AuthProvider({ children }) {
-  const [authUser, setAuthUser]       = useState(null);
-  const [authStatus, setAuthStatus]   = useState('loading');
-  const [debugError, setDebugError]   = useState(null);
-  const [companyId, setCompanyId]     = useState(null);
-  const [uid, setUid]                 = useState(null);
-  const [role, setRole]               = useState(null);
-  const [name, setName]               = useState(null);
-  const [deviceId, setDeviceId]       = useState(null);
-
-  const db = getFirestore();
+  const [authUser, setAuthUser]     = useState(null);
+  const [authStatus, setAuthStatus] = useState('loading');
+  const [debugError, setDebugError] = useState(null);
+  const [companyId, setCompanyId]   = useState(null);
+  const [uid, setUid]               = useState(null);
+  const [role, setRole]             = useState(null);
+  const [name, setName]             = useState(null);
+  const [deviceId, setDeviceId]     = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -99,15 +98,15 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        const userData = await fetchUserData(db, user.uid);
+        const userData = await fetchUserData(user.uid);
 
         if (!userData.companyId) throw new Error('company-not-assigned');
 
-        const companyData = await fetchCompanyData(db, userData.companyId);
+        const companyData = await fetchCompanyData(userData.companyId);
 
         if (!companyData.founding) {
           const did = await getOrCreateDeviceId();
-          await claimLicense(db, userData.companyId, did);
+          await claimLicense(userData.companyId, did);
         }
 
         setAuthUser(user);
@@ -149,7 +148,7 @@ export function AuthProvider({ children }) {
       name,
       deviceId,
       isSuperadmin: role === 'superadmin',
-      isCompanyAdmin: role === 'companyAdmin',
+      isCompanyAdmin: role === 'company_admin',
     }}>
       {children}
     </AuthContext.Provider>
