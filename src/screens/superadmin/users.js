@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function AbaUsuarios({ users, companies, onAddPress, onDeletePress }) {
+export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, onDeletePress }) {
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [isDropOpen, setIsDropOpen] = useState(false);
   const [busca, setBusca] = useState('');
+  
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [editNome, setEditNome] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState('user');
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId);
 
@@ -23,6 +28,35 @@ export default function AbaUsuarios({ users, companies, onAddPress, onDeletePres
   const handleSelectCompany = (id) => {
     setSelectedCompanyId(id);
     setIsDropOpen(false);
+  };
+
+  const startEditing = (user) => {
+    setEditingUserId(user.id);
+    setEditNome(user.nome || '');
+    setEditEmail(user.email || '');
+    setEditRole(user.role || 'user');
+  };
+
+  const cancelEditing = () => {
+    setEditingUserId(null);
+  };
+
+  const handleSave = (userId) => {
+    if (onSaveEdit) {
+      onSaveEdit({
+        id: userId,
+        nome: editNome,
+        email: editEmail,
+        role: editRole,
+      });
+    }
+    setEditingUserId(null);
+  };
+
+  const roleLabel = (role) => {
+    if (role === 'company_admin') return 'Company Admin';
+    if (role === 'superadmin') return 'Superadmin';
+    return 'User';
   };
 
   return (
@@ -102,21 +136,77 @@ export default function AbaUsuarios({ users, companies, onAddPress, onDeletePres
 
       <Text style={styles.resumo}>{sortedUsers.length} usuário(s) localizado(s)</Text>
 
-      {sortedUsers.map(u => (
-        <View key={u.id} style={styles.card}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardNome}>{u.nome || '—'}</Text>
-            <Text style={styles.cardSub}>{u.email}</Text>
-            <Text style={styles.cardMeta}>
-              Regra: <Text style={{ fontWeight: '600' }}>{u.role || 'user'}</Text> · {companies.find(c => c.id === u.companyId)?.name || 'Organização não identificada'}
-            </Text>
+      {sortedUsers.map(u => {
+        const isEditing = editingUserId === u.id;
+
+        return (
+          <View key={u.id} style={styles.card}>
+            {isEditing ? (
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.editInput}
+                  value={editNome}
+                  onChangeText={setEditNome}
+                  placeholder="Nome"
+                />
+                <TextInput
+                  style={styles.editInput}
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  placeholder="Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                
+                <View style={styles.roleContainer}>
+                  <Text style={styles.roleLabel}>Regra:</Text>
+                  <TouchableOpacity 
+                    style={[styles.roleOption, editRole === 'user' && styles.roleOptionActive]} 
+                    onPress={() => setEditRole('user')}
+                  >
+                    <Text style={[styles.roleOptionText, editRole === 'user' && styles.roleOptionTextActive]}>User</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.roleOption, editRole === 'company_admin' && styles.roleOptionActive]} 
+                    onPress={() => setEditRole('company_admin')}
+                  >
+                    <Text style={[styles.roleOptionText, editRole === 'company_admin' && styles.roleOptionTextActive]}>Company Admin</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.editActions}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={cancelEditing}>
+                    <Text style={styles.cancelBtnText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveBtn} onPress={() => handleSave(u.id)}>
+                    <Text style={styles.saveBtnText}>Salvar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardNome}>{u.nome || '—'}</Text>
+                  <Text style={styles.cardSub}>{u.email}</Text>
+                  <Text style={styles.cardMeta}>
+                    Regra: <Text style={{ fontWeight: '600' }}>{roleLabel(u.role)}</Text> · {companies.find(c => c.id === u.companyId)?.name || 'Organização não identificada'}
+                  </Text>
+                </View>
+                
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity style={styles.editBtn} onPress={() => startEditing(u)} activeOpacity={0.8}>
+                    <Ionicons name="create-outline" size={18} color="#E75F07" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => onDeletePress(u)} activeOpacity={0.8}>
+                    <Ionicons name="trash-outline" size={18} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
-          
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => onDeletePress(u)} activeOpacity={0.8}>
-            <Ionicons name="trash-outline" size={18} color="#f44336" />
-          </TouchableOpacity>
-        </View>
-      ))}
+        );
+      })}
 
       {sortedUsers.length === 0 && (
         <Text style={styles.vazio}>Nenhum usuário correspondente aos filtros foi localizado.</Text>
@@ -147,6 +237,20 @@ const styles = StyleSheet.create({
   cardNome: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
   cardSub: { fontSize: 13, color: '#666', marginBottom: 6 },
   cardMeta: { fontSize: 12, color: '#999' },
-  deleteBtn: { padding: 8, marginLeft: 8 },
-  vazio: { textAlign: 'center', color: '#999', fontSize: 14, marginTop: 24 }
+  actionButtonsContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  editBtn: { padding: 8 },
+  deleteBtn: { padding: 8 },
+  vazio: { textAlign: 'center', color: '#999', fontSize: 14, marginTop: 24 },
+  editInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#333', marginBottom: 8, backgroundColor: '#fafafa' },
+  roleContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 12 },
+  roleLabel: { fontSize: 13, color: '#666', marginRight: 10 },
+  roleOption: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: '#ccc', marginRight: 8 },
+  roleOptionActive: { backgroundColor: '#E75F07', borderColor: '#E75F07' },
+  roleOptionText: { fontSize: 12, color: '#555' },
+  roleOptionTextActive: { color: '#fff', fontWeight: '600' },
+  editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
+  cancelBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
+  cancelBtnText: { color: '#666', fontSize: 13, fontWeight: '500' },
+  saveBtn: { backgroundColor: '#E75F07', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 6 },
+  saveBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' }
 });
