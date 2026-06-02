@@ -8,7 +8,7 @@ export default function HomeScreen({ navigation }) {
   const { name, role } = useAppAuth();
 
   const isSuperadmin = role === 'superadmin';
-  const isCompanyAdmin = role === 'companyAdmin';
+  const isCompanyAdmin = role === 'company_admin';
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -141,7 +141,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#505050',
     marginTop: 20,
     width: '70%',
-    height: 50,
     marginBottom: 20,
   },
   adminButtonText: {

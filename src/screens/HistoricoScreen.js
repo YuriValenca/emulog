@@ -18,6 +18,7 @@ import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
 import NetInfo from '@react-native-community/netinfo';
 import { useAppAuth } from '../context/auth';
+import { db } from '../firebaseConfig';
 
 const PROJETOS_POR_PAGINA = 20;
 
@@ -42,7 +43,6 @@ export default function HistoricoScreen() {
   const navigation = useNavigation();
   const { uid, role, companyId } = useAppAuth();
   const flatListRef = useRef(null);
-  const db = getFirestore();
 
   const getTimestamp = (dataCriacao) => {
     if (dataCriacao?.seconds) return dataCriacao.seconds * 1000;
@@ -74,12 +74,11 @@ export default function HistoricoScreen() {
   };
 
   const buildBaseQuery = () => {
-    console.log('uid', uid)
     const ref = collection(db, 'projetos');
     if (role === 'superadmin') {
       return query(ref);
     }
-    if (role === 'companyAdmin') {
+    if (role === 'company_admin') {
       return query(ref, where('companyId', '==', companyId));
     }
     return query(ref, where('uidUsuario', '==', uid));
