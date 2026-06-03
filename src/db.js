@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { db } from './firebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 import { Alert } from 'react-native';
 
 export const saveProjectOffline = async (project) => {
@@ -60,7 +60,13 @@ export const syncProjects = async () => {
 
     for (const project of offlineProjects) {
       console.log('[sync] companyId on project being synced:', project.companyId);
-      await addDoc(collection(db, 'projetos'), project);
+      const docRef = await addDoc(collection(db, 'projetos'), project);
+      await setDoc(doc(db, 'projetos_meta', docRef.id), {
+        nomeProjeto: project.nomeProjeto,
+        dataCriacao: project.dataCriacao,
+        uidUsuario: project.uidUsuario,
+        companyId: project.companyId,
+      });
       await removeOfflineProject(project._localId);
       console.log('Projeto sincronizado com Firestore:', project);
     }
