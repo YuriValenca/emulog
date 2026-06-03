@@ -4,7 +4,7 @@ import {
   ScrollView, Modal, Alert, StatusBar,
 } from 'react-native';
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -315,7 +315,13 @@ function NovaAmostraScreenInner() {
       const connectionState = await NetInfo.fetch();
       if (connectionState.isConnected) {
         try {
-          await addDoc(collection(db, 'projetos'), dadosDoProjeto);
+          const docRef = await addDoc(collection(db, 'projetos'), dadosDoProjeto);
+          await setDoc(doc(db, 'projetos_meta', docRef.id), {
+            nomeProjeto: dadosDoProjeto.nomeProjeto,
+            dataCriacao: dadosDoProjeto.dataCriacao,
+            uidUsuario: dadosDoProjeto.uidUsuario,
+            companyId: dadosDoProjeto.companyId,
+          });
           Alert.alert("Sucesso", "Projeto salvo com sucesso!");
           resetarFormulario();
           limparEstadoDoProjeto();
