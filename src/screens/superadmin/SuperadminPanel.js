@@ -27,7 +27,7 @@ function formatDate(value) {
 }
 
 function generateXplogKey() {
-  const code = 'XXXXX-XXXXX-XXXXX-XXXXX'.replace(/X/g, () => 
+  const code = 'XXXXX-XXXXX-XXXXX-XXXXX'.replace(/X/g, () =>
     Math.random().toString(36).substring(2, 3).toUpperCase()
   );
   return `XPLOG-${code}`;
@@ -47,6 +47,7 @@ export default function SuperadminPanel() {
   const [modalLicencaVisivel, setModalLicencaVisivel] = useState(false);
   const [modalUsuarioVisivel, setModalUsuarioVisivel] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [licenseToRenew, setLicenseToRenew] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const carregarTudo = useCallback(async () => {
@@ -62,13 +63,24 @@ export default function SuperadminPanel() {
       setUsers(snapU.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const allLicenses = [];
+
       await Promise.all(
         companiesData.map(async (c) => {
           const snapL = await getDocs(collection(db, 'companies', c.id, 'licenses'));
           snapL.docs.forEach(d => allLicenses.push({ id: d.id, companyId: c.id, companyName: c.name, ...d.data() }));
         })
       );
-      setLicenses(allLicenses);
+
+      const agora = new Date();
+
+      const allLicensesNormalizadas = allLicenses.map(l => {
+        if (l.status !== 'active') return l;
+        const exp = l.expiresAt?.seconds ? new Date(l.expiresAt.seconds * 1000) : null;
+        if (exp && exp < agora) return { ...l, status: 'expired' };
+        return l;
+      });
+
+      setLicenses(allLicensesNormalizadas);
 
       if (!licenseCompanyFilter && companiesData.length > 0) {
         const initialCompany = companiesData.find(c => c.name !== 'Explog');
@@ -129,17 +141,13 @@ export default function SuperadminPanel() {
       Alert.alert('Erro', 'Não foi possível atualizar o status.');
     }
   };
-  
+
   const handleProcessarGeracaoLote = async (quantidade, mesesValidade) => {
     if (!licenseCompanyFilter) return;
     setSaving(true);
 
     try {
       const targetSubcollection = collection(db, 'companies', licenseCompanyFilter, 'licenses');
-      
-      const expDate = new Date();
-      expDate.setMonth(expDate.getMonth() + mesesValidade);
-      const expiresAtTimestamp = Timestamp.fromDate(expDate);
       const novasLicencasLocais = [];
 
       const promessas = Array.from({ length: quantidade }).map(async () => {
@@ -148,7 +156,8 @@ export default function SuperadminPanel() {
           key: novaChave,
           status: 'available',
           createdAt: Timestamp.now(),
-          expiresAt: expiresAtTimestamp,
+          expiresAt: null,
+          validityMonths: mesesValidade,
           deviceId: null,
         };
 
@@ -164,11 +173,38 @@ export default function SuperadminPanel() {
       await Promise.all(promessas);
       setLicenses(prev => [...prev, ...novasLicencasLocais]);
 
-      Alert.alert('Sucesso', `${quantidade} licença(s) gerada(s) com validade de ${mesesValidade} meses.`);
+      const validadeLabel = mesesValidade === '1min' ? '1 minuto (teste)' : `${mesesValidade} meses`;
+      Alert.alert('Sucesso', `${quantidade} licença(s) gerada(s). O prazo de ${validadeLabel} começará a contar a partir da primeira ativação.`);
       setModalLicencaVisivel(false);
     } catch (e) {
       console.error(e);
       Alert.alert('Erro', 'Houve uma falha ao gerar o lote de licenças.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRenewLicense = async (license, mesesValidade) => {
+    setSaving(true);
+    try {
+      const licenseRef = doc(db, 'companies', license.companyId, 'licenses', license.id);
+      await updateDoc(licenseRef, {
+        status: 'available',
+        expiresAt: null,
+        validityMonths: mesesValidade,
+        deviceId: null,
+      });
+      setLicenses(prev => prev.map(l =>
+        l.id === license.id
+          ? { ...l, status: 'available', expiresAt: null, validityMonths: mesesValidade, deviceId: null }
+          : l
+      ));
+      Alert.alert('Sucesso', 'Licença renovada. O novo prazo começará a contar a partir da próxima ativação.');
+      setLicenseToRenew(null);
+      setModalLicencaVisivel(false);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Erro', 'Não foi possível renovar a licença.');
     } finally {
       setSaving(false);
     }
@@ -184,8 +220,7 @@ export default function SuperadminPanel() {
           try {
             const licenseRef = doc(db, 'companies', license.companyId, 'licenses', license.id);
             await updateDoc(licenseRef, { status: 'revoked' });
-
-            setLicenses(prev => prev.map(l => 
+            setLicenses(prev => prev.map(l =>
               l.id === license.id ? { ...l, status: 'revoked' } : l
             ));
           } catch (e) {
@@ -206,7 +241,6 @@ export default function SuperadminPanel() {
           try {
             const licenseRef = doc(db, 'companies', license.companyId, 'licenses', license.id);
             await deleteDoc(licenseRef);
-
             setLicenses(prev => prev.filter(l => l.id !== license.id));
           } catch (e) {
             Alert.alert('Erro', 'Não foi possível remover a licença.');
@@ -363,9 +397,10 @@ export default function SuperadminPanel() {
             licenses={licenses}
             filteredFilterId={licenseCompanyFilter}
             onSetFilterId={setLicenseCompanyFilter}
-            onGeneratePress={() => setModalLicencaVisivel(true)}
+            onGeneratePress={() => { setLicenseToRenew(null); setModalLicencaVisivel(true); }}
             onRevokePress={handleRevokeLicense}
             onRemovePress={handleRemoveLicense}
+            onRenewPress={(l) => { setLicenseToRenew(l); setModalLicencaVisivel(true); }}
             formatDate={formatDate}
           />
         )}
@@ -392,8 +427,10 @@ export default function SuperadminPanel() {
       <ModalGerarLicencas
         visible={modalLicencaVisivel}
         companyName={empresaFiltradaNome}
-        onClose={() => setModalLicencaVisivel(false)}
+        licenseToRenew={licenseToRenew}
+        onClose={() => { setModalLicencaVisivel(false); setLicenseToRenew(null); }}
         onSave={handleProcessarGeracaoLote}
+        onRenew={handleRenewLicense}
         saving={saving}
       />
 
