@@ -22,6 +22,7 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
   });
 
   const sortedUsers = filteredUsers
+    .filter((user) => user.role !== "superadmin")
     .slice()
     .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
 
