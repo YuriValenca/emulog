@@ -41,9 +41,8 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('uidUsuario', user.uid);
       atualizarUltimoLoginEmBackground(user.uid);
     } catch (error) {
-      Alert.alert('Erro de Login', ERROS_LOGIN[error.code] ?? error.message);
-    } finally {
       setCarregando(false);
+      Alert.alert('Erro de Login', ERROS_LOGIN[error.code] ?? error.message);
     }
   };
 
