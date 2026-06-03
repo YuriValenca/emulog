@@ -3,6 +3,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   collection, query, where,
   getDocs, doc, getDoc, runTransaction,
+  updateDoc, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
@@ -30,18 +31,44 @@ async function fetchCompanyData(companyId) {
   return snap.data();
 }
 
+function computeExpiryDate(validityMonths) {
+  const expDate = new Date();
+  if (validityMonths === '1min') {
+    expDate.setMinutes(expDate.getMinutes() + 1);
+  } else {
+    expDate.setMonth(expDate.getMonth() + Number(validityMonths));
+  }
+  return expDate;
+}
+
 async function claimLicense(companyId, deviceId) {
   const licensesRef = collection(db, 'companies', companyId, 'licenses');
 
   const claimedQ = query(licensesRef, where('deviceId', '==', deviceId), where('status', '==', 'active'));
   const claimedSnap = await getDocs(claimedQ);
-  if (!claimedSnap.empty) return;
+
+  if (!claimedSnap.empty) {
+    const licenca = claimedSnap.docs[0];
+    const expiresAt = licenca.data()?.expiresAt;
+    const agora = new Date();
+    const expirou = expiresAt && new Date(expiresAt.seconds * 1000) < agora;
+
+    if (expirou) {
+      await updateDoc(licenca.ref, { status: 'expired' });
+    } else {
+      return;
+    }
+  }
 
   const availableQ = query(licensesRef, where('status', '==', 'available'));
   const availableSnap = await getDocs(availableQ);
   if (availableSnap.empty) throw new Error('no-license');
 
   const licenseRef = availableSnap.docs[0].ref;
+  const licenseData = availableSnap.docs[0].data();
+
+  const validityMonths = licenseData.validityMonths ?? 12;
+  const expiresAt = Timestamp.fromDate(computeExpiryDate(validityMonths));
 
   await runTransaction(db, async (tx) => {
     const freshSnap = await tx.get(licenseRef);
@@ -52,6 +79,7 @@ async function claimLicense(companyId, deviceId) {
       deviceId,
       status: 'active',
       claimedAt: new Date().toISOString(),
+      expiresAt,
     });
   });
 }
