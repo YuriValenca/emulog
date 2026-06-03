@@ -7,7 +7,7 @@ function StatusBadge({ status }) {
     available: { label: 'Disponível', bg: '#e8f5e9', color: '#2e7d32' },
     active:    { label: 'Ativa',      bg: '#e3f2fd', color: '#1565c0' },
     revoked:   { label: 'Revogada',   bg: '#fce4ec', color: '#c62828' },
-    expired:   { label: 'Expirada',   bg: '#fff3e0', color: '#e65100' },
+    expired:   { label: 'Expirada',   bg: '#212121', color: '#ffffff' },
   };
   const cfg = map[status] || { label: status, bg: '#f5f5f5', color: '#555' };
   return (
@@ -22,21 +22,30 @@ const badgeStyles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '700' },
 });
 
-export default function AbaLicencas({ 
-  companies, 
-  licenses, 
-  filteredFilterId, 
-  onSetFilterId, 
-  onGeneratePress, 
-  onRevokePress, 
-  onRemovePress, 
-  formatDate 
+function validityLabel(validityMonths) {
+  if (!validityMonths && validityMonths !== 0) return null;
+  if (validityMonths === '1min') return 'Plano: 1 min (teste)';
+  if (validityMonths === 1) return 'Plano: 1 mês';
+  if (validityMonths === 12) return 'Plano: 1 ano';
+  return `Plano: ${validityMonths} meses`;
+}
+
+export default function AbaLicencas({
+  companies,
+  licenses,
+  filteredFilterId,
+  onSetFilterId,
+  onGeneratePress,
+  onRevokePress,
+  onRemovePress,
+  onRenewPress,
+  formatDate,
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedCompany = companies.find(c => c.id === filteredFilterId);
   const allowedCompanies = companies.filter(company => company.name !== 'Explog');
-  
+
   const filteredLicenses = filteredFilterId
     ? licenses.filter(l => l.companyId === filteredFilterId)
     : [];
@@ -59,15 +68,15 @@ export default function AbaLicencas({
       </View>
 
       <View style={styles.dropdownWrapper}>
-        <TouchableOpacity 
-          style={styles.dropdownHeader} 
+        <TouchableOpacity
+          style={styles.dropdownHeader}
           onPress={() => setIsOpen(!isOpen)}
           activeOpacity={0.9}
         >
           <Text style={[styles.dropdownHeaderText, !selectedCompany && styles.dropdownPlaceholder]}>
             {selectedCompany ? selectedCompany.name : 'Selecione uma empresa...'}
           </Text>
-          <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={20} color="#555" />
+          <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#555" />
         </TouchableOpacity>
 
         {isOpen && (
@@ -76,17 +85,11 @@ export default function AbaLicencas({
               {allowedCompanies.map(c => (
                 <TouchableOpacity
                   key={c.id}
-                  style={[
-                    styles.dropdownItem, 
-                    filteredFilterId === c.id && styles.dropdownItemAtivo
-                  ]}
+                  style={[styles.dropdownItem, filteredFilterId === c.id && styles.dropdownItemAtivo]}
                   onPress={() => handleSelectCompany(c.id)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.dropdownItemTexto, 
-                    filteredFilterId === c.id && styles.dropdownItemTextoAtivo
-                  ]}>
+                  <Text style={[styles.dropdownItemTexto, filteredFilterId === c.id && styles.dropdownItemTextoAtivo]}>
                     {c.name}
                   </Text>
                   {filteredFilterId === c.id && (
@@ -110,38 +113,59 @@ export default function AbaLicencas({
             {filteredLicenses.length} licença(s) encontrada(s)
           </Text>
 
-          {filteredLicenses.map(l => (
-            <View key={l.id} style={styles.card}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.licenseKey}>{l.key}</Text>
-                <View style={styles.licenseMetaRow}>
-                  <StatusBadge status={l.status} />
-                  <Text style={styles.cardMeta}> Expira: {formatDate(l.expiresAt)}</Text>
-                </View>
-                {l.deviceId && (
-                  <Text style={styles.cardSub} numberOfLines={1}>Device: {l.deviceId}</Text>
-                )}
-              </View>
+          {filteredLicenses.map(l => {
+            const isExpired = l.status === 'expired';
+            const isRevoked = l.status === 'revoked';
+            const isAvailable = l.status === 'available';
 
-              {l.status !== 'revoked' && l.status !== 'expired' ? (
-                <TouchableOpacity 
-                  style={styles.actionBtn} 
-                  onPress={() => onRevokePress(l)} 
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="close-circle-outline" size={22} color="#f44336" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
-                  style={styles.actionBtn} 
-                  onPress={() => onRemovePress(l)} 
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#777" />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+            const expiryLine = isAvailable
+              ? validityLabel(l.validityMonths)
+              : (!isExpired && l.expiresAt ? `Expira: ${formatDate(l.expiresAt)}` : null);
+
+            return (
+              <TouchableOpacity
+                key={l.id}
+                style={[styles.card, isExpired && styles.cardExpirado]}
+                onPress={isExpired ? () => onRenewPress(l) : undefined}
+                activeOpacity={isExpired ? 0.7 : 1}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={styles.licenseKeyRow}>
+                    <Text style={styles.licenseKey}>{l.key}</Text>
+                  </View>
+                  <View style={styles.licenseMetaRow}>
+                    <StatusBadge status={l.status} />
+                    {expiryLine && (
+                      <Text style={[styles.cardMeta, isAvailable && styles.cardMetaPending]}>
+                        {' '}{expiryLine}
+                      </Text>
+                    )}
+                  </View>
+                  {l.deviceId && (
+                    <Text style={styles.cardSub} numberOfLines={1}>Device: {l.deviceId}</Text>
+                  )}
+                </View>
+
+                {!isRevoked && !isExpired ? (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => onRevokePress(l)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close-circle-outline" size={22} color="#f44336" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => onRemovePress(l)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#777" />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            );
+          })}
 
           {filteredLicenses.length === 0 && (
             <Text style={styles.vazioText}>Nenhuma licença cadastrada para esta empresa.</Text>
@@ -170,9 +194,12 @@ const styles = StyleSheet.create({
   dropdownItemTextoAtivo: { color: '#E75F07', fontWeight: '700' },
   resumo: { fontSize: 12, color: '#aaa', marginBottom: 12 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#efefef' },
-  licenseKey: { fontSize: 12, fontWeight: '700', color: '#333', fontFamily: 'monospace', marginBottom: 6 },
+  cardExpirado: { borderColor: '#333', borderWidth: 1, backgroundColor: '#fafafa' },
+  licenseKeyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  licenseKey: { fontSize: 12, fontWeight: '700', color: '#333', fontFamily: 'monospace' },
   licenseMetaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   cardMeta: { fontSize: 11, color: '#aaa', marginTop: 2 },
+  cardMetaPending: { color: '#2e7d32', fontStyle: 'italic' },
   cardSub: { fontSize: 12, color: '#777' },
   actionBtn: { padding: 6 },
   vazioContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
