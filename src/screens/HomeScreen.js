@@ -111,13 +111,13 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.buttonText}>Histórico</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
+      {(companyId === 'explog-founding' || isSuperadmin) && <TouchableOpacity
         style={[styles.buttonContainer, { backgroundColor: '#1A73E8', flexDirection: 'row' }]}
         onPress={() => navigation.navigate('ScaleConnect')}
       >
         <MaterialCommunityIcons name="bluetooth" size={24} color="#FFFFFF" />
         <Text style={[styles.buttonText, { marginLeft: 10 }]}>Conectar Balança</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       <TouchableOpacity
         style={[styles.buttonContainer, styles.logoutButton, { width: '70%' }]}
