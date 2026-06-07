@@ -5,25 +5,20 @@ import {
   Alert, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getFirestore, collection, getDocs, doc, updateDoc, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
 
 export default function InformacoesOperacao({
-  // Modo inline (StepInformacoes)
   modoModal = false,
   onVoltar,
   onSalvar,
-  // Modo modal (StepInformacoesModal)
   visivel,
   onFechar,
   onSalvo,
   projetoId,
   infoInicial,
 }) {
-  const { companyId } = useAppAuth();
-
-  // Estado local — usado apenas no modoModal (edição de projeto existente)
   const [nfLocal, setNfLocal] = useState('');
   const [kgPrevistoLocal, setKgPrevistoLocal] = useState('');
   const [kgAplicadoLocal, setKgAplicadoLocal] = useState('');
@@ -32,8 +27,8 @@ export default function InformacoesOperacao({
   const [infoGeraisLocal, setInfoGeraisLocal] = useState('');
   const [salvando, setSalvando] = useState(false);
 
-  // Contexto — usado apenas no modo inline (novo projeto)
   const form = !modoModal ? useProjetoForm() : null;
+  const { companyId } = useAppAuth();
 
   const numeroNF        = modoModal ? nfLocal          : form.numeroNF;
   const setNumeroNF     = modoModal ? setNfLocal        : form.setNumeroNF;
@@ -41,12 +36,12 @@ export default function InformacoesOperacao({
   const setKgPrevisto   = modoModal ? setKgPrevistoLocal: form.setKgPrevisto;
   const kgAplicado      = modoModal ? kgAplicadoLocal   : form.kgAplicado;
   const setKgAplicado   = modoModal ? setKgAplicadoLocal: form.setKgAplicado;
-  const caminhaoSelecionado  = modoModal ? caminhaoLocal  : form.caminhaoSelecionado;
+  const caminhaoSelecionado    = modoModal ? caminhaoLocal  : form.caminhaoSelecionado;
   const setCaminhaoSelecionado = modoModal ? setCaminhaoLocal : form.setCaminhaoSelecionado;
-  const equipeSelecionada    = modoModal ? equipeLocal    : form.equipeSelecionada;
-  const setEquipeSelecionada = modoModal ? setEquipeLocal  : form.setEquipeSelecionada;
+  const equipeSelecionada      = modoModal ? equipeLocal    : form.equipeSelecionada;
+  const setEquipeSelecionada   = modoModal ? setEquipeLocal  : form.setEquipeSelecionada;
   const salvarEstado    = modoModal ? () => {}           : form.salvarEstadoDoProjeto;
-  const informacoesGerais = modoModal ? infoGeraisLocal : form.informacoesGerais;
+  const informacoesGerais    = modoModal ? infoGeraisLocal : form.informacoesGerais;
   const setInformacoesGerais = modoModal ? setInfoGeraisLocal : form.setInformacoesGerais;
 
   const [caminhoes, setCaminhoes] = useState([]);
@@ -57,9 +52,6 @@ export default function InformacoesOperacao({
 
   const db = getFirestore();
 
-  // Carregamento de dados
-  // - modoModal: recarrega sempre que o modal abre
-  // - modo inline: carrega uma vez ao montar
   useEffect(() => {
     if (modoModal && !visivel) return;
 
@@ -75,9 +67,18 @@ export default function InformacoesOperacao({
     const carregar = async () => {
       setCarregando(true);
       try {
+        const filtro = companyId ? where('companyId', '==', companyId) : null;
+
+        const qCaminhoes = filtro
+          ? query(collection(db, 'caminhoes'), filtro)
+          : collection(db, 'caminhoes');
+        const qOperadores = filtro
+          ? query(collection(db, 'operadores'), filtro)
+          : collection(db, 'operadores');
+
         const [snapC, snapO] = await Promise.all([
-          getDocs(collection(db, 'caminhoes'), where('companyId', '==', companyId)),
-          getDocs(collection(db, 'operadores'), where('companyId', '==', companyId)),
+          getDocs(qCaminhoes),
+          getDocs(qOperadores),
         ]);
         setCaminhoes(snapC.docs.map(d => ({ id: d.id, ...d.data() })));
         setOperadores(snapO.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -88,7 +89,7 @@ export default function InformacoesOperacao({
       }
     };
     carregar();
-  }, [modoModal ? visivel : true]);
+  }, [modoModal ? visivel : true, companyId]);
 
   const toggleMembro = (membro) => {
     const jaEsta = equipeSelecionada.some(m => m.id === membro.id);
@@ -136,7 +137,6 @@ export default function InformacoesOperacao({
     }
   };
 
-  // ─── Conteúdo do formulário ────────────────────────────────────────────────
   const conteudo = carregando ? (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color="#E75F07" />
@@ -178,7 +178,7 @@ export default function InformacoesOperacao({
       {caminhoes.length === 0 ? (
         <View style={styles.avisoContainer}>
           <Ionicons name="information-circle-outline" size={16} color="#aaa" />
-          <Text style={styles.avisoTexto}>Nenhum caminhão cadastrado. Acesse Gerenciar Cadastros.</Text>
+          <Text style={styles.avisoTexto}>Nenhum caminhão cadastrado.</Text>
         </View>
       ) : (
         <TouchableOpacity style={styles.selectBtn} onPress={() => setModalCaminhaoVisivel(true)} activeOpacity={0.8}>
@@ -193,7 +193,7 @@ export default function InformacoesOperacao({
       {operadores.length === 0 ? (
         <View style={styles.avisoContainer}>
           <Ionicons name="information-circle-outline" size={16} color="#aaa" />
-          <Text style={styles.avisoTexto}>Nenhum operador cadastrado. Acesse Gerenciar Cadastros.</Text>
+          <Text style={styles.avisoTexto}>Nenhum operador cadastrado.</Text>
         </View>
       ) : (
         <TouchableOpacity
@@ -221,7 +221,7 @@ export default function InformacoesOperacao({
           )}
         </TouchableOpacity>
       )}
-      
+
       <Text style={styles.label}>Informações gerais</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -250,7 +250,6 @@ export default function InformacoesOperacao({
     </ScrollView>
   );
 
-  // ─── Modais internos de seleção ────────────────────────────────────────────
   const modaisSelecao = (
     <>
       <Modal animationType="slide" transparent visible={modalCaminhaoVisivel} onRequestClose={() => setModalCaminhaoVisivel(false)}>
@@ -337,7 +336,6 @@ export default function InformacoesOperacao({
     </>
   );
 
-  // ─── Renderização: inline vs modal ────────────────────────────────────────
   if (modoModal) {
     return (
       <Modal animationType="slide" transparent={false} visible={visivel} onRequestClose={onFechar} presentationStyle="pageSheet">
@@ -370,7 +368,6 @@ export default function InformacoesOperacao({
 }
 
 const styles = StyleSheet.create({
-  // Modo modal
   wrapper: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -379,8 +376,6 @@ const styles = StyleSheet.create({
   },
   fecharBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },
-
-  // Modo inline
   inlineContainer: { flex: 1 },
   voltarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24, alignSelf: 'flex-start' },
   voltarBtnTexto: { color: '#E75F07', fontSize: 15, fontWeight: '600' },
@@ -388,8 +383,6 @@ const styles = StyleSheet.create({
     fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 20,
     borderLeftWidth: 3, borderLeftColor: '#E75F07', paddingLeft: 10,
   },
-
-  // Compartilhados
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
   form: { padding: 12 },
@@ -444,10 +437,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
   },
-  textArea: {
-    height: 120,
-    paddingTop: 6,
-  },
+  textArea: { height: 120, paddingTop: 6 },
   grupoTitulo: {
     fontSize: 13, fontWeight: '700', color: '#aaa',
     textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 16, marginBottom: 6,
