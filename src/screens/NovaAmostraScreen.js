@@ -4,7 +4,7 @@ import {
   ScrollView, Modal, Alert, StatusBar,
 } from 'react-native';
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc, where } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -115,10 +115,11 @@ function NovaAmostraScreenInner() {
 
   useEffect(() => {
     const buscarUltimaCalibragem = async () => {
+      if (!companyId) return;
       try {
         const connectionState = await NetInfo.fetch();
         if (connectionState.isConnected) {
-          const q = query(collection(db, "calibragens"), orderBy("timestamp", "desc"), limit(1));
+          const q = query(collection(db, "calibragens"), where('companyId', '==', companyId), orderBy("timestamp", "desc"), limit(1));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
             const calibragemDoc = querySnapshot.docs[0].data();
