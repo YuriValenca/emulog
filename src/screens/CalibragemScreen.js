@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Modal } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import BackButton from './BackButton';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,23 +15,48 @@ export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
   const [pesoCheio, setPesoCheio] = useState('');
   const [tara, setTara] = useState('');
+  const [ultimaCalibragemInfo, setUltimaCalibragemInfo] = useState(null);
   const auth = getAuth();
   const navigation = useNavigation();
 
   const { companyId } = useAppAuth();
 
-  // ─── INTEGRAÇÃO BLE ───────────────────────────────────────────────────────
   const { bleStatus, connectedDevice, weight, readingStatus, resumeMonitor } = useBle();
 
-  // Qual campo receberá o peso da balança: 'vazio' | 'cheio' | null
   const [campoBleAtivo, setCampoBleAtivo] = useState(null);
-
-  // Modal de confirmação BLE
   const [modalBleVisivel, setModalBleVisivel] = useState(false);
   const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
   const lastBleWeightShown = useRef(null);
 
-  // Quando o peso estabiliza, abre a modal (só se houver um campo ativo)
+  useEffect(() => {
+    const buscarUltimaCalibragem = async () => {
+      try {
+        const q = query(
+          collection(db, 'calibragens'),
+          where('companyId', '==', companyId),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
+          const ts = data.timestamp?.seconds
+            ? new Date(data.timestamp.seconds * 1000)
+            : new Date(data.timestamp);
+          setUltimaCalibragemInfo({
+            data: ts,
+            tara: data.tara,
+            horasAtras: Math.floor(Math.abs(new Date() - ts) / 36e5),
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao buscar última calibragem:', e);
+      }
+    };
+
+    if (companyId) buscarUltimaCalibragem();
+  }, [companyId]);
+
   useEffect(() => {
     if (
       readingStatus === 'stable' &&
@@ -46,7 +71,6 @@ export default function CalibragemScreen() {
     }
   }, [readingStatus, weight]);
 
-  // Confirmar: preenche o campo ativo e prepara próxima leitura
   const confirmarPesoBle = () => {
     if (pesoBleConfirmacao === null) return;
     const valorStr = pesoBleConfirmacao.toFixed(1);
@@ -57,13 +81,11 @@ export default function CalibragemScreen() {
     resumeMonitor();
   };
 
-  // Cancelar: fecha modal e aguarda próximo 'stable'
   const cancelarPesoBle = () => {
     setModalBleVisivel(false);
     lastBleWeightShown.current = null;
     resumeMonitor();
   };
-  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -119,8 +141,16 @@ export default function CalibragemScreen() {
     }
   };
 
-  // Label descritivo para a modal
   const labelCampo = campoBleAtivo === 'vazio' ? 'Copo vazio' : 'Copo cheio (com água)';
+
+  const formatarDataCalibragem = (ts) => {
+    const d = String(ts.getDate()).padStart(2, '0');
+    const m = String(ts.getMonth() + 1).padStart(2, '0');
+    const y = ts.getFullYear();
+    const h = String(ts.getHours()).padStart(2, '0');
+    const min = String(ts.getMinutes()).padStart(2, '0');
+    return `${d}/${m}/${y} às ${h}:${min}`;
+  };
 
   return (
     <View style={styles.container}>
@@ -129,7 +159,38 @@ export default function CalibragemScreen() {
       <View style={styles.linha} />
       <Text style={styles.instrucao}>Insira os dados abaixo</Text>
 
-      {/* Status da balança BLE */}
+      {ultimaCalibragemInfo ? (
+        <View style={[
+          styles.ultimaCalibragemCard,
+          ultimaCalibragemInfo.horasAtras > 14 ? styles.ultimaCalibragemVencida : styles.ultimaCalibragemOk,
+        ]}>
+          <MaterialCommunityIcons
+            name={ultimaCalibragemInfo.horasAtras > 14 ? 'alert-circle-outline' : 'check-circle-outline'}
+            size={18}
+            color={ultimaCalibragemInfo.horasAtras > 14 ? '#FF5C00' : '#4CAF50'}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[
+              styles.ultimaCalibragemTexto,
+              { color: ultimaCalibragemInfo.horasAtras > 14 ? '#FF5C00' : '#4CAF50' },
+            ]}>
+              {ultimaCalibragemInfo.horasAtras > 14 ? 'Necessita nova calibragem' : 'Calibragem OK'}
+            </Text>
+            <Text style={styles.ultimaCalibragemSub}>
+              Última: {formatarDataCalibragem(ultimaCalibragemInfo.data)}
+              {' '}({ultimaCalibragemInfo.horasAtras}h atrás · tara {ultimaCalibragemInfo.tara} g)
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.ultimaCalibragemCard, styles.ultimaCalibragemVencida]}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#FF5C00" />
+          <Text style={[styles.ultimaCalibragemTexto, { color: '#FF5C00' }]}>
+            Nenhuma calibragem encontrada para esta empresa
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         style={[styles.bleStatus, bleStatus === 'connected' ? styles.bleConnected : styles.bleDisconnected]}
         onPress={() => navigation.navigate('ScaleConnect')}
@@ -149,17 +210,13 @@ export default function CalibragemScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* Input: peso vazio */}
       <Text style={styles.inputLabel}>Peso do copo vazio</Text>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => bleStatus === 'connected' && setCampoBleAtivo('vazio')}
       >
         <TextInput
-          style={[
-            styles.input,
-            campoBleAtivo === 'vazio' && styles.inputAtivo,
-          ]}
+          style={[styles.input, campoBleAtivo === 'vazio' && styles.inputAtivo]}
           placeholder="Ex: 150.0 g"
           keyboardType="numeric"
           value={pesoVazio}
@@ -183,17 +240,13 @@ export default function CalibragemScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Input: peso cheio */}
       <Text style={styles.inputLabel}>Peso do copo cheio (com água)</Text>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => bleStatus === 'connected' && setCampoBleAtivo('cheio')}
       >
         <TextInput
-          style={[
-            styles.input,
-            campoBleAtivo === 'cheio' && styles.inputAtivo,
-          ]}
+          style={[styles.input, campoBleAtivo === 'cheio' && styles.inputAtivo]}
           placeholder="Ex: 350.0 g"
           keyboardType="numeric"
           value={pesoCheio}
@@ -224,7 +277,6 @@ export default function CalibragemScreen() {
         <Text style={styles.buttonText}>Registrar Calibragem</Text>
       </TouchableOpacity>
 
-      {/* ── Modal: confirmação de peso via BLE ────────────────────────────── */}
       <Modal
         animationType="fade"
         transparent
@@ -234,7 +286,6 @@ export default function CalibragemScreen() {
       >
         <View style={styles.bleModalOverlay}>
           <View style={styles.bleModalCard}>
-
             <View style={styles.bleModalHeader}>
               <View style={styles.bleModalIconCircle}>
                 <MaterialCommunityIcons name="scale" size={28} color="#fff" />
@@ -242,12 +293,10 @@ export default function CalibragemScreen() {
               <Text style={styles.bleModalTitle}>Peso estabilizado</Text>
               <Text style={styles.bleModalSubtitle}>{labelCampo}</Text>
             </View>
-
             <View style={styles.bleModalWeightRow}>
               <Text style={styles.bleModalWeightValue}>{pesoBleConfirmacao?.toFixed(1)}</Text>
               <Text style={styles.bleModalWeightUnit}>g</Text>
             </View>
-
             <View style={styles.bleModalActions}>
               <TouchableOpacity
                 style={[styles.bleModalBtn, styles.bleModalBtnCancel]}
@@ -257,7 +306,6 @@ export default function CalibragemScreen() {
                 <MaterialCommunityIcons name="close" size={20} color="#666" />
                 <Text style={styles.bleModalBtnCancelText}>Cancelar</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.bleModalBtn, styles.bleModalBtnConfirm]}
                 onPress={confirmarPesoBle}
@@ -267,7 +315,6 @@ export default function CalibragemScreen() {
                 <Text style={styles.bleModalBtnConfirmText}>Confirmar</Text>
               </TouchableOpacity>
             </View>
-
           </View>
         </View>
       </Modal>
@@ -299,11 +346,35 @@ const styles = StyleSheet.create({
   instrucao: {
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     fontSize: 18,
   },
-
-  // Status BLE
+  ultimaCalibragemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 16,
+  },
+  ultimaCalibragemOk: {
+    backgroundColor: '#f0faf0',
+    borderColor: '#4CAF50',
+  },
+  ultimaCalibragemVencida: {
+    backgroundColor: '#fff5f0',
+    borderColor: '#FF5C00',
+  },
+  ultimaCalibragemTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  ultimaCalibragemSub: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
   bleStatus: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     padding: 10, borderRadius: 10, marginBottom: 20,
@@ -311,8 +382,6 @@ const styles = StyleSheet.create({
   bleConnected: { backgroundColor: '#4CAF50' },
   bleDisconnected: { backgroundColor: '#f5f5f5', borderWidth: 1, borderColor: '#e0e0e0' },
   bleStatusText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#fff' },
-
-  // Inputs
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
@@ -332,8 +401,6 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
     borderWidth: 2,
   },
-
-  // Botão de campo BLE
   bleFieldBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -355,7 +422,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4CAF50',
   },
-
   label: {
     fontSize: 18,
     marginBottom: 10,
@@ -379,8 +445,6 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 5,
   },
-
-  // ── Modal BLE ──────────────────────────────────────────────────────────────
   bleModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
