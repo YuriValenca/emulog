@@ -1,14 +1,56 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 import { useAppAuth } from '../context/auth';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
-  const { name, role } = useAppAuth();
+  const { name, role, companyId } = useAppAuth();
+  const [calibragemValida, setCalibragemValida] = useState(false);
 
   const isSuperadmin = role === 'superadmin';
   const isCompanyAdmin = role === 'company_admin';
+
+  useEffect(() => {
+    const verificarCalibragem = async () => {
+      try {
+        const state = await NetInfo.fetch();
+        if (state.isConnected && companyId) {
+          const q = query(collection(db, 'calibragens'), where('companyId', '==', companyId), orderBy('timestamp', 'desc'), limit(1));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            setCalibragemValida(true);
+            return;
+          }
+        }
+        const stored = await AsyncStorage.getItem('ultimaCalibragem');
+        if (stored) setCalibragemValida(true);
+      } catch (e) {
+        console.error('Erro ao verificar calibragem:', e);
+      }
+    };
+
+    if (companyId) verificarCalibragem();
+  }, [companyId]);
+
+  const handleNovaAmostra = () => {
+    if (!calibragemValida) {
+      Alert.alert(
+        'Calibragem necessária',
+        'Nenhuma calibragem encontrada para esta empresa. Realize uma calibragem antes de iniciar um novo projeto.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Calibrar agora', onPress: () => navigation.navigate('Calibragem') },
+        ]
+      );
+      return;
+    }
+    navigation.navigate('NovaAmostra');
+  };
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -54,12 +96,14 @@ export default function HomeScreen({ navigation }) {
       >
         <Text style={styles.buttonText}>Calibragem</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.buttonContainer, { backgroundColor: '#FF5C00' }]}
-        onPress={() => navigation.navigate('NovaAmostra')}
+        onPress={handleNovaAmostra}
       >
         <Text style={styles.buttonText}>Novo Projeto</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.buttonContainer, { backgroundColor: '#505050' }]}
         onPress={() => navigation.navigate('Historico')}
