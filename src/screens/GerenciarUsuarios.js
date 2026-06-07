@@ -3,9 +3,12 @@ import {
   View, Text, TextInput, StyleSheet, Alert, TouchableOpacity,
   ScrollView, Modal,
 } from 'react-native';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import {
-  collection, addDoc, getDocs,
+  getAuth, createUserWithEmailAndPassword,
+  onAuthStateChanged, deleteUser as deleteAuthUser,
+} from 'firebase/auth';
+import {
+  getFirestore, collection, addDoc, getDocs,
   deleteDoc, updateDoc, doc, getDoc, query, where,
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -13,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
 import { useAppAuth } from '../context/auth';
-import { auth, db } from '../firebaseConfig';
 
 const ABAS = ['Usuários', 'Caminhões', 'Operadores'];
 
@@ -43,35 +45,35 @@ export default function GerenciarUsuarios() {
   const [pendingDeletion, setPendingDeletion] = useState(null);
 
   const navigation = useNavigation();
+  const auth = getAuth();
+  const db = getFirestore();
   const scrollViewRef = useRef(null);
-
-  const { role, companyId, authUser } = useAppAuth();
-
-  const buildCollectionQuery = (collectionName) => {
-    if (role === 'superadmin') {
-      return collection(db, collectionName);
-    }
-    return query(collection(db, collectionName), where('companyId', '==', companyId));
-  };
+  const { companyId } = useAppAuth();
 
   useEffect(() => {
-    if (!role || (role !== 'superadmin' && !companyId)) return;
-    if (authUser) {
-      setCurrentUserUid(authUser.uid);
-      carregarUsuarios();
-      registrarUltimoLogin(authUser.uid);
-    }
-  }, [role, companyId]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUserUid(user.uid);
+        await carregarUsuarios();
+        await registrarUltimoLogin(user.uid);
+      } else {
+        setUsuarios([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
-    if (!role || (role !== 'superadmin' && !companyId)) return;
     if (abaAtiva === 1) carregarCaminhoes();
     if (abaAtiva === 2) carregarOperadores();
   }, [abaAtiva]);
 
   const carregarUsuarios = async () => {
     try {
-      const snap = await getDocs(buildCollectionQuery('users'));
+      const q = companyId
+        ? query(collection(db, 'users'), where('companyId', '==', companyId))
+        : collection(db, 'users');
+      const snap = await getDocs(q);
       setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar usuários:', e);
@@ -80,7 +82,10 @@ export default function GerenciarUsuarios() {
 
   const carregarCaminhoes = async () => {
     try {
-      const snap = await getDocs(buildCollectionQuery('caminhoes'));
+      const q = companyId
+        ? query(collection(db, 'caminhoes'), where('companyId', '==', companyId))
+        : collection(db, 'caminhoes');
+      const snap = await getDocs(q);
       setCaminhoes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar caminhões:', e);
@@ -89,7 +94,10 @@ export default function GerenciarUsuarios() {
 
   const carregarOperadores = async () => {
     try {
-      const snap = await getDocs(buildCollectionQuery('operadores'));
+      const q = companyId
+        ? query(collection(db, 'operadores'), where('companyId', '==', companyId))
+        : collection(db, 'operadores');
+      const snap = await getDocs(q);
       setOperadores(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar operadores:', e);
@@ -116,7 +124,7 @@ export default function GerenciarUsuarios() {
         uid: cred.user.uid,
         email,
         nome: nomeUsuario,
-        companyId,
+        companyId: companyId || null,
         role: 'user',
         ultimoLogin: new Date().toISOString(),
       });
@@ -139,7 +147,7 @@ export default function GerenciarUsuarios() {
       await addDoc(collection(db, 'caminhoes'), {
         placa: placaCaminhao.trim().toUpperCase(),
         descricao: `Caminhão — ${placaCaminhao.trim().toUpperCase()}`,
-        companyId,
+        companyId: companyId || null,
         criadoEm: new Date().toISOString(),
       });
       setPlacaCaminhao('');
@@ -160,7 +168,7 @@ export default function GerenciarUsuarios() {
       await addDoc(collection(db, 'operadores'), {
         nome: nomeOperador.trim(),
         cargo: cargoOperador.trim(),
-        companyId,
+        companyId: companyId || null,
         criadoEm: new Date().toISOString(),
       });
       setNomeOperador(''); setCargoOperador('');
@@ -219,22 +227,14 @@ export default function GerenciarUsuarios() {
   const scrollToTop = () => scrollViewRef.current?.scrollTo({ y: 0, animated: true });
 
   const usuariosFiltrados = usuarios
-    .filter(u => u.nome?.toLowerCase().includes(termoBuscaUsuario.toLowerCase()))
-    .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
+    .filter(u => u.nome?.toLowerCase().includes(termoBuscaUsuario.toLowerCase()));
 
   const caminhoesFiltrados = caminhoes
-  .filter(c => c.placa?.toLowerCase().includes(termoBuscaCaminhao.toLowerCase()));
+    .filter(c => c.placa?.toLowerCase().includes(termoBuscaCaminhao.toLowerCase()));
 
   const operadoresFiltrados = operadores
     .filter(o => o.nome?.toLowerCase().includes(termoBuscaOperador.toLowerCase()))
     .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
-  
-  const formatarData = (valor) => {
-    if (!valor) return 'Não logado';
-    if (valor?.seconds) return new Date(valor.seconds * 1000).toLocaleString('pt-BR');
-    if (typeof valor === 'string') return new Date(valor).toLocaleString('pt-BR');
-    return 'Não disponível';
-  };
 
   return (
     <ScrollView
@@ -292,7 +292,7 @@ export default function GerenciarUsuarios() {
                 <Text style={styles.cardNome}>{usuario.nome}</Text>
                 <Text style={styles.cardSub}>{usuario.email}</Text>
                 <Text style={styles.cardMeta}>
-                  Último login: {formatarData(usuario.ultimoLogin)}
+                  Último login: {usuario.ultimoLogin ? new Date(usuario.ultimoLogin).toLocaleString() : 'Não disponível'}
                 </Text>
               </View>
               {usuario.uid !== currentUserUid && (
@@ -451,95 +451,46 @@ export default function GerenciarUsuarios() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#FFF', paddingTop: 72 },
   titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#E75F07', marginTop: 4 },
-
   abaContainer: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
-    padding: 4,
-    marginBottom: 20,
+    flexDirection: 'row', borderRadius: 10, backgroundColor: '#f0f0f0',
+    padding: 4, marginBottom: 20,
   },
-  abaBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
+  abaBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
   abaBtnAtiva: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   abaBtnTexto: { fontSize: 13, color: '#888', fontWeight: '600' },
   abaBtnTextoAtivo: { color: '#E75F07' },
-
   secaoTitulo: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 },
   formulario: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 10,
-    marginBottom: 12,
-    borderRadius: 8,
-    fontSize: 15,
-    backgroundColor: '#fafafa',
+    borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 12,
+    borderRadius: 8, fontSize: 15, backgroundColor: '#fafafa',
   },
   adicionarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FF9621',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 4,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#FF9621', padding: 12, borderRadius: 8, marginTop: 4,
   },
   adicionarBtnTexto: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-
   listaTitulo: { fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 10, marginTop: 4 },
   vazio: { color: '#aaa', fontStyle: 'italic', marginBottom: 12 },
-
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: '#fafafa',
+    flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee',
+    borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: '#fafafa',
   },
   cardInfo: { flex: 1 },
   cardNome: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
   cardSub: { fontSize: 13, color: '#555', marginBottom: 2 },
   cardMeta: { fontSize: 11, color: '#999', fontStyle: 'italic' },
-
   botaoDeletar: {
-    backgroundColor: '#FF5C00',
-    borderRadius: 8,
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 10,
+    backgroundColor: '#FF5C00', borderRadius: 8, padding: 10,
+    alignItems: 'center', justifyContent: 'center', marginLeft: 10,
   },
-
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
   modalView: {
-    width: '80%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    width: '80%', backgroundColor: 'white', borderRadius: 20, padding: 32, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5,
   },
   modalText: { fontSize: 16, textAlign: 'center', marginBottom: 16, color: '#333' },
-  modalBtn: {
-    width: '100%',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
+  modalBtn: { width: '100%', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 8 },
   modalBtnTexto: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
