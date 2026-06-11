@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, ScrollView, TouchableOpacity,
-  TextInput, Switch, ActivityIndicator, StyleSheet, Alert,
+  TextInput, Switch, ActivityIndicator, StyleSheet, Alert, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ColorPicker from 'react-native-wheel-color-picker';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   getFirestore, collection, query, where,
   getDocs, addDoc, deleteDoc, doc,
@@ -35,6 +37,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
   const [operadores, setOperadores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [novaCaminhaoPlaca, setNovaCaminhaoPlaca] = useState('');
   const [novoOperadorNome, setNovoOperadorNome] = useState('');
@@ -81,7 +84,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
       ]);
       setCaminhoes(snapC.docs.map(d => ({ id: d.id, ...d.data() })));
       setOperadores(snapO.docs.map(d => ({ id: d.id, ...d.data() })));
-      setUsuarios(snapU.docs.map(d => ({ id: d.id, ...d.data() })).filter((user) => user.role !== "superadmin"));
+      setUsuarios(snapU.docs.map(d => ({ id: d.id, ...d.data() })).filter((user) => user.role !== 'superadmin'));
     } catch (e) {
       console.error('Erro ao carregar dados da empresa:', e);
     } finally {
@@ -100,6 +103,32 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
     setForm(p => ({ ...p, cnpj: masked }));
   };
 
+  const pickAndUploadLogo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    setUploadingLogo(true);
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize: { width: 400 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      const base64 = `data:image/jpeg;base64,${manipulated.base64}`;
+      setForm(p => ({ ...p, logo: base64 }));
+    } catch (e) {
+      console.error('Erro ao processar imagem:', e);
+      Alert.alert('Erro', 'Não foi possível processar a imagem. Tente novamente.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const adicionarCaminhao = async () => {
     if (!novaCaminhaoPlaca.trim()) return;
     setAddingCaminhao(true);
@@ -109,8 +138,8 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
         companyId: companyToEdit.id,
         criadoEm: new Date().toISOString(),
       };
-      const ref = await addDoc(collection(db, 'caminhoes'), novo);
-      setCaminhoes(prev => [...prev, { id: ref.id, ...novo }]);
+      const docRef = await addDoc(collection(db, 'caminhoes'), novo);
+      setCaminhoes(prev => [...prev, { id: docRef.id, ...novo }]);
       setNovaCaminhaoPlaca('');
     } catch (e) {
       Alert.alert('Erro', 'Não foi possível adicionar o caminhão.');
@@ -138,8 +167,8 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
         companyId: companyToEdit.id,
         criadoEm: new Date().toISOString(),
       };
-      const ref = await addDoc(collection(db, 'operadores'), novo);
-      setOperadores(prev => [...prev, { id: ref.id, ...novo }]);
+      const docRef = await addDoc(collection(db, 'operadores'), novo);
+      setOperadores(prev => [...prev, { id: docRef.id, ...novo }]);
       setNovoOperadorNome('');
       setNovoOperadorCargo('');
     } catch (e) {
@@ -193,13 +222,36 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
               maxLength={18}
             />
 
-            <Text style={styles.formLabel}>URL da Logo</Text>
-            <TextInput
-              style={styles.formInput}
-              value={form.logo}
-              onChangeText={v => setForm(p => ({ ...p, logo: v }))}
-              placeholder="https://exemplo.com/logo.png"
-            />
+            <Text style={styles.formLabel}>Logo da Empresa</Text>
+            <TouchableOpacity
+              style={styles.logoPickerBtn}
+              onPress={pickAndUploadLogo}
+              disabled={uploadingLogo}
+              activeOpacity={0.8}
+            >
+              {uploadingLogo ? (
+                <View style={styles.logoPickerContent}>
+                  <ActivityIndicator size="small" color="#E75F07" />
+                  <Text style={styles.logoPickerText}>Enviando imagem...</Text>
+                </View>
+              ) : form.logo ? (
+                <View style={styles.logoPickerContent}>
+                  <Image source={{ uri: form.logo }} style={styles.logoPreview} resizeMode="contain" />
+                  <View style={styles.logoPickerOverlay}>
+                    <Ionicons name="camera-outline" size={18} color="#E75F07" />
+                    <Text style={styles.logoPickerChangeText}>Trocar imagem</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.logoPickerContent}>
+                  <View style={styles.logoPickerIconWrap}>
+                    <Ionicons name="image-outline" size={28} color="#ccc" />
+                  </View>
+                  <Text style={styles.logoPickerText}>Toque para selecionar uma imagem</Text>
+                  <Text style={styles.logoPickerHint}>JPG ou PNG</Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
             <Text style={styles.formLabel}>Cor Principal</Text>
             <View style={styles.pickerWrapper}>
@@ -211,6 +263,10 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
                 noSnap
                 row
               />
+            </View>
+            <View style={styles.colorPreviewRow}>
+              <View style={[styles.colorSwatch, { backgroundColor: form.primaryColor }]} />
+              <Text style={styles.colorHex}>{form.primaryColor}</Text>
             </View>
 
             <View style={styles.switchRow}>
@@ -365,9 +421,9 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
           </ScrollView>
 
           <TouchableOpacity
-            style={[styles.modalBtn, saving && styles.modalBtnDisabled]}
+            style={[styles.modalBtn, (saving || uploadingLogo) && styles.modalBtnDisabled]}
             onPress={() => onSave(form)}
-            disabled={saving}
+            disabled={saving || uploadingLogo}
             activeOpacity={0.8}
           >
             {saving
@@ -391,7 +447,51 @@ const styles = StyleSheet.create({
   scroll: { marginBottom: 16 },
   formLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6 },
   formInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: '#fafafa' },
-  pickerWrapper: { height: 200, marginBottom: 24, paddingHorizontal: 8 },
+
+  logoPickerBtn: {
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    marginBottom: 16,
+    overflow: 'hidden',
+    backgroundColor: '#fafafa',
+  },
+  logoPickerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 8,
+  },
+  logoPickerIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  logoPickerText: { fontSize: 14, color: '#555', fontWeight: '500' },
+  logoPickerHint: { fontSize: 12, color: '#aaa' },
+  logoPreview: { width: '100%', height: 80 },
+  logoPickerOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  logoPickerChangeText: { fontSize: 13, color: '#E75F07', fontWeight: '600' },
+
+  pickerWrapper: { height: 200, marginBottom: 12, paddingHorizontal: 8 },
+  colorPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  colorSwatch: { width: 28, height: 28, borderRadius: 6, borderWidth: 1, borderColor: '#e0e0e0' },
+  colorHex: { fontSize: 13, color: '#555', fontWeight: '600', fontFamily: 'monospace' },
+
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#E75F07', borderRadius: 10, padding: 14, marginTop: 8 },
   modalBtnDisabled: { backgroundColor: '#f0a07a' },
