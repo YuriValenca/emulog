@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SUPERADMIN_UID = process.env.EXPO_PUBLIC_ADMIN_UUID;
 
@@ -85,14 +86,15 @@ async function claimLicense(companyId, deviceId) {
 }
 
 export function AuthProvider({ children }) {
-  const [authUser, setAuthUser]     = useState(null);
-  const [authStatus, setAuthStatus] = useState('loading');
-  const [debugError, setDebugError] = useState(null);
-  const [companyId, setCompanyId]   = useState(null);
-  const [uid, setUid]               = useState(null);
-  const [role, setRole]             = useState(null);
-  const [name, setName]             = useState(null);
-  const [deviceId, setDeviceId]     = useState(null);
+  const [authUser, setAuthUser]       = useState(null);
+  const [authStatus, setAuthStatus]   = useState('loading');
+  const [debugError, setDebugError]   = useState(null);
+  const [companyId, setCompanyId]     = useState(null);
+  const [uid, setUid]                 = useState(null);
+  const [role, setRole]               = useState(null);
+  const [name, setName]               = useState(null);
+  const [deviceId, setDeviceId]       = useState(null);
+  const [companyLogo, setCompanyLogo] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -137,6 +139,12 @@ export function AuthProvider({ children }) {
           await claimLicense(userData.companyId, did);
         }
 
+        if (companyData.logo) {
+          await AsyncStorage.setItem('cachedCompanyLogo', companyData.logo);
+        } else {
+          await AsyncStorage.removeItem('cachedCompanyLogo');
+        }
+
         setAuthUser(user);
         setCompanyId(userData.companyId);
         setUid(userData.uid);
@@ -144,6 +152,7 @@ export function AuthProvider({ children }) {
         setName(userData.nome ?? null);
         setDebugError(null);
         setAuthStatus('authenticated');
+        setCompanyLogo(companyData.logo ?? null);
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
         setDebugError(e.message);
@@ -175,6 +184,7 @@ export function AuthProvider({ children }) {
       role,
       name,
       deviceId,
+      companyLogo,
       isSuperadmin: role === 'superadmin',
       isCompanyAdmin: role === 'company_admin',
     }}>
