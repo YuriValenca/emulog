@@ -4,15 +4,15 @@ import {
   ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { printToFileAsync } from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
+import { useAppAuth } from '../context/auth';
 
 const db = getFirestore();
 
@@ -21,10 +21,12 @@ export default function DetalheProjetoScreen() {
   const [carregando, setCarregando] = useState(true);
   const [amostraPesquisa, setAmostraPesquisa] = useState('');
   const [modalInfoVisivel, setModalInfoVisivel] = useState(false);
+  const [companyData, setCompanyData] = useState(null);
 
   const route = useRoute();
   const navigation = useNavigation();
   const { projetoId } = route.params;
+  const { companyId, role } = useAppAuth();
 
   const buscarProjeto = async () => {
     try {
@@ -43,6 +45,18 @@ export default function DetalheProjetoScreen() {
           data.calibragem.timestamp = new Date(data.calibragem.timestamp).toLocaleDateString();
         }
         setProjeto(data);
+
+        const projetoCompanyId = data.companyId || companyId;
+        if (projetoCompanyId) {
+          try {
+            const companySnap = await getDoc(doc(db, 'companies', projetoCompanyId));
+            if (companySnap.exists()) {
+              setCompanyData({ id: companySnap.id, ...companySnap.data() });
+            }
+          } catch (e) {
+            console.warn('Erro ao buscar dados da empresa:', e);
+          }
+        }
       }
     } catch (e) {
       console.error('Erro ao buscar o projeto:', e);
@@ -66,7 +80,8 @@ export default function DetalheProjetoScreen() {
       info.kgPrevisto?.trim() ||
       info.kgAplicado?.trim() ||
       info.caminhao ||
-      (info.equipe && info.equipe.length > 0)
+      (info.equipe && info.equipe.length > 0) ||
+      info.informacoesGerais?.trim()
     );
   };
 
@@ -78,11 +93,51 @@ export default function DetalheProjetoScreen() {
     return `${projeto.nomeProjeto} - ${d}-${m}-${y}`;
   };
 
+  const fetchImageAsBase64 = async (url) => {
+    try {
+      if (url.startsWith('data:')) return url;
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.warn('Erro ao converter imagem para base64:', e);
+      return null;
+    }
+  };
+
   const gerarPDF = async () => {
     if (!projeto) return;
 
     const info = projeto.informacoesOperacao;
-    const informacoesGerais = info.informacoesGerais;
+    const informacoesGerais = info?.informacoesGerais;
+    const isFoundingCompany = companyData?.founding === true;
+    const primaryColor = companyData?.primaryColor || '#FF5C00';
+
+    let companyLogoSrc = LOGO_BASE_64;
+    if (companyData?.logo) {
+      const b64 = await fetchImageAsBase64(companyData.logo);
+      if (b64) companyLogoSrc = b64;
+    }
+
+    const explogFooter = !isFoundingCompany ? `
+      <div style="
+        margin-top: 40px;
+        padding-top: 12px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+      ">
+        <span style="font-size: 9px; color: #aaa; font-style: italic;">desenvolvido por</span>
+        <img src="${LOGO_BASE_64}" style="height: 18px; opacity: 0.7;" alt="Expolog" />
+      </div>` : '';
 
     const htmlContent = `
     <html>
@@ -91,9 +146,16 @@ export default function DetalheProjetoScreen() {
       <style>
         body { font-family: Arial, sans-serif; padding: 20px; font-size: 10px; margin: 30px; }
         h1 { color: #333; }
-        .header-container { display: flex; align-items: flex-start; }
-        .logo { width: 150px; margin-bottom: 20px; }
+        .header-container {
+          display: flex;
+          align-items: flex-start;
+          border-bottom: 3px solid ${primaryColor};
+          padding-bottom: 16px;
+          margin-bottom: 20px;
+        }
+        .logo { height: 48px; width: auto; max-width: 180px; object-fit: contain; margin-bottom: 0; }
         .project-details { margin-left: 20px; flex: 1; }
+        .project-details h1 { font-size: 16px; margin: 0 0 6px 0; color: #222; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
         th { background-color: #f2f2f2; }
@@ -101,25 +163,40 @@ export default function DetalheProjetoScreen() {
         .amostra-box { width: 48%; border: 1px solid #ccc; padding: 10px; }
         .amostra-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-bottom: 10px; }
         .pesagem-row { margin-bottom: 5px; }
-        .content-box { border: 2px solid orange; padding: 10px; border-radius: 5px; color: black; margin-top: 20px; }
+        .content-box {
+          border: 2px solid ${primaryColor};
+          padding: 10px;
+          border-radius: 5px;
+          color: black;
+          margin-top: 20px;
+        }
+        .content-box h2 { color: ${primaryColor}; margin: 0 0 6px 0; font-size: 12px; }
         .informacoesGerais-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
         .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
         .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-        .info-header { background-color: #FF5C00; color: #fff; padding: 6px 10px; font-weight: bold; }
+        .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
+        .section-title {
+          font-size: 13px;
+          font-weight: bold;
+          color: ${primaryColor};
+          margin: 20px 0 8px 0;
+          border-left: 4px solid ${primaryColor};
+          padding-left: 8px;
+        }
       </style>
     </head>
     <body>
       <div class="header-container">
-        <img src="${LOGO_BASE_64}" class="logo" alt="Logo" />
+        <img src="${companyLogoSrc}" class="logo" alt="Logo" />
         <div class="project-details">
           <h1>Projeto: ${projeto.nomeProjeto}</h1>
-          <p><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
-          <p><strong>Calibragem:</strong></p>
-          <ul>
-            <li>Tara: ${projeto.calibragem?.tara || 'Não informado'}</li>
-            <li>Peso Cheio: ${projeto.calibragem?.pesoCheio || 'Não informado'}</li>
-            <li>Necessita Calibragem: ${projeto.calibragem?.necessitaCalibragem ? 'Sim' : 'Não'}</li>
-          </ul>
+          <p style="margin: 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
+          <p style="margin: 4px 0 0 0; color: #555;">
+            <strong>Calibragem:</strong>
+            Tara ${projeto.calibragem?.tara || '—'} ·
+            Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
+            ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#e53e3e">Necessita recalibrar</span>' : '<span style="color:#38a169">OK</span>'}
+          </p>
         </div>
       </div>
 
@@ -138,15 +215,19 @@ export default function DetalheProjetoScreen() {
       </div>` : ''}
 
       <div class="content-box">
-        <h2 style="color: orange;">Observação Técnica:</h2>
-        <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da Explog.</p>
+        <h2>Observação Técnica:</h2>
+        <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da Expolog.</p>
       </div>
+
       ${informacoesGerais ? `<div class="informacoesGerais-box">
         <div class="informacoesGerais-header">Observação sobre o projeto</div>
         <p>${informacoesGerais}</p>
       </div>` : ''}
-      <h2>Quantidade de Amostras: ${projeto.quantidadeAmostras}</h2>
+
+      <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
       ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
+
+      ${explogFooter}
     </body>
     </html>`;
 
@@ -343,16 +424,24 @@ export default function DetalheProjetoScreen() {
         </View>
       </View>
 
-      {infoAtual.informacoesGerais?.trim() &&
-        <>
-          <Text style={styles.label}>Observação sobre o projeto</Text>
-          <View style={styles.observacaoBox}>
-            <Text style={styles.valor}>{projeto.informacoesOperacao.informacoesGerais || 'Sem observações'}</Text>
-          </View>
-        </>
+      {hasAdditionalInfo(infoAtual)
+        ? renderizarInformacoesAdicionais(infoAtual)
+        : (
+          <TouchableOpacity
+            style={styles.adicionarInfoBtn}
+            onPress={() => setModalInfoVisivel(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle-outline" size={20} color="#E75F07" />
+            <Text style={styles.adicionarInfoBtnTexto}>Adicionar informações da operação</Text>
+          </TouchableOpacity>
+        )
       }
 
-      {renderizarInformacoesAdicionais(infoAtual)}
+      <Text style={styles.label}>Observação sobre o projeto</Text>
+      <View style={styles.observacaoBox}>
+        <Text style={styles.valor}>{projeto.informacoesOperacao?.informacoesGerais || 'Sem observações'}</Text>
+      </View>
 
       <TextInput
         style={styles.input}
@@ -397,6 +486,13 @@ const styles = StyleSheet.create({
   },
   calibragemLabel: { fontSize: 14, color: '#555' },
   calibragemValor: { fontSize: 14, fontWeight: '600', color: '#333' },
+  adicionarInfoBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 16, padding: 16,
+    borderWidth: 1.5, borderColor: '#E75F07', borderStyle: 'dashed',
+    borderRadius: 10,
+  },
+  adicionarInfoBtnTexto: { fontSize: 14, color: '#E75F07', fontWeight: '600' },
   infoAdicionalBox: { marginTop: 16, borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
   infoAdicionalTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', backgroundColor: '#E75F07', paddingHorizontal: 12, paddingVertical: 8 },
   infoRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
