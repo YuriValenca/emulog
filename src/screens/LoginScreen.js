@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -10,7 +10,6 @@ const atualizarUltimoLoginEmBackground = (uid) => {
     .then((snap) => {
       if (!snap.empty) {
         updateDoc(doc(db, 'users', snap.docs[0].id), { ultimoLogin: serverTimestamp() })
-          .then(() => console.log('Último login atualizado:', new Date().toISOString()))
           .catch((e) => console.warn('Falha ao atualizar ultimoLogin:', e.message));
       }
     })
@@ -18,20 +17,27 @@ const atualizarUltimoLoginEmBackground = (uid) => {
 };
 
 const ERROS_LOGIN = {
-  'auth/invalid-email':           'Insira um e-mail válido.',
-  'auth/invalid-credential':      'E-mail ou senha incorretos.',
-  'auth/user-not-found':          'Usuário não encontrado.',
-  'auth/wrong-password':          'Senha incorreta.',
-  'auth/network-request-failed':  'Sem conexão com a internet. Verifique sua rede e tente novamente.',
-  'auth/too-many-requests':       'Muitas tentativas. Aguarde alguns minutos.',
+  'auth/invalid-email':          'Insira um e-mail válido.',
+  'auth/invalid-credential':     'E-mail ou senha incorretos.',
+  'auth/user-not-found':         'Usuário não encontrado.',
+  'auth/wrong-password':         'Senha incorreta.',
+  'auth/network-request-failed': 'Sem conexão com a internet. Verifique sua rede e tente novamente.',
+  'auth/too-many-requests':      'Muitas tentativas. Aguarde alguns minutos.',
 };
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const [cachedLogo, setCachedLogo] = useState(null);
 
   const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
+
+  useEffect(() => {
+    AsyncStorage.getItem('cachedCompanyLogo').then(logo => {
+      if (logo) setCachedLogo(logo);
+    });
+  }, []);
 
   const handleLogin = async () => {
     setCarregando(true);
@@ -49,7 +55,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/logo.png')}
+        source={cachedLogo ? { uri: cachedLogo } : require('../assets/logo.png')}
         resizeMode="contain"
         style={styles.logo}
       />
