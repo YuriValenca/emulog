@@ -1,4 +1,4 @@
-package com.expologapp.Expologpcoapp
+package com.emulogapp.Emulogapp
 
 import android.os.Build
 import android.os.Bundle

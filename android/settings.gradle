@@ -1,4 +1,4 @@
-rootProject.name = 'Expolog-pco-app'
+rootProject.name = 'Emulog'
 
 dependencyResolutionManagement {
   versionCatalogs {
