@@ -33,6 +33,7 @@ async function fetchCompanyData(companyId) {
 }
 
 function computeExpiryDate(validityMonths) {
+  if (validityMonths === 'vitalicia') return null;
   const expDate = new Date();
   if (validityMonths === '1min') {
     expDate.setMinutes(expDate.getMinutes() + 1);
@@ -69,7 +70,8 @@ async function claimLicense(companyId, deviceId) {
   const licenseData = availableSnap.docs[0].data();
 
   const validityMonths = licenseData.validityMonths ?? 12;
-  const expiresAt = Timestamp.fromDate(computeExpiryDate(validityMonths));
+  const expiryDate = computeExpiryDate(validityMonths);
+  const expiresAt = expiryDate ? Timestamp.fromDate(expiryDate) : null;
 
   await runTransaction(db, async (tx) => {
     const freshSnap = await tx.get(licenseRef);

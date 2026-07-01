@@ -24,7 +24,7 @@ const badgeStyles = StyleSheet.create({
 
 function validityLabel(validityMonths) {
   if (!validityMonths && validityMonths !== 0) return null;
-  if (validityMonths === '1min') return 'Plano: 1 min (teste)';
+  if (validityMonths === 'vitalicia') return 'Plano: Vitalícia';
   if (validityMonths === 1) return 'Plano: 1 mês';
   if (validityMonths === 12) return 'Plano: 1 ano';
   return `Plano: ${validityMonths} meses`;
@@ -117,10 +117,13 @@ export default function AbaLicencas({
             const isExpired = l.status === 'expired';
             const isRevoked = l.status === 'revoked';
             const isAvailable = l.status === 'available';
+            const isVitalicia = l.status === 'active' && !l.expiresAt;
 
             const expiryLine = isAvailable
               ? validityLabel(l.validityMonths)
-              : (!isExpired && l.expiresAt ? `Expira: ${formatDate(l.expiresAt)}` : null);
+              : isVitalicia
+                ? 'Vitalícia — sem expiração'
+                : (!isExpired && l.expiresAt ? `Expira: ${formatDate(l.expiresAt)}` : null);
 
             return (
               <TouchableOpacity
@@ -136,7 +139,7 @@ export default function AbaLicencas({
                   <View style={styles.licenseMetaRow}>
                     <StatusBadge status={l.status} />
                     {expiryLine && (
-                      <Text style={[styles.cardMeta, isAvailable && styles.cardMetaPending]}>
+                      <Text style={[styles.cardMeta, (isAvailable || isVitalicia) && styles.cardMetaPending]}>
                         {' '}{expiryLine}
                       </Text>
                     )}

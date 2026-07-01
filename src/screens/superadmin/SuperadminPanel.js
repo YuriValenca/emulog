@@ -75,6 +75,7 @@ export default function SuperadminPanel() {
 
       const allLicensesNormalizadas = allLicenses.map(l => {
         if (l.status !== 'active') return l;
+        if (!l.expiresAt) return l;
         const exp = l.expiresAt?.seconds ? new Date(l.expiresAt.seconds * 1000) : null;
         if (exp && exp < agora) return { ...l, status: 'expired' };
         return l;
@@ -173,7 +174,7 @@ export default function SuperadminPanel() {
       await Promise.all(promessas);
       setLicenses(prev => [...prev, ...novasLicencasLocais]);
 
-      const validadeLabel = mesesValidade === '1min' ? '1 minuto (teste)' : `${mesesValidade} meses`;
+      const validadeLabel = mesesValidade === 'vitalicia' ? 'vitalícia (sem expiração)' : `${mesesValidade} meses`;
       Alert.alert('Sucesso', `${quantidade} licença(s) gerada(s). O prazo de ${validadeLabel} começará a contar a partir da primeira ativação.`);
       setModalLicencaVisivel(false);
     } catch (e) {
@@ -339,6 +340,7 @@ export default function SuperadminPanel() {
       availableLicenses: licenses.filter(l => l.status === 'available').length,
       expiringSoon: licenses.filter(l => {
         if (l.status !== 'active') return false;
+        if (!l.expiresAt) return false;
         const exp = l.expiresAt?.toDate ? l.expiresAt.toDate() : new Date(l.expiresAt?.seconds * 1000);
         const diff = (exp - new Date()) / (1000 * 60 * 60 * 24);
         return diff >= 0 && diff <= 30;
