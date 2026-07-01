@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Expolog-pco-app",
-    "slug": "Expolog-pco-app",
+    "name": "Emulog",
+    "slug": "Emulog",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
@@ -16,10 +16,10 @@
     ],
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.expologapp.Expologpcoapp",
+      "package": "com.emulogapp.Emulogapp",
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_CONNECT",

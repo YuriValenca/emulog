@@ -136,7 +136,7 @@ export default function DetalheProjetoScreen() {
         gap: 8px;
       ">
         <span style="font-size: 9px; color: #aaa; font-style: italic;">desenvolvido por</span>
-        <img src="${LOGO_BASE_64}" style="height: 18px; opacity: 0.7;" alt="Expolog" />
+        <img src="${LOGO_BASE_64}" style="height: 18px; opacity: 0.7;" alt="Emulog" />
       </div>` : '';
 
     const htmlContent = `
@@ -216,7 +216,7 @@ export default function DetalheProjetoScreen() {
 
       <div class="content-box">
         <h2>Observação Técnica:</h2>
-        <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da Expolog.</p>
+        <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da empresa.</p>
       </div>
 
       ${informacoesGerais ? `<div class="informacoesGerais-box">
