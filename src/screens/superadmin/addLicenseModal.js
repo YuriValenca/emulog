@@ -34,10 +34,10 @@ export default function ModalGerarLicencas({ visible, onClose, onSave, onRenew, 
   };
 
   const opcoes = [
-    { label: '1 Min', value: '1min', isTest: true },
     { label: '1 Mês', value: 1 },
     { label: '6 Meses', value: 6 },
     { label: '1 Ano', value: 12 },
+    { label: 'Vitalícia', value: 'vitalicia', isVitalicia: true },
   ];
 
   return (
@@ -95,18 +95,18 @@ export default function ModalGerarLicencas({ visible, onClose, onSave, onRenew, 
                   key={String(opcao.value)}
                   style={[
                     styles.btnValidade,
-                    ativo && (opcao.isTest ? styles.btnValidadeAtivoTeste : styles.btnValidadeAtivo),
-                    opcao.isTest && styles.btnTeste,
+                    ativo && (opcao.isVitalicia ? styles.btnValidadeAtivoVitalicia : styles.btnValidadeAtivo),
+                    opcao.isVitalicia && styles.btnVitalicia,
                   ]}
                   onPress={() => setValidade(opcao.value)}
                   disabled={saving}
                 >
-                  {opcao.isTest && (
-                    <Text style={[styles.badgeTeste, ativo && styles.badgeTesteAtivo]}>TESTE</Text>
+                  {opcao.isVitalicia && (
+                    <Text style={[styles.badgeVitalicia, ativo && styles.badgeVitaliciaAtivo]}>SEM EXPIRAÇÃO</Text>
                   )}
                   <Text style={[
                     styles.txtValidade,
-                    ativo && (opcao.isTest ? styles.txtValidadeAtivoTeste : styles.txtValidadeAtivo),
+                    ativo && (opcao.isVitalicia ? styles.txtValidadeAtivoVitalicia : styles.txtValidadeAtivo),
                   ]}>
                     {opcao.label}
                   </Text>
@@ -151,14 +151,14 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: '#222', marginBottom: 20 },
   gridValidade: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   btnValidade: { flex: 1, minWidth: '45%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingVertical: 12, alignItems: 'center', backgroundColor: '#f9f9f9' },
-  btnTeste: { borderStyle: 'dashed', borderColor: '#aaa' },
+  btnVitalicia: { borderStyle: 'dashed', borderColor: '#aaa' },
   btnValidadeAtivo: { borderColor: '#E75F07', backgroundColor: '#fcf8f5' },
-  btnValidadeAtivoTeste: { borderColor: '#7C3AED', backgroundColor: '#f5f3ff', borderStyle: 'dashed' },
+  btnValidadeAtivoVitalicia: { borderColor: '#7C3AED', backgroundColor: '#f5f3ff', borderStyle: 'dashed' },
   txtValidade: { fontSize: 13, fontWeight: '600', color: '#555' },
   txtValidadeAtivo: { color: '#E75F07', fontWeight: '700' },
-  txtValidadeAtivoTeste: { color: '#7C3AED', fontWeight: '700' },
-  badgeTeste: { fontSize: 9, fontWeight: '800', color: '#aaa', letterSpacing: 0.5, marginBottom: 2 },
-  badgeTesteAtivo: { color: '#7C3AED' },
+  txtValidadeAtivoVitalicia: { color: '#7C3AED', fontWeight: '700' },
+  badgeVitalicia: { fontSize: 9, fontWeight: '800', color: '#aaa', letterSpacing: 0.5, marginBottom: 2 },
+  badgeVitaliciaAtivo: { color: '#7C3AED' },
   footer: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   btnCancelar: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8 },
   txtCancelar: { color: '#777', fontWeight: '600' },
