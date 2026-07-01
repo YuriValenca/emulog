@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, StyleSheet, Alert, TouchableOpacity,
-  ScrollView, Modal,
+  ScrollView, Modal, ActivityIndicator,
 } from 'react-native';
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -43,6 +43,13 @@ export default function GerenciarUsuarios() {
   const [modalMessage, setModalMessage] = useState('');
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState(null);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null); // { id, colecao }
+  const [editPlaca, setEditPlaca] = useState('');
+  const [editNomeOperador, setEditNomeOperador] = useState('');
+  const [editCargoOperador, setEditCargoOperador] = useState('');
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   const navigation = useNavigation();
   const auth = getAuth();
@@ -212,6 +219,66 @@ export default function GerenciarUsuarios() {
     }
   };
 
+  const abrirEdicaoCaminhao = (c) => {
+    setEditingItem({ id: c.id, colecao: 'caminhoes' });
+    setEditPlaca(c.placa || '');
+    setEditModalVisible(true);
+  };
+
+  const abrirEdicaoOperador = (o) => {
+    setEditingItem({ id: o.id, colecao: 'operadores' });
+    setEditNomeOperador(o.nome || '');
+    setEditCargoOperador(o.cargo || '');
+    setEditModalVisible(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editingItem || salvandoEdicao) return;
+    const { id, colecao } = editingItem;
+
+    if (colecao === 'caminhoes' && !editPlaca.trim()) {
+      Alert.alert('Atenção', 'Informe a placa do caminhão.');
+      return;
+    }
+    if (colecao === 'operadores' && !editNomeOperador.trim()) {
+      Alert.alert('Atenção', 'Informe o nome do operador.');
+      return;
+    }
+
+    setSalvandoEdicao(true);
+    try {
+      if (colecao === 'caminhoes') {
+        await updateDoc(doc(db, 'caminhoes', id), {
+          placa: editPlaca.trim().toUpperCase(),
+          descricao: `Caminhão — ${editPlaca.trim().toUpperCase()}`,
+        });
+        await carregarCaminhoes();
+      } else if (colecao === 'operadores') {
+        await updateDoc(doc(db, 'operadores', id), {
+          nome: editNomeOperador.trim(),
+          cargo: editCargoOperador.trim(),
+        });
+        await carregarOperadores();
+      }
+      fecharEdicao();
+      mostrarModal('Registro atualizado com sucesso!');
+    } catch (e) {
+      console.error('Erro ao editar:', e);
+      Alert.alert('Erro', 'Não foi possível atualizar o registro.');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  };
+
+  const fecharEdicao = () => {
+    if (salvandoEdicao) return;
+    setEditModalVisible(false);
+    setEditingItem(null);
+    setEditPlaca('');
+    setEditNomeOperador('');
+    setEditCargoOperador('');
+  };
+
   const mostrarModal = (msg) => {
     setModalMessage(msg);
     setModalVisible(true);
@@ -347,13 +414,22 @@ export default function GerenciarUsuarios() {
                   Cadastrado em: {c.criadoEm ? new Date(c.criadoEm).toLocaleDateString() : '—'}
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => confirmarDelecao(c.id, 'caminhoes')}
-                style={styles.botaoDeletar}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="trash-outline" size={18} color="white" />
-              </TouchableOpacity>
+              <View style={styles.acoesCard}>
+                <TouchableOpacity
+                  onPress={() => abrirEdicaoCaminhao(c)}
+                  style={styles.botaoEditar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="pencil-outline" size={18} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => confirmarDelecao(c.id, 'caminhoes')}
+                  style={styles.botaoDeletar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="trash-outline" size={18} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
@@ -404,13 +480,22 @@ export default function GerenciarUsuarios() {
                   Cadastrado em: {o.criadoEm ? new Date(o.criadoEm).toLocaleDateString() : '—'}
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => confirmarDelecao(o.id, 'operadores')}
-                style={styles.botaoDeletar}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="trash-outline" size={18} color="white" />
-              </TouchableOpacity>
+              <View style={styles.acoesCard}>
+                <TouchableOpacity
+                  onPress={() => abrirEdicaoOperador(o)}
+                  style={styles.botaoEditar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="pencil-outline" size={18} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => confirmarDelecao(o.id, 'operadores')}
+                  style={styles.botaoDeletar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="trash-outline" size={18} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
@@ -444,6 +529,68 @@ export default function GerenciarUsuarios() {
           </View>
         </View>
       </Modal>
+
+      <Modal animationType="slide" transparent visible={editModalVisible} onRequestClose={fecharEdicao}>
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            {editingItem?.colecao === 'caminhoes' && (
+              <>
+                <Text style={styles.modalTitulo}>Editar Caminhão</Text>
+                <Text style={styles.label}>Placa</Text>
+                <TextInput
+                  value={editPlaca}
+                  onChangeText={setEditPlaca}
+                  style={styles.input}
+                  placeholder="Ex: ABC-1234"
+                  autoCapitalize="characters"
+                  editable={!salvandoEdicao}
+                />
+              </>
+            )}
+
+            {editingItem?.colecao === 'operadores' && (
+              <>
+                <Text style={styles.modalTitulo}>Editar Operador</Text>
+                <Text style={styles.label}>Nome</Text>
+                <TextInput
+                  value={editNomeOperador}
+                  onChangeText={setEditNomeOperador}
+                  style={styles.input}
+                  placeholder="Nome completo"
+                  editable={!salvandoEdicao}
+                />
+                <Text style={styles.label}>Cargo</Text>
+                <TextInput
+                  value={editCargoOperador}
+                  onChangeText={setEditCargoOperador}
+                  style={styles.input}
+                  placeholder="Ex: Operador, Motorista"
+                  editable={!salvandoEdicao}
+                />
+              </>
+            )}
+
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: '#808080', opacity: salvandoEdicao ? 0.6 : 1 }]}
+              onPress={fecharEdicao}
+              disabled={salvandoEdicao}
+            >
+              <Text style={styles.modalBtnTexto}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: '#FF9621', opacity: salvandoEdicao ? 0.8 : 1 }]}
+              onPress={salvarEdicao}
+              disabled={salvandoEdicao}
+            >
+              {salvandoEdicao ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalBtnTexto}>Salvar</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -463,7 +610,7 @@ const styles = StyleSheet.create({
   formulario: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
   input: {
-    borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 12,
+    borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 12, width: '100%',
     borderRadius: 8, fontSize: 15, backgroundColor: '#fafafa',
   },
   adicionarBtn: {
@@ -481,16 +628,22 @@ const styles = StyleSheet.create({
   cardNome: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
   cardSub: { fontSize: 13, color: '#555', marginBottom: 2 },
   cardMeta: { fontSize: 11, color: '#999', fontStyle: 'italic' },
+  acoesCard: { flexDirection: 'row', gap: 8, marginLeft: 10 },
+  botaoEditar: {
+    backgroundColor: '#FF9621', borderRadius: 8, padding: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
   botaoDeletar: {
     backgroundColor: '#FF5C00', borderRadius: 8, padding: 10,
-    alignItems: 'center', justifyContent: 'center', marginLeft: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
   modalView: {
     width: '80%', backgroundColor: 'white', borderRadius: 20, padding: 32, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5,
   },
+  modalTitulo: { fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 12, alignSelf: 'center' },
   modalText: { fontSize: 16, textAlign: 'center', marginBottom: 16, color: '#333' },
-  modalBtn: { width: '100%', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 8 },
+  modalBtn: { width: '100%', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 8, minHeight: 44, justifyContent: 'center' },
   modalBtnTexto: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
