@@ -37,3 +37,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# build
+android/app/release.jks
+android/gradle.properties
