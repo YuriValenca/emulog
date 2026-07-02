@@ -2,7 +2,7 @@
   "expo": {
     "name": "Emulog",
     "slug": "Emulog",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +19,7 @@
         "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.emulogapp.Emulogapp",
+      "package": "com.Emulog.myapp",
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_CONNECT",
@@ -55,9 +55,10 @@
       ],
       "expo-secure-store"
     ],
+    "owner": "yurivalencac",
     "extra": {
       "eas": {
-        "projectId": "04a541c1-cf4c-46db-a45a-b745f8874f0e"
+        "projectId": "f3f157f5-f374-4914-8757-88d6fd3369cf"
       }
     }
   }

@@ -83,9 +83,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.emulogapp.Emulogapp'
+    namespace 'com.Emulog.myapp'
     defaultConfig {
-        applicationId 'com.emulogapp.Emulogapp'
+        applicationId 'com.Emulog.myapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
