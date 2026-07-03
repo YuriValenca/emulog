@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": false,
     "splash": {
       "image": "./src/assets/splash.png",
       "resizeMode": "contain",
@@ -53,7 +54,9 @@
           "bluetoothAlwaysPermission": "Permitir que o app acesse o Bluetooth para conectar à balança"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-asset",
+      "expo-font"
     ],
     "owner": "yurivalencac",
     "extra": {
