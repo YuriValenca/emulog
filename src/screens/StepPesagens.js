@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   alertText: { fontSize: 16, color: 'red', fontWeight: 'bold' },
   input: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
-    borderRadius: 5, padding: 10, marginBottom: 15, fontSize: 18,
+    borderRadius: 5, padding: 10, marginBottom: 15, fontSize: 18, color: '#000000',
   },
   button: {
     backgroundColor: '#F67D22', padding: 10, borderRadius: 5,

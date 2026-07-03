@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   },
   editarInfoBtnTexto: { fontSize: 13, color: '#E75F07', fontWeight: '600' },
   observacaoBox: { backgroundColor: '#f9f9f9', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#e2e2e2' },
-  input: { backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1, borderRadius: 5, padding: 10, marginTop: 20, marginBottom: 10, fontSize: 16 },
+  input: { color: '#000000', backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1, borderRadius: 5, padding: 10, marginTop: 20, marginBottom: 10, fontSize: 16 },
   amostraContainer: { marginTop: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 8, borderWidth: 1, borderColor: '#e2e2e2' },
   amostraTitulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#333' },
   pesagemContainer: { marginTop: 8 },

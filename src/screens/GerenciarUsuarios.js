@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
   input: {
     borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 12, width: '100%',
-    borderRadius: 8, fontSize: 15, backgroundColor: '#fafafa',
+    borderRadius: 8, fontSize: 15, backgroundColor: '#fafafa', color: '#000000',
   },
   adicionarBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

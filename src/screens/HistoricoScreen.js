@@ -392,6 +392,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     backgroundColor: '#fafafa',
+    color: '#000000',
   },
   // Wrapper necessário para o Picker respeitar bordas no RN
   pickerWrapper: {

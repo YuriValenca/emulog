@@ -20,6 +20,12 @@ import { auth } from './src/firebaseConfig';
 
 const Stack = createNativeStackNavigator();
 
+function DefaultStatusBar() {
+  return (
+    <StatusBar backgroundColor="#ffffff" barStyle="dark-content" translucent={false} />
+  );
+}
+
 function BleStatusBar({ navigation }) {
   const { bleStatus, connectedDevice, weight } = useBle();
 
@@ -152,14 +158,30 @@ function AppNavigator() {
     checkConnectionAndSync();
   }, []);
 
-  if (authStatus === 'loading') return null;
-  if (authStatus === 'no-license') return <LicenseBlockScreen />;
-  if (authStatus === 'config-error') return <ConfigErrorScreen message={debugError} />;
-  if (authStatus === 'error') return <GenericErrorScreen message={debugError} />;
+  if (authStatus === 'loading') return <DefaultStatusBar />;
+  if (authStatus === 'no-license') return (
+    <>
+      <DefaultStatusBar />
+      <LicenseBlockScreen />
+    </>
+  );
+  if (authStatus === 'config-error') return (
+    <>
+      <DefaultStatusBar />
+      <ConfigErrorScreen message={debugError} />
+    </>
+  );
+  if (authStatus === 'error') return (
+    <>
+      <DefaultStatusBar />
+      <GenericErrorScreen message={debugError} />
+    </>
+  );
 
   return (
     <NavigationContainer ref={navigationRef} onReady={() => setNavReady(true)}>
       <View style={styles.root}>
+        <DefaultStatusBar />
         <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: styles.screenContent }}>
           {authUser ? (
             <>

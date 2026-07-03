@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   input: {
+    color: '#000000',
     backgroundColor: '#FFF',
     borderColor: '#CCC',
     borderWidth: 1,

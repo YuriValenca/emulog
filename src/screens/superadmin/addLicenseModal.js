@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   keyBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f4f4f4', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 20 },
   keyText: { fontSize: 12, fontFamily: 'monospace', color: '#444', flex: 1 },
   label: { fontSize: 13, fontWeight: '700', color: '#444', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: '#222', marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: '#000000', marginBottom: 20 },
   gridValidade: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   btnValidade: { flex: 1, minWidth: '45%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingVertical: 12, alignItems: 'center', backgroundColor: '#f9f9f9' },
   btnVitalicia: { borderStyle: 'dashed', borderColor: '#aaa' },

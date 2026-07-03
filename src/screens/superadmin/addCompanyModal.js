@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   modalTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },
   scroll: { marginBottom: 16 },
   formLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6 },
-  formInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: '#fafafa' },
+  formInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16, backgroundColor: '#fafafa', color: '#000000', },
 
   logoPickerBtn: {
     borderWidth: 1.5,

@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6 },
   input: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
-    borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16,
+    borderRadius: 8, padding: 12, marginBottom: 18, fontSize: 16, color: '#000000',
   },
   avisoContainer: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 18,
