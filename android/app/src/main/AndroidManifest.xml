@@ -33,7 +33,7 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="com.emulogapp.Emulogapp"/>
+        <data android:scheme="com.Emulog.myapp"/>
         <data android:scheme="exp+emulog"/>
       </intent-filter>
     </activity>

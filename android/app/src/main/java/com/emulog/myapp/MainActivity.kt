@@ -1,4 +1,4 @@
-package com.emulogapp.Emulogapp
+package com.Emulog.myapp
 
 import android.os.Build
 import android.os.Bundle
