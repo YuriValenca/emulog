@@ -4,6 +4,10 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
+import { getOrCreateDeviceId } from '../deviceId';
+
+const DEV_DEVICE_ID_PREFIX = 'a7694378-1ade-4c6d-9a3d-73500677d';
 
 const atualizarUltimoLoginEmBackground = (uid) => {
   getDocs(query(collection(db, 'users'), where('uid', '==', uid)))
@@ -30,7 +34,7 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [cachedLogo, setCachedLogo] = useState(null);
-  const [tecladoAberto, setTecladoAberto] = useState(false);
+  const [devDevice, setDevDevice] = useState(false);
 
   const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
 
@@ -41,12 +45,17 @@ export default function LoginScreen() {
   }, []);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setTecladoAberto(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setTecladoAberto(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
+    const checarDeviceId = async () => {
+      try {
+        const id = await getOrCreateDeviceId();
+        if (id && id.toLowerCase().startsWith(DEV_DEVICE_ID_PREFIX)) {
+          setDevDevice(true);
+        }
+      } catch (e) {
+        console.warn('Falha ao checar deviceId:', e.message);
+      }
     };
+    checarDeviceId();
   }, []);
 
   const handleLogin = async () => {
@@ -105,10 +114,17 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
 
-      {!tecladoAberto && (
-        <View style={styles.footer}>
-          <Text style={styles.footerTexto}>Desenvolvido por</Text>
-          <Image source={require('../assets/logo.png')} style={styles.footerLogo} resizeMode="contain" />
+      {devDevice && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugTexto}>
+            updateId: {Updates.updateId ?? 'nenhum (rodando build embutido)'}
+          </Text>
+          <Text style={styles.debugTexto}>
+            channel: {Updates.channel ?? 'nenhum'}
+          </Text>
+          <Text style={styles.debugTexto}>
+            isEmbeddedLaunch: {String(Updates.isEmbeddedLaunch)}
+          </Text>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -138,6 +154,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
+    color: '#000000',
     marginBottom: 10,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 15,
@@ -160,21 +177,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  debugContainer: {
     paddingHorizontal: 20,
     paddingBottom: 12,
     paddingTop: 12,
   },
-  footerTexto: {
-    fontSize: 12,
-    color: '#888',
-  },
-  footerLogo: {
-    height: 36,
-    width: 36,
+  debugTexto: {
+    fontSize: 10,
+    color: '#999',
   },
 });
