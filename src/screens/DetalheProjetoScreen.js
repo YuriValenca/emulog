@@ -125,20 +125,6 @@ export default function DetalheProjetoScreen() {
       if (b64) companyLogoSrc = b64;
     }
 
-    const explogFooter = !isFoundingCompany ? `
-      <div style="
-        margin-top: 40px;
-        padding-top: 12px;
-        border-top: 1px solid #e0e0e0;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-      ">
-        <span style="font-size: 9px; color: #aaa; font-style: italic;">desenvolvido por</span>
-        <img src="${LOGO_BASE_64}" style="height: 18px; opacity: 0.7;" alt="Emulog" />
-      </div>` : '';
-
     const htmlContent = `
     <html>
     <head>
@@ -226,8 +212,6 @@ export default function DetalheProjetoScreen() {
 
       <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
       ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
-
-      ${explogFooter}
     </body>
     </html>`;
 
