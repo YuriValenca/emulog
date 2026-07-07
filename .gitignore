@@ -40,4 +40,4 @@ yarn-error.*
 
 # build
 android/app/release.jks
-android/gradle.properties
+*gradle.properties
