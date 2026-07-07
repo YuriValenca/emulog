@@ -210,6 +210,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
               value={form.name}
               onChangeText={v => setForm(p => ({ ...p, name: v }))}
               placeholder="Razão social"
+              placeholderTextColor="#888888"
             />
 
             <Text style={styles.formLabel}>CNPJ</Text>
@@ -218,6 +219,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
               value={form.cnpj}
               onChangeText={handleCnpjChange}
               placeholder="00.000.000/0000-00"
+              placeholderTextColor="#888888"
               keyboardType="numeric"
               maxLength={18}
             />
@@ -319,6 +321,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
                             value={novaCaminhaoPlaca}
                             onChangeText={setNovaCaminhaoPlaca}
                             placeholder="Placa (ex: ABC-1234)"
+                            placeholderTextColor="#888888"
                             autoCapitalize="characters"
                           />
                           <TouchableOpacity
@@ -368,12 +371,14 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
                               value={novoOperadorNome}
                               onChangeText={setNovoOperadorNome}
                               placeholder="Nome completo"
+                              placeholderTextColor="#888888"
                             />
                             <TextInput
                               style={[styles.formInput, { marginBottom: 0 }]}
                               value={novoOperadorCargo}
                               onChangeText={setNovoOperadorCargo}
                               placeholder="Cargo"
+                              placeholderTextColor="#888888"
                             />
                           </View>
                           <TouchableOpacity

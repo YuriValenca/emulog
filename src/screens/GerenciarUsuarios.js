@@ -333,11 +333,11 @@ export default function GerenciarUsuarios() {
           <Text style={styles.secaoTitulo}>Adicionar Usuário</Text>
           <View style={styles.formulario}>
             <Text style={styles.label}>Nome</Text>
-            <TextInput value={nomeUsuario} onChangeText={setNomeUsuario} style={styles.input} placeholder="Nome completo" />
+            <TextInput value={nomeUsuario} onChangeText={setNomeUsuario} style={styles.input} placeholder="Nome completo" placeholderTextColor="#888888" />
             <Text style={styles.label}>Email</Text>
-            <TextInput value={email} onChangeText={setEmail} style={styles.input} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
+            <TextInput value={email} onChangeText={setEmail} style={styles.input} placeholder="email@exemplo.com" placeholderTextColor="#888888" keyboardType="email-address" autoCapitalize="none" />
             <Text style={styles.label}>Senha</Text>
-            <TextInput value={senha} onChangeText={setSenha} secureTextEntry style={styles.input} placeholder="Senha" />
+            <TextInput value={senha} onChangeText={setSenha} secureTextEntry style={styles.input} placeholder="Senha" placeholderTextColor="#888888"  />
             <TouchableOpacity style={styles.adicionarBtn} onPress={adicionarUsuario} activeOpacity={0.8}>
               <Ionicons name="person-add" size={20} color="white" />
               <Text style={styles.adicionarBtnTexto}>Adicionar Usuário</Text>
@@ -350,6 +350,7 @@ export default function GerenciarUsuarios() {
             onChangeText={setTermoBuscaUsuario}
             style={styles.input}
             placeholder="Digite o nome"
+            placeholderTextColor="#888888"
           />
 
           <Text style={styles.listaTitulo}>Lista de Usuários ({usuariosFiltrados.length})</Text>
@@ -386,6 +387,7 @@ export default function GerenciarUsuarios() {
               onChangeText={setPlacaCaminhao}
               style={styles.input}
               placeholder="Ex: ABC-1234"
+              placeholderTextColor="#888888"
               autoCapitalize="characters"
             />
             <TouchableOpacity style={styles.adicionarBtn} onPress={adicionarCaminhao} activeOpacity={0.8}>
@@ -400,6 +402,7 @@ export default function GerenciarUsuarios() {
             onChangeText={setTermoBuscaCaminhao}
             style={styles.input}
             placeholder="Digite a placa"
+            placeholderTextColor="#888888"
           />
 
           <Text style={styles.listaTitulo}>Caminhões cadastrados ({caminhoesFiltrados.length})</Text>
@@ -445,6 +448,7 @@ export default function GerenciarUsuarios() {
               onChangeText={setNomeOperador}
               style={styles.input}
               placeholder="Nome completo"
+              placeholderTextColor="#888888"
             />
             <Text style={styles.label}>Cargo</Text>
             <TextInput
@@ -452,6 +456,7 @@ export default function GerenciarUsuarios() {
               onChangeText={setCargoOperador}
               style={styles.input}
               placeholder="Ex: Operador, Motorista"
+              placeholderTextColor="#888888"
             />
             <TouchableOpacity style={styles.adicionarBtn} onPress={adicionarOperador} activeOpacity={0.8}>
               <Ionicons name="person-add-outline" size={20} color="white" />
@@ -465,6 +470,7 @@ export default function GerenciarUsuarios() {
             onChangeText={setTermoBuscaOperador}
             style={styles.input}
             placeholder="Digite o nome"
+            placeholderTextColor="#888888"
           />
 
           <Text style={styles.listaTitulo}>Operadores cadastrados ({operadoresFiltrados.length})</Text>
@@ -542,6 +548,7 @@ export default function GerenciarUsuarios() {
                   onChangeText={setEditPlaca}
                   style={styles.input}
                   placeholder="Ex: ABC-1234"
+                  placeholderTextColor="#888888"
                   autoCapitalize="characters"
                   editable={!salvandoEdicao}
                 />
@@ -557,6 +564,7 @@ export default function GerenciarUsuarios() {
                   onChangeText={setEditNomeOperador}
                   style={styles.input}
                   placeholder="Nome completo"
+                  placeholderTextColor="#888888"
                   editable={!salvandoEdicao}
                 />
                 <Text style={styles.label}>Cargo</Text>
@@ -565,6 +573,7 @@ export default function GerenciarUsuarios() {
                   onChangeText={setEditCargoOperador}
                   style={styles.input}
                   placeholder="Ex: Operador, Motorista"
+                  placeholderTextColor="#888888"
                   editable={!salvandoEdicao}
                 />
               </>

@@ -124,9 +124,9 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar por nome ou email..."
+          placeholderTextColor="#888888"
           value={busca}
           onChangeText={setBusca}
-          placeholderTextColor="#999"
         />
         {busca.length > 0 && (
           <TouchableOpacity onPress={() => setBusca('')}>
@@ -149,12 +149,14 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
                   value={editNome}
                   onChangeText={setEditNome}
                   placeholder="Nome"
+                  placeholderTextColor="#888888"
                 />
                 <TextInput
                   style={styles.editInput}
                   value={editEmail}
                   onChangeText={setEditEmail}
                   placeholder="Email"
+                  placeholderTextColor="#888888"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />

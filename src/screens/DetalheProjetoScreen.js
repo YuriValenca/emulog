@@ -430,6 +430,7 @@ export default function DetalheProjetoScreen() {
       <TextInput
         style={styles.input}
         placeholder="Buscar Amostra"
+        placeholderTextColor="#888888"
         value={amostraPesquisa}
         onChangeText={setAmostraPesquisa}
       />

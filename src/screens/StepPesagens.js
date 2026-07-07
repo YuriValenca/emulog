@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     flex: 1, fontSize: 13, fontWeight: '600', color: '#FF9621',
   },
   calibragemView: { marginBottom: 20 },
-  infoText: { fontSize: 16 },
+  infoText: { color: '#000000', fontSize: 16 },
   alertText: { fontSize: 16, color: 'red', fontWeight: 'bold' },
   input: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   adicionarAmostraBtnTexto: { color: '#FFF', fontSize: 18, marginLeft: 5 },
   selectContainer: { marginBottom: 15 },
-  label: { fontWeight: 'bold', marginBottom: 5 },
+  label: { color: '#000000', fontWeight: 'bold', marginBottom: 5 },
   amostrasContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   amostraBtn: { backgroundColor: '#ddd', padding: 15, borderRadius: 5, marginVertical: 5, alignItems: 'center' },
   amostraBtnMobile: { width: Dimensions.get('window').width - 40 },

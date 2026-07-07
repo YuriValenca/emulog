@@ -67,6 +67,7 @@ export default function ModalAdicionarUsuario({ visible, onClose, onSave, saving
               value={nome}
               onChangeText={setNome}
               placeholder="Ex: João Silva"
+              placeholderTextColor="#888888"
               editable={!saving}
             />
 
@@ -76,6 +77,7 @@ export default function ModalAdicionarUsuario({ visible, onClose, onSave, saving
               value={email}
               onChangeText={setEmail}
               placeholder="exemplo@xplog.com"
+              placeholderTextColor="#888888"
               keyboardType="email-address"
               autoCapitalize="none"
               editable={!saving}
@@ -87,6 +89,7 @@ export default function ModalAdicionarUsuario({ visible, onClose, onSave, saving
               value={senha}
               onChangeText={setSenha}
               placeholder="Mínimo 6 caracteres"
+              placeholderTextColor="#888888"
               secureTextEntry
               editable={!saving}
             />

@@ -148,6 +148,7 @@ export default function InformacoesOperacao({
       <TextInput
         style={styles.input}
         placeholder="Ex: 123456"
+        placeholderTextColor="#888888"
         keyboardType="numeric"
         value={numeroNF}
         onChangeText={setNumeroNF}
@@ -158,6 +159,7 @@ export default function InformacoesOperacao({
       <TextInput
         style={styles.input}
         placeholder="Ex: 1500"
+        placeholderTextColor="#888888"
         keyboardType="numeric"
         value={kgPrevisto}
         onChangeText={setKgPrevisto}
@@ -168,6 +170,7 @@ export default function InformacoesOperacao({
       <TextInput
         style={styles.input}
         placeholder="Ex: 1480"
+        placeholderTextColor="#888888"
         keyboardType="numeric"
         value={kgAplicado}
         onChangeText={setKgAplicado}
@@ -226,6 +229,7 @@ export default function InformacoesOperacao({
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Observações relevantes sobre a operação..."
+        placeholderTextColor="#888888"
         multiline
         numberOfLines={4}
         textAlignVertical="top"
