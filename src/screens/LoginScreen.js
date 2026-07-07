@@ -4,8 +4,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates';
-import { useAppAuth } from '../context/auth';
 
 const atualizarUltimoLoginEmBackground = (uid) => {
   getDocs(query(collection(db, 'users'), where('uid', '==', uid)))
@@ -32,9 +30,6 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [cachedLogo, setCachedLogo] = useState(null);
-  const [devDevice, setDevDevice] = useState(false);
-
-  const { isSuperadmin } = useAppAuth();
 
   const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
 
@@ -42,19 +37,6 @@ export default function LoginScreen() {
     AsyncStorage.getItem('cachedCompanyLogo').then(logo => {
       if (logo) setCachedLogo(logo);
     });
-  }, []);
-
-  useEffect(() => {
-    const checarDeviceId = async () => {
-      try {
-        if (isSuperadmin) {
-          setDevDevice(true);
-        }
-      } catch (e) {
-        console.warn('Falha ao checar deviceId:', e.message);
-      }
-    };
-    checarDeviceId();
   }, []);
 
   const handleLogin = async () => {
@@ -99,6 +81,7 @@ export default function LoginScreen() {
           placeholder="Senha"
           placeholderTextColor="#888888"
           secureTextEntry
+          autoCapitalize="none"
           value={senha}
           onChangeText={setSenha}
           editable={!carregando}
@@ -114,20 +97,6 @@ export default function LoginScreen() {
             : <Text style={styles.buttonText}>Entrar</Text>}
         </TouchableOpacity>
       </View>
-
-      {devDevice && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugTexto}>
-            updateId: {Updates.updateId ?? 'nenhum (rodando build embutido)'}
-          </Text>
-          <Text style={styles.debugTexto}>
-            channel: {Updates.channel ?? 'nenhum'}
-          </Text>
-          <Text style={styles.debugTexto}>
-            isEmbeddedLaunch: {String(Updates.isEmbeddedLaunch)}
-          </Text>
-        </View>
-      )}
     </KeyboardAvoidingView>
   );
 }
