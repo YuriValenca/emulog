@@ -115,12 +115,18 @@ function NovaAmostraScreenInner() {
 
   useEffect(() => {
     const buscarUltimaCalibragem = async () => {
-      if (!companyId) return;
       try {
         const connectionState = await NetInfo.fetch();
-        if (connectionState.isConnected) {
-          const q = query(collection(db, "calibragens"), where('companyId', '==', companyId), orderBy("timestamp", "desc"), limit(1));
+
+        if (connectionState.isConnected && companyId) {
+          const q = query(
+            collection(db, "calibragens"),
+            where('companyId', '==', companyId),
+            orderBy("timestamp", "desc"),
+            limit(1)
+          );
           const querySnapshot = await getDocs(q);
+
           if (!querySnapshot.empty) {
             const calibragemDoc = querySnapshot.docs[0].data();
             const calibragemData = new Date(
@@ -139,26 +145,28 @@ function NovaAmostraScreenInner() {
             await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify({
               ...dados, timestamp: calibragemData.toISOString(),
             }));
+            return;
           }
-        } else {
-          const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
-          if (calibragemOffline) {
-            const calibragem = JSON.parse(calibragemOffline);
-            const calibragemData = new Date(calibragem.timestamp);
-            const horasDesdeCalibragem = Math.abs(new Date() - calibragemData) / 36e5;
-            setUltimaCalibragem({
-              ...calibragem,
-              timestamp: calibragemData,
-              necessitaCalibragem: horasDesdeCalibragem > 14,
-            });
-          }
+        }
+
+        const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
+        if (calibragemOffline) {
+          const calibragem = JSON.parse(calibragemOffline);
+          const calibragemData = new Date(calibragem.timestamp);
+          const horasDesdeCalibragem = Math.abs(new Date() - calibragemData) / 36e5;
+          setUltimaCalibragem({
+            ...calibragem,
+            timestamp: calibragemData,
+            necessitaCalibragem: horasDesdeCalibragem > 14,
+          });
         }
       } catch (error) {
         console.error("Erro ao buscar calibragem:", error);
       }
     };
+
     buscarUltimaCalibragem();
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     const init = async () => {
@@ -420,9 +428,9 @@ function NovaAmostraScreenInner() {
         {amostra.map((pesagem, indexPesagem) => (
           <View key={indexPesagem} style={styles.tableRow}>
             <Text style={styles.historicoPesagemBold}>Pesagem {indexPesagem + 1}:</Text>
-            <Text> {pesagem.peso ? `${pesagem.peso} g` : '—'}</Text>
-            <Text> {pesagem.densidade ? `${pesagem.densidade} g/cm³` : ''}</Text>
-            <Text> {pesagem.timestamp}</Text>
+            <Text style={styles.pesagemText}> {pesagem.peso ? `${pesagem.peso} g` : '—'}</Text>
+            <Text style={styles.pesagemText}> {pesagem.densidade ? `${pesagem.densidade} g/cm³` : ''}</Text>
+            <Text style={styles.pesagemText}> {pesagem.timestamp}</Text>
           </View>
         ))}
       </View>
@@ -684,7 +692,7 @@ const styles = StyleSheet.create({
   historicoTitulo: { fontWeight: 'bold', fontSize: 18, color: '#333', marginBottom: 5 },
   tableRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
   historicoPesagemBold: { fontSize: 16, color: '#333', fontWeight: 'bold' },
-
+  pesagemText: { fontSize: 14, color: '#333' },
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 22 },
   modalView: {
     width: '90%', margin: 20, backgroundColor: 'white', borderRadius: 20,
@@ -695,7 +703,7 @@ const styles = StyleSheet.create({
   modalTituloDestaque: { fontSize: 18, fontWeight: '700', color: '#222', marginBottom: 8, textAlign: 'center' },
   modalTextoDescricao: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 8, lineHeight: 20 },
   textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center', marginLeft: 6 },
-  modalText: { marginBottom: 15, textAlign: 'center' },
+  modalText: { color: '#000000', marginBottom: 15, textAlign: 'center' },
   modalButton: {
     width: '100%', padding: 12, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12,
