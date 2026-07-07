@@ -91,6 +91,7 @@ export default function StepPesagens({
       <TextInput
         style={styles.input}
         placeholder="Nome do Projeto/Cliente"
+        placeholderTextColor="#888888"
         value={nomeProjeto}
         onChangeText={setNomeProjeto}
         onBlur={salvarEstadoDoProjeto}
@@ -100,6 +101,7 @@ export default function StepPesagens({
         <TextInput
           style={styles.input}
           placeholder="Quantidade de Amostras"
+          placeholderTextColor="#888888"
           keyboardType="numeric"
           value={quantidadeAmostras.toString()}
           onChangeText={(text) => {
@@ -170,6 +172,7 @@ export default function StepPesagens({
       <TextInput
         style={styles.input}
         placeholder="Peso"
+        placeholderTextColor="#888888"
         keyboardType="numeric"
         value={peso}
         onChangeText={setPeso}
@@ -195,6 +198,7 @@ export default function StepPesagens({
       <TextInput
         style={styles.input}
         placeholder="Buscar Amostra"
+        placeholderTextColor="#888888"
         value={amostraPesquisa}
         onChangeText={setAmostraPesquisa}
       />
@@ -334,7 +338,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5,
   },
   textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
-  modalText: { marginBottom: 15, textAlign: 'center' },
+  modalText: { marginBottom: 15, textAlign: 'center', color: '#000000' },
   modalDensidade: { fontSize: 20, fontWeight: 'bold', color: '#000' },
   modalButton: {
     width: '90%', padding: 10, borderRadius: 5,

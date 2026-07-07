@@ -244,6 +244,7 @@ export default function HistoricoScreen() {
         <TextInput
           style={styles.filtroInput}
           placeholder="Buscar por nome"
+          placeholderTextColor="#888888"
           value={buscaInput}
           onChangeText={handleBusca}
           returnKeyType="search"
@@ -401,12 +402,14 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#fafafa',
+    color: '#000000',
     overflow: 'hidden',
     justifyContent: 'center',
   },
   picker: {
     width: '100%',
     height: 48,
+    color: '#000000',
   },
 
   resumo: { fontSize: 12, color: '#aaa', marginBottom: 12 },

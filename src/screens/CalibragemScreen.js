@@ -218,6 +218,7 @@ export default function CalibragemScreen() {
         <TextInput
           style={[styles.input, campoBleAtivo === 'vazio' && styles.inputAtivo]}
           placeholder="Ex: 150.0 g"
+          placeholderTextColor="#888888"
           keyboardType="numeric"
           value={pesoVazio}
           onChangeText={setPesoVazio}
@@ -248,6 +249,7 @@ export default function CalibragemScreen() {
         <TextInput
           style={[styles.input, campoBleAtivo === 'cheio' && styles.inputAtivo]}
           placeholder="Ex: 350.0 g"
+          placeholderTextColor="#888888"
           keyboardType="numeric"
           value={pesoCheio}
           onChangeText={setPesoCheio}
