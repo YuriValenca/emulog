@@ -5,9 +5,7 @@ import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } fr
 import { auth, db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
-import { getOrCreateDeviceId } from '../deviceId';
-
-const DEV_DEVICE_ID_PREFIX = 'a7694378-1ade-4c6d-9a3d-73500677d';
+import { useAppAuth } from '../context/auth';
 
 const atualizarUltimoLoginEmBackground = (uid) => {
   getDocs(query(collection(db, 'users'), where('uid', '==', uid)))
@@ -36,6 +34,8 @@ export default function LoginScreen() {
   const [cachedLogo, setCachedLogo] = useState(null);
   const [devDevice, setDevDevice] = useState(false);
 
+  const { isSuperadmin } = useAppAuth();
+
   const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
 
   useEffect(() => {
@@ -47,8 +47,7 @@ export default function LoginScreen() {
   useEffect(() => {
     const checarDeviceId = async () => {
       try {
-        const id = await getOrCreateDeviceId();
-        if (id && id.toLowerCase().startsWith(DEV_DEVICE_ID_PREFIX)) {
+        if (isSuperadmin) {
           setDevDevice(true);
         }
       } catch (e) {
@@ -88,6 +87,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor="#888888"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
@@ -97,6 +97,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Senha"
+          placeholderTextColor="#888888"
           secureTextEntry
           value={senha}
           onChangeText={setSenha}

@@ -9,14 +9,15 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
-  const { name, role, companyId } = useAppAuth();
+  const { name, role, companyId, isSuperadmin, isCompanyAdmin } = useAppAuth();
   const [calibragemValida, setCalibragemValida] = useState(false);
-
-  const isSuperadmin = role === 'superadmin';
-  const isCompanyAdmin = role === 'company_admin';
 
   useEffect(() => {
     const verificarCalibragem = async () => {
+      if (isSuperadmin) {
+        setCalibragemValida(true);
+        return;
+      }
       try {
         const state = await NetInfo.fetch();
         if (state.isConnected && companyId) {
@@ -34,7 +35,7 @@ export default function HomeScreen({ navigation }) {
       }
     };
 
-    if (companyId) verificarCalibragem();
+    if (isSuperadmin || companyId) verificarCalibragem();
   }, [companyId]);
 
   const handleNovaAmostra = () => {
