@@ -10,52 +10,30 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
 import { useAppAuth } from '../context/auth';
+import { useReferenceData } from '../context/referenceData';
 
 export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
   const [pesoCheio, setPesoCheio] = useState('');
   const [tara, setTara] = useState('');
-  const [ultimaCalibragemInfo, setUltimaCalibragemInfo] = useState(null);
   const auth = getAuth();
   const navigation = useNavigation();
 
   const { companyId } = useAppAuth();
-
   const { bleStatus, connectedDevice, weight, readingStatus, resumeMonitor } = useBle();
+  const { ultimaCalibragem, setUltimaCalibragem } = useReferenceData();
 
+  
   const [campoBleAtivo, setCampoBleAtivo] = useState(null);
   const [modalBleVisivel, setModalBleVisivel] = useState(false);
   const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
   const lastBleWeightShown = useRef(null);
 
-  useEffect(() => {
-    const buscarUltimaCalibragem = async () => {
-      try {
-        const q = query(
-          collection(db, 'calibragens'),
-          where('companyId', '==', companyId),
-          orderBy('timestamp', 'desc'),
-          limit(1)
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const data = snap.docs[0].data();
-          const ts = data.timestamp?.seconds
-            ? new Date(data.timestamp.seconds * 1000)
-            : new Date(data.timestamp);
-          setUltimaCalibragemInfo({
-            data: ts,
-            tara: data.tara,
-            horasAtras: Math.floor(Math.abs(new Date() - ts) / 36e5),
-          });
-        }
-      } catch (e) {
-        console.error('Erro ao buscar última calibragem:', e);
-      }
-    };
-
-    if (companyId) buscarUltimaCalibragem();
-  }, [companyId]);
+  const ultimaCalibragemInfo = ultimaCalibragem ? {
+    data: ultimaCalibragem.timestamp,
+    tara: ultimaCalibragem.tara,
+    horasAtras: Math.floor(Math.abs(new Date() - ultimaCalibragem.timestamp) / 36e5),
+  } : null;
 
   useEffect(() => {
     if (
@@ -123,16 +101,14 @@ export default function CalibragemScreen() {
     }
     try {
       if (!auth.currentUser) return;
-      const calibragem = {
-        pesoVazio, pesoCheio, tara,
-        timestamp: new Date(),
-        userId: auth.currentUser.uid,
-      };
-      await addDoc(collection(db, 'calibragens'), {
-        ...calibragem,
-        companyId,
-      });
-      await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify(calibragem));
+      const timestamp = new Date();
+      const calibragem = { pesoVazio, pesoCheio, tara, timestamp, userId: auth.currentUser.uid };
+      
+      await addDoc(collection(db, 'calibragens'), { ...calibragem, companyId });
+
+      await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify({ ...calibragem, timestamp: timestamp.toISOString() }));
+
+      setUltimaCalibragem({ pesoVazio, pesoCheio, tara, timestamp });
       Alert.alert("Sucesso", "Calibragem registrada com sucesso.");
       navigation.goBack();
     } catch (error) {

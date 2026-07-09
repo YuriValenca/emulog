@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
+import { useReferenceData } from '../context/referenceData';
 
 export default function InformacoesOperacao({
   modoModal = false,
@@ -29,6 +30,7 @@ export default function InformacoesOperacao({
 
   const form = !modoModal ? useProjetoForm() : null;
   const { companyId } = useAppAuth();
+  const { caminhoes, operadores } = useReferenceData();
 
   const numeroNF        = modoModal ? nfLocal          : form.numeroNF;
   const setNumeroNF     = modoModal ? setNfLocal        : form.setNumeroNF;
@@ -44,9 +46,6 @@ export default function InformacoesOperacao({
   const informacoesGerais    = modoModal ? infoGeraisLocal : form.informacoesGerais;
   const setInformacoesGerais = modoModal ? setInfoGeraisLocal : form.setInformacoesGerais;
 
-  const [caminhoes, setCaminhoes] = useState([]);
-  const [operadores, setOperadores] = useState([]);
-  const [carregando, setCarregando] = useState(true);
   const [modalCaminhaoVisivel, setModalCaminhaoVisivel] = useState(false);
   const [modalEquipeVisivel, setModalEquipeVisivel] = useState(false);
 
@@ -63,32 +62,6 @@ export default function InformacoesOperacao({
       setEquipeLocal(infoInicial.equipe || []);
       setInfoGeraisLocal(infoInicial.informacoesGerais || '');
     }
-
-    const carregar = async () => {
-      setCarregando(true);
-      try {
-        const filtro = companyId ? where('companyId', '==', companyId) : null;
-
-        const qCaminhoes = filtro
-          ? query(collection(db, 'caminhoes'), filtro)
-          : collection(db, 'caminhoes');
-        const qOperadores = filtro
-          ? query(collection(db, 'operadores'), filtro)
-          : collection(db, 'operadores');
-
-        const [snapC, snapO] = await Promise.all([
-          getDocs(qCaminhoes),
-          getDocs(qOperadores),
-        ]);
-        setCaminhoes(snapC.docs.map(d => ({ id: d.id, ...d.data() })));
-        setOperadores(snapO.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) {
-        console.error('Erro ao carregar dados:', e);
-      } finally {
-        setCarregando(false);
-      }
-    };
-    carregar();
   }, [modoModal ? visivel : true, companyId]);
 
   const toggleMembro = (membro) => {
@@ -137,12 +110,7 @@ export default function InformacoesOperacao({
     }
   };
 
-  const conteudo = carregando ? (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#E75F07" />
-      <Text style={styles.loadingTexto}>Carregando dados...</Text>
-    </View>
-  ) : (
+  const conteudo = (
     <ScrollView contentContainerStyle={styles.form}>
       <Text style={styles.label}>Número da Nota Fiscal</Text>
       <TextInput

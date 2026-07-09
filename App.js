@@ -17,6 +17,7 @@ import { AuthProvider, useAppAuth } from './src/context/auth';
 import { checkConnectionAndSync } from './src/db';
 import { signOut } from 'firebase/auth';
 import { auth } from './src/firebaseConfig';
+import { ReferenceDataProvider, useReferenceData } from './src/context/referenceData';
 
 const Stack = createNativeStackNavigator();
 
@@ -150,13 +151,21 @@ function GenericErrorScreen({ message }) {
 }
 
 function AppNavigator() {
-  const { authUser, authStatus, debugError } = useAppAuth();
+  const { authUser, authStatus, debugError, companyId } = useAppAuth();
+  const { syncReferenceData } = useReferenceData();
+
   const [navReady, setNavReady] = useState(false);
   const navigationRef = useRef(null);
 
   useEffect(() => {
     checkConnectionAndSync();
   }, []);
+
+  useEffect(() => {
+    if (authUser && companyId) {
+      syncReferenceData(companyId);
+    }
+  }, [authUser, companyId]);
 
   if (authStatus === 'loading') return <DefaultStatusBar />;
   if (authStatus === 'no-license') return (
@@ -208,9 +217,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <BleProvider>
-        <AppNavigator />
-      </BleProvider>
+      <ReferenceDataProvider>
+        <BleProvider>
+          <AppNavigator />
+        </BleProvider>
+      </ReferenceDataProvider>
     </AuthProvider>
   );
 }
