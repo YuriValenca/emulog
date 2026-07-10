@@ -17,10 +17,10 @@
       "**/*"
     ],
     "android": {
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./src/assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#07080A"
       },
       "package": "com.Emulog.myapp",
       "permissions": [
@@ -30,9 +30,6 @@
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN"
       ]
-    },
-    "web": {
-      "favicon": "./src/assets/favicon.png"
     },
     "plugins": [
       [
