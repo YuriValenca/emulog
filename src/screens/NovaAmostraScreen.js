@@ -568,7 +568,7 @@ function NovaAmostraScreenInner() {
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
             <View style={styles.modalIconeContainer}>
-              <Ionicons name="clipboard-outline" size={40} color="#E75F07" />
+              <Ionicons name="clipboard-outline" size={40} color="#1F6452" />
             </View>
             <Text style={styles.modalTituloDestaque}>Informações complementares</Text>
             <Text style={styles.modalTextoDescricao}>
@@ -667,7 +667,7 @@ export default function NovaAmostraScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#FFFFFF' },
-  titulo: { fontSize: 22, fontWeight: 'bold', color: '#E75F07', marginBottom: 10 },
+  titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F6452', marginBottom: 10 },
 
   stepIndicatorContainer: { marginBottom: 24, marginTop: 8 },
   stepIndicatorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
@@ -676,17 +676,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#ddd',
   },
-  stepCircleActive: { backgroundColor: '#E75F07', borderColor: '#E75F07' },
+  stepCircleActive: { backgroundColor: '#1F6452', borderColor: '#1F6452' },
   stepCircleText: { fontSize: 15, fontWeight: '700', color: '#aaa' },
   stepCircleTextActive: { color: '#fff' },
   stepLine: { flex: 1, height: 3, backgroundColor: '#eee', marginHorizontal: 8 },
-  stepLineActive: { backgroundColor: '#E75F07' },
+  stepLineActive: { backgroundColor: '#1F6452' },
   stepLabelsRow: {
     flexDirection: 'row', justifyContent: 'space-between',
     marginTop: 6, paddingHorizontal: 4,
   },
   stepLabel: { fontSize: 12, color: '#aaa', fontWeight: '600' },
-  stepLabelActive: { color: '#E75F07' },
+  stepLabelActive: { color: '#1F6452' },
 
   historicoGrupo: { marginBottom: 15 },
   historicoTitulo: { fontWeight: 'bold', fontSize: 18, color: '#333', marginBottom: 5 },
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     width: '100%', padding: 12, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12,
   },
-  salvarButton: { backgroundColor: '#E75F07' },
+  salvarButton: { backgroundColor: '#1F6452' },
   cancelarButton: { backgroundColor: '#787878' },
 
   bleModalOverlay: {
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   bleModalTitle: { fontSize: 20, fontWeight: '800', color: '#222' },
   bleModalSubtitle: { fontSize: 13, color: '#aaa', marginTop: 4 },
   bleModalWeightRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 6 },
-  bleModalWeightValue: { fontSize: 72, fontWeight: '800', color: '#FF5C00', lineHeight: 80 },
+  bleModalWeightValue: { fontSize: 72, fontWeight: '800', color: '#1F6452', lineHeight: 80 },
   bleModalWeightUnit: { fontSize: 30, fontWeight: '400', color: '#ccc', marginBottom: 10, marginLeft: 6 },
   bleModalDensidadePreview: { fontSize: 15, color: '#888', marginBottom: 28 },
   bleModalActions: { flexDirection: 'row', gap: 12, width: '100%' },

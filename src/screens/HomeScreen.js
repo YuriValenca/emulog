@@ -92,14 +92,14 @@ export default function HomeScreen({ navigation }) {
       )}
 
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: '#FF9621' }]}
+        style={[styles.buttonContainer, { backgroundColor: '#2E8C71' }]}
         onPress={() => navigation.navigate('Calibragem')}
       >
         <Text style={styles.buttonText}>Calibragem</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.buttonContainer, { backgroundColor: '#FF5C00' }]}
+        style={[styles.buttonContainer, { backgroundColor: '#1F6452' }]}
         onPress={handleNovaAmostra}
       >
         <Text style={styles.buttonText}>Novo Projeto</Text>
@@ -138,7 +138,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    paddingTop: 50,
   },
   text: {
     color: '#000000',
@@ -176,14 +175,14 @@ const styles = StyleSheet.create({
   },
   superadminButton: {
     flexDirection: 'row',
-    backgroundColor: '#1A1A2E',
+    backgroundColor: '#494949',
     marginTop: 20,
     width: '70%',
     marginBottom: 20,
   },
   adminButton: {
     flexDirection: 'row',
-    backgroundColor: '#505050',
+    backgroundColor: '#494949',
     marginTop: 20,
     width: '70%',
     marginBottom: 20,

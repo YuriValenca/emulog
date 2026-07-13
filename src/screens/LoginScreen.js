@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
@@ -58,13 +58,11 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.conteudo}>
-        {cachedLogo && (
-          <Image
-            source={{ uri: cachedLogo }}
-            resizeMode="contain"
-            style={styles.logo}
-          />
-        )}
+        <Image
+          source={cachedLogo ? { uri: cachedLogo } : require('../assets/adaptive-icon-foreground.png')}
+          resizeMode="contain"
+          style={styles.logo}
+        />
         <Text style={styles.title}>Login</Text>
         <TextInput
           style={styles.input}
@@ -102,26 +100,10 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FCFCFC',
-  },
-  conteudo: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  logo: {
-    width: 250,
-    height: 250,
-    marginBottom: 0,
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    color: '#000000',
-  },
+  container: { flex: 1, backgroundColor: '#FCFCFC', marginTop: -64 },
+  conteudo: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  logo: { width: 225, height: 225 },
+  title: { fontSize: 24, marginBottom: 20, color: '#000000', marginTop: -20 },
   input: {
     width: '100%',
     color: '#000000',
@@ -133,27 +115,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D3D3D3',
   },
-  button: {
-    width: '100%',
-    backgroundColor: '#525659',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  buttonDesabilitado: {
-    backgroundColor: '#b0b0b0',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-  },
-  debugContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    paddingTop: 12,
-  },
-  debugTexto: {
-    fontSize: 10,
-    color: '#999',
-  },
+  button: { width: '100%', backgroundColor: '#1F6452', padding: 15, borderRadius: 5, alignItems: 'center' },
+  buttonDesabilitado: { backgroundColor: '#b0b0b0' },
+  buttonText: { color: '#FFFFFF', fontSize: 20 },
 });

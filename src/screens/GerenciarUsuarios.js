@@ -514,7 +514,7 @@ export default function GerenciarUsuarios() {
           <View style={styles.modalView}>
             <Ionicons name="checkmark-circle" size={40} color="#4CAF50" style={{ marginBottom: 12 }} />
             <Text style={styles.modalText}>{modalMessage}</Text>
-            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#FF9621' }]} onPress={fecharModais}>
+            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#1F6452' }]} onPress={fecharModais}>
               <Text style={styles.modalBtnTexto}>Fechar</Text>
             </TouchableOpacity>
           </View>
@@ -524,12 +524,12 @@ export default function GerenciarUsuarios() {
       <Modal animationType="slide" transparent visible={isConfirmationModalVisible} onRequestClose={fecharModais}>
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Ionicons name="warning-outline" size={40} color="#FF5C00" style={{ marginBottom: 12 }} />
+            <Ionicons name="warning-outline" size={40} color="#D32F2F" style={{ marginBottom: 12 }} />
             <Text style={styles.modalText}>Deseja remover este registro?</Text>
             <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#808080' }]} onPress={fecharModais}>
               <Text style={styles.modalBtnTexto}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#FF5C00' }]} onPress={executarDelecao}>
+            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#D32F2F' }]} onPress={executarDelecao}>
               <Text style={styles.modalBtnTexto}>Remover</Text>
             </TouchableOpacity>
           </View>
@@ -587,7 +587,7 @@ export default function GerenciarUsuarios() {
               <Text style={styles.modalBtnTexto}>Cancelar</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: '#FF9621', opacity: salvandoEdicao ? 0.8 : 1 }]}
+              style={[styles.modalBtn, { backgroundColor: '#1F6452', opacity: salvandoEdicao ? 0.8 : 1 }]}
               onPress={salvarEdicao}
               disabled={salvandoEdicao}
             >
@@ -606,7 +606,7 @@ export default function GerenciarUsuarios() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#FFF', paddingTop: 72 },
-  titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#E75F07', marginTop: 4 },
+  titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#1F6452', marginTop: 4 },
   abaContainer: {
     flexDirection: 'row', borderRadius: 10, backgroundColor: '#f0f0f0',
     padding: 4, marginBottom: 20,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   abaBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
   abaBtnAtiva: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   abaBtnTexto: { fontSize: 13, color: '#888', fontWeight: '600' },
-  abaBtnTextoAtivo: { color: '#E75F07' },
+  abaBtnTextoAtivo: { color: '#1F6452' },
   secaoTitulo: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 },
   formulario: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4 },
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   },
   adicionarBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#FF9621', padding: 12, borderRadius: 8, marginTop: 4,
+    gap: 8, backgroundColor: '#1F6452', padding: 12, borderRadius: 8, marginTop: 4,
   },
   adicionarBtnTexto: { color: '#FFF', fontSize: 15, fontWeight: '700' },
   listaTitulo: { fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 10, marginTop: 4 },
@@ -639,11 +639,11 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 11, color: '#999', fontStyle: 'italic' },
   acoesCard: { flexDirection: 'row', gap: 8, marginLeft: 10 },
   botaoEditar: {
-    backgroundColor: '#FF9621', borderRadius: 8, padding: 10,
+    backgroundColor: '#1F6452', borderRadius: 8, padding: 10,
     alignItems: 'center', justifyContent: 'center',
   },
   botaoDeletar: {
-    backgroundColor: '#FF5C00', borderRadius: 8, padding: 10,
+    backgroundColor: '#D32F2F', borderRadius: 8, padding: 10,
     alignItems: 'center', justifyContent: 'center',
   },
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },

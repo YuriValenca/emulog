@@ -1,4 +1,3 @@
-// src/screens/ScrollToTopButton.js
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
@@ -15,7 +14,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: '#d3d3d3', // Cor de fundo cinza claro
+    backgroundColor: '#d3d3d3',
     padding: 10,
     borderRadius: 50,
     elevation: 5,

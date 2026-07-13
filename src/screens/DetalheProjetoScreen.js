@@ -117,7 +117,7 @@ export default function DetalheProjetoScreen() {
     const info = projeto.informacoesOperacao;
     const informacoesGerais = info?.informacoesGerais;
     const isFoundingCompany = companyData?.founding === true;
-    const primaryColor = companyData?.primaryColor || '#FF5C00';
+    const primaryColor = companyData?.primaryColor || '#1F6452';
 
     let companyLogoSrc = LOGO_BASE_64;
     if (companyData?.logo) {
@@ -181,7 +181,7 @@ export default function DetalheProjetoScreen() {
             <strong>Calibragem:</strong>
             Tara ${projeto.calibragem?.tara || '—'} ·
             Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
-            ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#e53e3e">Necessita recalibrar</span>' : '<span style="color:#38a169">OK</span>'}
+            ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
           </p>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function DetalheProjetoScreen() {
           onPress={() => setModalInfoVisivel(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="pencil-outline" size={16} color="#E75F07" />
+          <Ionicons name="pencil-outline" size={16} color="#1F6452" />
           <Text style={styles.editarInfoBtnTexto}>Editar informações</Text>
         </TouchableOpacity>
       </View>
@@ -359,7 +359,7 @@ export default function DetalheProjetoScreen() {
   if (carregando) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E75F07" />
+        <ActivityIndicator size="large" color="#1F6452" />
         <Text style={styles.loadingTexto}>Carregando...</Text>
       </View>
     );
@@ -402,7 +402,7 @@ export default function DetalheProjetoScreen() {
         </View>
         <View style={styles.calibragemRow}>
           <Text style={styles.calibragemLabel}>Necessita Calibragem</Text>
-          <Text style={[styles.calibragemValor, { color: projeto.calibragem?.necessitaCalibragem ? '#e53e3e' : '#38a169' }]}>
+          <Text style={[styles.calibragemValor, { color: projeto.calibragem?.necessitaCalibragem ? '#D32F2F' : '#4CAF50' }]}>
             {projeto.calibragem?.necessitaCalibragem ? 'Sim' : 'Não'}
           </Text>
         </View>
@@ -416,7 +416,7 @@ export default function DetalheProjetoScreen() {
             onPress={() => setModalInfoVisivel(true)}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#E75F07" />
+            <Ionicons name="add-circle-outline" size={20} color="#1F6452" />
             <Text style={styles.adicionarInfoBtnTexto}>Adicionar informações da operação</Text>
           </TouchableOpacity>
         )
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
   backButtonWrapper: { marginTop: 32, marginBottom: 8 },
-  titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, marginTop: 8, color: '#E75F07' },
+  titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, marginTop: 8, color: '#1F6452' },
   label: { fontSize: 15, fontWeight: '700', color: '#444', marginTop: 16, marginBottom: 6 },
   valor: { fontSize: 15, color: '#333' },
   calibragemBox: { borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
@@ -474,23 +474,23 @@ const styles = StyleSheet.create({
   adicionarInfoBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 16, padding: 16,
-    borderWidth: 1.5, borderColor: '#E75F07', borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: '#1F6452', borderStyle: 'dashed',
     borderRadius: 10,
   },
-  adicionarInfoBtnTexto: { fontSize: 14, color: '#E75F07', fontWeight: '600' },
+  adicionarInfoBtnTexto: { fontSize: 14, color: '#1F6452', fontWeight: '600' },
   infoAdicionalBox: { marginTop: 16, borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
-  infoAdicionalTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', backgroundColor: '#E75F07', paddingHorizontal: 12, paddingVertical: 8 },
+  infoAdicionalTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', backgroundColor: '#1F6452', paddingHorizontal: 12, paddingVertical: 8 },
   infoRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   infoLabel: { fontSize: 12, color: '#888', marginBottom: 2 },
   infoValor: { fontSize: 14, color: '#333', fontWeight: '500' },
   equipeBaloes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  equipeBalao: { backgroundColor: '#fff0e8', borderWidth: 1, borderColor: '#E75F07', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
-  equipeBalaoTexto: { fontSize: 12, color: '#E75F07', fontWeight: '600' },
+  equipeBalao: { backgroundColor: '#E3F0EC', borderWidth: 1, borderColor: '#1F6452', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10 },
+  equipeBalaoTexto: { fontSize: 12, color: '#1F6452', fontWeight: '600' },
   editarInfoBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 10,
   },
-  editarInfoBtnTexto: { fontSize: 13, color: '#E75F07', fontWeight: '600' },
+  editarInfoBtnTexto: { fontSize: 13, color: '#1F6452', fontWeight: '600' },
   observacaoBox: { backgroundColor: '#f9f9f9', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#e2e2e2' },
   input: { color: '#000000', backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1, borderRadius: 5, padding: 10, marginTop: 20, marginBottom: 10, fontSize: 16 },
   amostraContainer: { marginTop: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 8, borderWidth: 1, borderColor: '#e2e2e2' },
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   pesagemHeader: { fontSize: 13, fontWeight: 'bold', color: '#333' },
   vazioTexto: { color: '#aaa', fontStyle: 'italic' },
   pdfButton: {
-    backgroundColor: '#E75F07', padding: 14, borderRadius: 8,
+    backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     gap: 8, marginTop: 24, marginBottom: 24,
   },

@@ -282,7 +282,7 @@ export default function ScaleConnect({ navigation }) {
               </>
             ) : (
               <View style={styles.waitingRow}>
-                <ActivityIndicator size="small" color="#FF5C00" />
+                <ActivityIndicator size="small" color="#1F6452" />
                 <Text style={styles.waitingText}>Aguardando leitura...</Text>
               </View>
             )}
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
   },
   weightCardLabel: { fontSize: 13, color: '#aaa', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
-  weightValue: { fontSize: 64, fontWeight: '800', color: '#FF5C00', lineHeight: 72 },
+  weightValue: { fontSize: 64, fontWeight: '800', color: '#1F6452', lineHeight: 72 },
   weightUnit: { fontSize: 28, color: '#ccc', fontWeight: '400' },
   weightKg: { fontSize: 16, color: '#aaa', marginTop: 6 },
   waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },

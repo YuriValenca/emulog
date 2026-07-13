@@ -143,12 +143,12 @@ export default function CalibragemScreen() {
           <MaterialCommunityIcons
             name={ultimaCalibragemInfo.horasAtras > 14 ? 'alert-circle-outline' : 'check-circle-outline'}
             size={18}
-            color={ultimaCalibragemInfo.horasAtras > 14 ? '#FF5C00' : '#4CAF50'}
+            color={ultimaCalibragemInfo.horasAtras > 14 ? '#D32F2F' : '#4CAF50'}
           />
           <View style={{ flex: 1 }}>
             <Text style={[
               styles.ultimaCalibragemTexto,
-              { color: ultimaCalibragemInfo.horasAtras > 14 ? '#FF5C00' : '#4CAF50' },
+              { color: ultimaCalibragemInfo.horasAtras > 14 ? '#D32F2F' : '#4CAF50' },
             ]}>
               {ultimaCalibragemInfo.horasAtras > 14 ? 'Necessita nova calibragem' : 'Calibragem OK'}
             </Text>
@@ -160,8 +160,8 @@ export default function CalibragemScreen() {
         </View>
       ) : (
         <View style={[styles.ultimaCalibragemCard, styles.ultimaCalibragemVencida]}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#FF5C00" />
-          <Text style={[styles.ultimaCalibragemTexto, { color: '#FF5C00' }]}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#D32F2F" />
+          <Text style={[styles.ultimaCalibragemTexto, { color: '#D32F2F' }]}>
             Nenhuma calibragem encontrada para esta empresa
           </Text>
         </View>
@@ -309,13 +309,13 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 24,
-    color: '#F67D22',
+    color: '#1F6452',
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 10,
   },
   linha: {
-    borderBottomColor: '#F67D22',
+    borderBottomColor: '#1F6452',
     borderBottomWidth: 2,
     marginVertical: 5,
     alignSelf: 'center',
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   },
   ultimaCalibragemVencida: {
     backgroundColor: '#fff5f0',
-    borderColor: '#FF5C00',
+    borderColor: '#D32F2F',
   },
   ultimaCalibragemTexto: {
     fontSize: 13,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F67D22',
+    backgroundColor: '#1F6452',
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: 28,
   },
-  bleModalWeightValue: { fontSize: 72, fontWeight: '800', color: '#FF5C00', lineHeight: 80 },
+  bleModalWeightValue: { fontSize: 72, fontWeight: '800', color: '#1F6452', lineHeight: 80 },
   bleModalWeightUnit: { fontSize: 30, fontWeight: '400', color: '#ccc', marginBottom: 10, marginLeft: 6 },
   bleModalActions: { flexDirection: 'row', gap: 12, width: '100%' },
   bleModalBtn: {

@@ -229,7 +229,7 @@ export default function HistoricoScreen() {
   if (isLoadingMeta) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E75F07" />
+        <ActivityIndicator size="large" color="#1F6452" />
         <Text style={styles.loadingTexto}>Carregando projetos...</Text>
       </View>
     );
@@ -269,7 +269,7 @@ export default function HistoricoScreen() {
 
       {isLoadingPagina ? (
         <View style={styles.loadingPaginaContainer}>
-          <ActivityIndicator size="small" color="#E75F07" />
+          <ActivityIndicator size="small" color="#1F6452" />
           <Text style={styles.loadingTexto}>Buscando projetos...</Text>
         </View>
       ) : (
@@ -311,7 +311,7 @@ export default function HistoricoScreen() {
                   disabled={paginaAtual === 1}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-back" size={18} color={paginaAtual === 1 ? '#ccc' : '#E75F07'} />
+                  <Ionicons name="chevron-back" size={18} color={paginaAtual === 1 ? '#ccc' : '#1F6452'} />
                 </TouchableOpacity>
 
                 {gerarNumerosPaginas().map((item, index) =>
@@ -337,7 +337,7 @@ export default function HistoricoScreen() {
                   disabled={paginaAtual === totalPaginas}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-forward" size={18} color={paginaAtual === totalPaginas ? '#ccc' : '#E75F07'} />
+                  <Ionicons name="chevron-forward" size={18} color={paginaAtual === totalPaginas ? '#ccc' : '#1F6452'} />
                 </TouchableOpacity>
               </View>
             ) : null
@@ -353,7 +353,7 @@ export default function HistoricoScreen() {
       >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Ionicons name="warning-outline" size={36} color="#FF5C00" style={{ marginBottom: 12 }} />
+            <Ionicons name="warning-outline" size={36} color="#D32F2F" style={{ marginBottom: 12 }} />
             <Text style={styles.modalTitulo}>Erro ao carregar</Text>
             <Text style={styles.errorText}>{erroLogs}</Text>
             <TouchableOpacity
@@ -375,10 +375,7 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingPaginaContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 40 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
-
-  titulo: { fontSize: 22, fontWeight: 'bold', color: '#E75F07', marginBottom: 14, marginTop: 4 },
-
-  // Filtros em coluna
+  titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F6452', marginBottom: 14, marginTop: 4 },
   filtroContainer: {
     flexDirection: 'column',
     marginBottom: 8,
@@ -395,7 +392,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     color: '#000000',
   },
-  // Wrapper necessário para o Picker respeitar bordas no RN
   pickerWrapper: {
     width: '100%',
     borderWidth: 1,
@@ -411,9 +407,7 @@ const styles = StyleSheet.create({
     height: 48,
     color: '#000000',
   },
-
   resumo: { fontSize: 12, color: '#aaa', marginBottom: 12 },
-
   projetoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -429,17 +423,15 @@ const styles = StyleSheet.create({
   projetoData: { fontSize: 12, color: '#888' },
   projetoMeta: { fontSize: 12, color: '#aaa', marginTop: 2 },
   verMaisBtn: {
-    backgroundColor: '#E75F07',
+    backgroundColor: '#1F6452',
     borderRadius: 8,
     padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
   },
-
   vazioContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
   vazioTexto: { color: '#ccc', fontSize: 15 },
-
   paginacaoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,7 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#fff',
   },
-  paginaBtnAtivo: { backgroundColor: '#E75F07', borderColor: '#E75F07' },
+  paginaBtnAtivo: { backgroundColor: '#1F6452', borderColor: '#1F6452' },
   paginaBtnTexto: { fontSize: 13, color: '#555', fontWeight: '600' },
   paginaBtnTextoAtivo: { color: '#fff' },
   paginaBtnSeta: {
@@ -473,7 +465,6 @@ const styles = StyleSheet.create({
   },
   paginaBtnDesabilitado: { borderColor: '#f0f0f0', backgroundColor: '#fafafa' },
   paginaEllipsis: { fontSize: 15, color: '#aaa', paddingHorizontal: 2, lineHeight: 36 },
-
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
   modalView: {
     width: '85%',
@@ -484,7 +475,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalTitulo: { fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 10 },
-  errorText: { fontSize: 13, color: '#e53e3e', textAlign: 'center', marginBottom: 16 },
+  errorText: { fontSize: 13, color: '#D32F2F', textAlign: 'center', marginBottom: 16 },
   modalBtn: {
     backgroundColor: '#787878',
     paddingVertical: 10,

@@ -82,7 +82,7 @@ export default function StepPesagens({
           <Text style={styles.infoText}>
             Última Calibragem: {ultimaCalibragem.timestamp.toLocaleDateString()}
           </Text>
-          <Text style={styles.alertText}>
+          <Text style={[styles.alertText, { color: ultimaCalibragem.necessitaCalibragem ? '#D32F2F' : '#4CAF50' }]}>
             {ultimaCalibragem.necessitaCalibragem ? 'Necessita nova calibragem' : 'Calibragem OK'}
           </Text>
         </View>
@@ -120,7 +120,7 @@ export default function StepPesagens({
       </View>
 
       <TouchableOpacity style={styles.adicionarAmostraBtn} onPress={() => setModalAdicionarAmostra(true)}>
-        <Ionicons name="add-circle" size={24} color="#FFF" />
+        <Ionicons name="add-circle" size={24} color="#1F6452" />
         <Text style={styles.adicionarAmostraBtnTexto}>Adicionar Amostra</Text>
       </TouchableOpacity>
 
@@ -181,7 +181,7 @@ export default function StepPesagens({
       />
 
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: confirmarDesabilitado ? '#ccc' : '#ff9621' }]}
+        style={[styles.button, { backgroundColor: confirmarDesabilitado ? '#ccc' : '#1F6452' }]}
         onPress={onConfirmarPesagem}
         disabled={confirmarDesabilitado}
       >
@@ -298,34 +298,37 @@ const styles = StyleSheet.create({
   },
   calibragemView: { marginBottom: 20 },
   infoText: { color: '#000000', fontSize: 16 },
-  alertText: { fontSize: 16, color: 'red', fontWeight: 'bold' },
+  alertText: { fontSize: 16, fontWeight: 'bold' },
   input: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
     borderRadius: 5, padding: 10, marginBottom: 15, fontSize: 18, color: '#000000',
   },
   button: {
-    backgroundColor: '#F67D22', padding: 10, borderRadius: 5,
+    backgroundColor: '#1F6452', padding: 10, borderRadius: 5,
     justifyContent: 'center', alignItems: 'center', marginBottom: 15, flexDirection: 'row',
   },
   buttonText: { color: '#FFF', fontSize: 18, marginLeft: 5 },
   buttonClose: { backgroundColor: '#787878', marginTop: 15 },
   adicionarAmostraBtn: {
-    backgroundColor: '#4CAF50', padding: 10, borderRadius: 5,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#1F6452',
+    padding: 10, borderRadius: 5,
     justifyContent: 'center', alignItems: 'center', marginBottom: 15, flexDirection: 'row',
   },
-  adicionarAmostraBtnTexto: { color: '#FFF', fontSize: 18, marginLeft: 5 },
+  adicionarAmostraBtnTexto: { color: '#1F6452', fontSize: 18, marginLeft: 5 },
   selectContainer: { marginBottom: 15 },
   label: { color: '#000000', fontWeight: 'bold', marginBottom: 5 },
   amostrasContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   amostraBtn: { backgroundColor: '#ddd', padding: 15, borderRadius: 5, marginVertical: 5, alignItems: 'center' },
   amostraBtnMobile: { width: Dimensions.get('window').width - 40 },
-  amostraBtnSelecionado: { backgroundColor: '#E75F07' },
+  amostraBtnSelecionado: { backgroundColor: '#494949' },
   amostraBtnConcluida: { backgroundColor: '#A5A5A5' },
   amostraBtnTexto: { color: '#FFF', fontWeight: 'bold', textAlign: 'center' },
   amostraBtnTextoMenor: { color: '#FFF', fontSize: 12, textAlign: 'center' },
   historicoContainer: { marginTop: 20 },
   avancarBtn: {
-    backgroundColor: '#E75F07', padding: 14, borderRadius: 8,
+    backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     marginTop: 24, marginBottom: 12, gap: 8,
   },
@@ -344,6 +347,6 @@ const styles = StyleSheet.create({
     width: '90%', padding: 10, borderRadius: 5,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 15,
   },
-  salvarButton: { backgroundColor: '#F67D22' },
+  salvarButton: { backgroundColor: '#1F6452' },
   cancelarButton: { backgroundColor: '#787878' },
 });

@@ -186,7 +186,7 @@ export default function InformacoesOperacao({
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={styles.balaoAdicionar} onPress={() => setModalEquipeVisivel(true)} activeOpacity={0.7}>
-                <Ionicons name="add" size={16} color="#E75F07" />
+                <Ionicons name="add" size={16} color="#1F6452" />
               </TouchableOpacity>
             </View>
           )}
@@ -245,7 +245,7 @@ export default function InformacoesOperacao({
                   <Text style={[styles.opcaoItemTexto, caminhaoSelecionado?.id === item.id && styles.opcaoItemTextoSelecionado]}>
                     {item.placa}
                   </Text>
-                  {caminhaoSelecionado?.id === item.id && <Ionicons name="checkmark" size={20} color="#E75F07" />}
+                  {caminhaoSelecionado?.id === item.id && <Ionicons name="checkmark" size={20} color="#1F6452" />}
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.separador} />}
@@ -286,7 +286,7 @@ export default function InformacoesOperacao({
                       {membros.map(item => (
                         <TouchableOpacity key={item.id} style={styles.opcaoItem} onPress={() => toggleMembro(item)} activeOpacity={0.8}>
                           <Text style={styles.opcaoItemTexto}>{item.nome}</Text>
-                          <Ionicons name="add-circle-outline" size={22} color="#E75F07" />
+                          <Ionicons name="add-circle-outline" size={22} color="#1F6452" />
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -329,7 +329,7 @@ export default function InformacoesOperacao({
   return (
     <View style={styles.inlineContainer}>
       <TouchableOpacity style={styles.voltarBtn} onPress={onVoltar} activeOpacity={0.8}>
-        <Ionicons name="arrow-back-circle" size={24} color="#E75F07" />
+        <Ionicons name="arrow-back-circle" size={24} color="#1F6452" />
         <Text style={styles.voltarBtnTexto}>Voltar às pesagens</Text>
       </TouchableOpacity>
       <Text style={styles.secaoTitulo}>Informações da Operação</Text>
@@ -350,10 +350,10 @@ const styles = StyleSheet.create({
   headerTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },
   inlineContainer: { flex: 1 },
   voltarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24, alignSelf: 'flex-start' },
-  voltarBtnTexto: { color: '#E75F07', fontSize: 15, fontWeight: '600' },
+  voltarBtnTexto: { color: '#1F6452', fontSize: 15, fontWeight: '600' },
   secaoTitulo: {
     fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 20,
-    borderLeftWidth: 3, borderLeftColor: '#E75F07', paddingLeft: 10,
+    borderLeftWidth: 3, borderLeftColor: '#1F6452', paddingLeft: 10,
   },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
@@ -378,20 +378,20 @@ const styles = StyleSheet.create({
   selectBtnPlaceholder: { fontSize: 16, color: '#aaa', flex: 1 },
   baloesContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, flex: 1 },
   balao: {
-    backgroundColor: '#E75F07', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10,
+    backgroundColor: '#1F6452', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10,
     flexDirection: 'row', alignItems: 'center',
   },
   balaoTexto: { color: '#fff', fontSize: 13, fontWeight: '600' },
   balaoAdicionar: {
     width: 28, height: 28, borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#E75F07', borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: '#1F6452', borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
   },
   salvarBtn: {
-    backgroundColor: '#E75F07', padding: 14, borderRadius: 8,
+    backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12, gap: 8,
   },
-  salvarBtnDisabled: { backgroundColor: '#f0a07a' },
+  salvarBtnDisabled: { backgroundColor: '#8FB8AC' },
   salvarBtnTexto: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalCard: {
@@ -401,9 +401,9 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },
   opcaoItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
-  opcaoItemSelecionado: { backgroundColor: '#fff5f0', borderRadius: 8, paddingHorizontal: 8 },
+  opcaoItemSelecionado: { backgroundColor: '#E3F0EC', borderRadius: 8, paddingHorizontal: 8 },
   opcaoItemTexto: { fontSize: 15, color: '#333' },
-  opcaoItemTextoSelecionado: { color: '#E75F07', fontWeight: '600' },
+  opcaoItemTextoSelecionado: { color: '#1F6452', fontWeight: '600' },
   separador: { height: 1, backgroundColor: '#f0f0f0' },
   equipeResumo: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16, paddingBottom: 16,
@@ -416,6 +416,6 @@ const styles = StyleSheet.create({
   },
   todosAdicionados: { alignItems: 'center', paddingVertical: 32, gap: 12 },
   todosAdicionadosTexto: { fontSize: 15, color: '#aaa', fontWeight: '500' },
-  confirmarBtn: { backgroundColor: '#E75F07', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16 },
+  confirmarBtn: { backgroundColor: '#1F6452', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16 },
   confirmarBtnTexto: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
