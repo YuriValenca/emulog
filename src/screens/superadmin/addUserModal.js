@@ -126,7 +126,7 @@ export default function ModalAdicionarUsuario({ visible, onClose, onSave, saving
                       <Text style={[styles.dropdownItemText, selecionado && styles.dropdownItemTextAtivo]}>
                         {c.name}
                       </Text>
-                      {selecionado && <Ionicons name="checkmark" size={18} color="#E75F07" />}
+                      {selecionado && <Ionicons name="checkmark" size={18} color="#1F6452" />}
                     </TouchableOpacity>
                   );
                 })}
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
   },
   dropdownItemUltimo: { borderBottomWidth: 0 },
-  dropdownItemAtivo: { backgroundColor: '#FFF5EE' },
+  dropdownItemAtivo: { backgroundColor: '#E3F0EC' },
   dropdownItemText: { fontSize: 14, color: '#444' },
-  dropdownItemTextAtivo: { color: '#E75F07', fontWeight: '600' },
+  dropdownItemTextAtivo: { color: '#1F6452', fontWeight: '600' },
   footer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   btnCancelar: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8 },
   txtCancelar: { color: '#777', fontWeight: '600' },
   btnConfirmar: {
-    backgroundColor: '#E75F07',
+    backgroundColor: '#1F6452',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

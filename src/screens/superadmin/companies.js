@@ -40,7 +40,7 @@ export default function AbaEmpresas({ companies, licenses, onAddPress, onEditPre
 const styles = StyleSheet.create({
   secaoTitulo: { fontSize: 16, fontWeight: '700', color: '#222', marginBottom: 12, marginTop: 4 },
   secaoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E75F07', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1F6452', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   addBtnTexto: { color: '#fff', fontSize: 13, fontWeight: '700' },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#efefef', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   cardNome: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },

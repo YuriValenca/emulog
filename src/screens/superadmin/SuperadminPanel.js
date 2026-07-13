@@ -351,7 +351,7 @@ export default function SuperadminPanel() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E75F07" />
+        <ActivityIndicator size="large" color="#1F6452" />
         <Text style={styles.loadingText}>Carregando painel...</Text>
       </View>
     );
@@ -452,10 +452,10 @@ const styles = StyleSheet.create({
   container: { padding: 20, paddingTop: 72, paddingBottom: 40 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FA' },
   loadingText: { color: '#aaa', fontSize: 14 },
-  titulo: { fontSize: 22, fontWeight: '800', color: '#E75F07', marginBottom: 16 },
+  titulo: { fontSize: 22, fontWeight: '800', color: '#1F6452', marginBottom: 16 },
   abaContainer: { flexDirection: 'row', backgroundColor: '#eee', borderRadius: 10, padding: 4, marginBottom: 20 },
   abaBtn: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 8 },
   abaBtnAtiva: { backgroundColor: '#fff', elevation: 2 },
   abaBtnTexto: { fontSize: 11, fontWeight: '600', color: '#888' },
-  abaBtnTextoAtivo: { color: '#E75F07' },
+  abaBtnTextoAtivo: { color: '#1F6452' },
 });

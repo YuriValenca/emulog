@@ -96,7 +96,7 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
                 <Text style={[styles.dropdownItemTexto, selectedCompanyId === null && styles.dropdownItemTextoAtivo]}>
                   Todos os Usuários ({users.length})
                 </Text>
-                {selectedCompanyId === null && <Ionicons name="checkmark" size={18} color="#E75F07" />}
+                {selectedCompanyId === null && <Ionicons name="checkmark" size={18} color="#1F6452" />}
               </TouchableOpacity>
               
               {companies.map(c => {
@@ -110,7 +110,7 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
                     <Text style={[styles.dropdownItemTexto, selectedCompanyId === c.id && styles.dropdownItemTextoAtivo]}>
                       {c.name} ({count})
                     </Text>
-                    {selectedCompanyId === c.id && <Ionicons name="checkmark" size={18} color="#E75F07" />}
+                    {selectedCompanyId === c.id && <Ionicons name="checkmark" size={18} color="#1F6452" />}
                   </TouchableOpacity>
                 );
               })}
@@ -198,11 +198,11 @@ export default function AbaUsuarios({ users, companies, onAddPress, onSaveEdit, 
                 
                 <View style={styles.actionButtonsContainer}>
                   <TouchableOpacity style={styles.editBtn} onPress={() => startEditing(u)} activeOpacity={0.8}>
-                    <Ionicons name="create-outline" size={18} color="#E75F07" />
+                    <Ionicons name="create-outline" size={18} color="#1F6452" />
                   </TouchableOpacity>
                   
                   <TouchableOpacity style={styles.deleteBtn} onPress={() => onDeletePress(u)} activeOpacity={0.8}>
-                    <Ionicons name="trash-outline" size={18} color="#f44336" />
+                    <Ionicons name="trash-outline" size={18} color="#D32F2F" />
                   </TouchableOpacity>
                 </View>
               </>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   secaoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   secaoTitulo: { fontSize: 16, fontWeight: '700', color: '#333' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E75F07', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, gap: 6 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1F6452', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, gap: 6 },
   addBtnTexto: { color: '#fff', fontWeight: '600', fontSize: 14 },
   dropdownWrapper: { zIndex: 10, position: 'relative', marginBottom: 16 },
   dropdownHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#fff' },
@@ -230,9 +230,9 @@ const styles = StyleSheet.create({
   dropdownMenu: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, zIndex: 100, elevation: 4, marginTop: 4 },
   dropdownScroll: { maxHeight: 200 },
   dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
-  dropdownItemAtivo: { backgroundColor: '#FFF5EE' },
+  dropdownItemAtivo: { backgroundColor: '#E3F0EC' },
   dropdownItemTexto: { fontSize: 14, color: '#555' },
-  dropdownItemTextoAtivo: { color: '#E75F07', fontWeight: '600' },
+  dropdownItemTextoAtivo: { color: '#1F6452', fontWeight: '600' },
   searchContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, height: 46, backgroundColor: '#fff', marginBottom: 16 },
   searchInput: { flex: 1, fontSize: 14, color: '#000000', },
   resumo: { fontSize: 13, color: '#777', marginBottom: 12, fontWeight: '500' },
@@ -248,12 +248,12 @@ const styles = StyleSheet.create({
   roleContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 12 },
   roleLabel: { fontSize: 13, color: '#666', marginRight: 10 },
   roleOption: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: '#ccc', marginRight: 8 },
-  roleOptionActive: { backgroundColor: '#E75F07', borderColor: '#E75F07' },
+  roleOptionActive: { backgroundColor: '#1F6452', borderColor: '#1F6452' },
   roleOptionText: { fontSize: 12, color: '#555' },
   roleOptionTextActive: { color: '#fff', fontWeight: '600' },
   editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   cancelBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
   cancelBtnText: { color: '#666', fontSize: 13, fontWeight: '500' },
-  saveBtn: { backgroundColor: '#E75F07', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 6 },
+  saveBtn: { backgroundColor: '#1F6452', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 6 },
   saveBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' }
 });

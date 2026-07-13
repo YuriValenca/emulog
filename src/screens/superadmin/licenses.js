@@ -93,7 +93,7 @@ export default function AbaLicencas({
                     {c.name}
                   </Text>
                   {filteredFilterId === c.id && (
-                    <Ionicons name="checkmark" size={18} color="#E75F07" />
+                    <Ionicons name="checkmark" size={18} color="#1F6452" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   secaoTitulo: { fontSize: 16, fontWeight: '700', color: '#222' },
   secaoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, minHeight: 40 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E75F07', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1F6452', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   addBtnTexto: { color: '#fff', fontSize: 13, fontWeight: '700' },
   dropdownWrapper: { zIndex: 10, position: 'relative', marginBottom: 16 },
   dropdownHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#fff' },
@@ -192,9 +192,9 @@ const styles = StyleSheet.create({
   dropdownMenu: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, maxHeight: 200, zIndex: 99 },
   dropdownScroll: { paddingVertical: 4 },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
-  dropdownItemAtivo: { backgroundColor: '#fcf8f5' },
+  dropdownItemAtivo: { backgroundColor: '#E3F0EC' },
   dropdownItemTexto: { fontSize: 14, color: '#444' },
-  dropdownItemTextoAtivo: { color: '#E75F07', fontWeight: '700' },
+  dropdownItemTextoAtivo: { color: '#1F6452', fontWeight: '700' },
   resumo: { fontSize: 12, color: '#aaa', marginBottom: 12 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#efefef' },
   cardExpirado: { borderColor: '#333', borderWidth: 1, backgroundColor: '#fafafa' },
