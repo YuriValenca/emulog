@@ -420,27 +420,46 @@ function NovaAmostraScreenInner() {
   const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
   const proximaPesagem = pesagensFeitas + 1;
 
-  const historicoPesagens = amostras.map((grupoAmostras, indexGrupo) => {
-    const amostra = grupoAmostras || [];
-    return (
-      <View key={indexGrupo} style={styles.historicoGrupo}>
-        <Text style={styles.historicoTitulo}>Amostra {indexGrupo + 1}</Text>
-        {amostra.map((pesagem, indexPesagem) => (
-          <View key={indexPesagem} style={styles.tableRow}>
-            <Text style={styles.historicoPesagemBold}>Pesagem {indexPesagem + 1}:</Text>
-            <Text style={styles.pesagemText}> {pesagem.peso ? `${pesagem.peso} g` : '—'}</Text>
-            <Text style={styles.pesagemText}> {pesagem.densidade ? `${pesagem.densidade} g/cm³` : ''}</Text>
-            <Text style={styles.pesagemText}> {pesagem.timestamp}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  });
+  const amostrasComStatus = amostras.map((grupoAmostras, indexGrupo) => ({
+    indexGrupo,
+    amostra: grupoAmostras || [],
+    concluida: (grupoAmostras || []).filter(p => p.peso !== '').length >= 4,
+  }));
 
-  const historicoFiltrado = historicoPesagens.filter((_, index) => {
+  const passaNaBusca = (item) => {
     if (!amostraPesquisa) return true;
-    return `Amostra ${index + 1}`.toLowerCase().includes(amostraPesquisa.toLowerCase());
-  });
+    return `Amostra ${item.indexGrupo + 1}`.toLowerCase().includes(amostraPesquisa.toLowerCase());
+  };
+
+  const incompletas = amostrasComStatus.filter(a => !a.concluida && passaNaBusca(a));
+  const completas = amostrasComStatus.filter(a => a.concluida && passaNaBusca(a));
+
+  const renderGrupo = ({ indexGrupo, amostra }) => (
+    <View key={indexGrupo} style={styles.historicoGrupo}>
+      <Text style={styles.historicoTitulo}>Amostra {indexGrupo + 1}</Text>
+      {amostra.map((pesagem, indexPesagem) => (
+        <View key={indexPesagem} style={styles.tableRow}>
+          <Text style={styles.historicoPesagemBold}>Pesagem {indexPesagem + 1}:</Text>
+          <Text style={styles.pesagemText}> {pesagem.peso ? `${pesagem.peso} g` : '—'}</Text>
+          <Text style={styles.pesagemText}> {pesagem.densidade ? `${pesagem.densidade} g/cm³` : ''}</Text>
+          <Text style={styles.pesagemText}> {pesagem.timestamp}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const historicoFiltrado = (
+    <>
+      <Text style={styles.titulo}>Resultados da pesagem:</Text>
+      {incompletas.map(renderGrupo)}
+      {completas.length > 0 && (
+        <>
+          <Text style={styles.historicoSecaoConcluidas}>Amostras Concluídas</Text>
+          {completas.map(renderGrupo)}
+        </>
+      )}
+    </>
+  );
 
   const bleBarHeight = (bleStatus === 'connected' || bleStatus === 'reconnecting')
     ? (StatusBar.currentHeight ?? 24) + 42
@@ -667,7 +686,7 @@ export default function NovaAmostraScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#FFFFFF' },
-  titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F6452', marginBottom: 10 },
+  titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F6452', marginBottom: 16 },
 
   stepIndicatorContainer: { marginBottom: 24, marginTop: 8 },
   stepIndicatorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
@@ -741,4 +760,10 @@ const styles = StyleSheet.create({
   bleModalBtnCancelText: { fontSize: 15, fontWeight: '700', color: '#666' },
   bleModalBtnConfirm: { backgroundColor: '#4CAF50' },
   bleModalBtnConfirmText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  historicoSecaoConcluidas: {
+    fontSize: 14, fontWeight: '700', color: '#888',
+    textTransform: 'uppercase', letterSpacing: 0.5,
+    marginTop: 20, marginBottom: 8,
+    borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16,
+  },
 });

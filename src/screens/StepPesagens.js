@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Platform, Dimensions, Modal, ActivityIndicator,
@@ -39,12 +39,22 @@ export default function StepPesagens({
     salvarEstadoDoProjeto,
   } = useProjetoForm();
 
+  const [modalConfirmarVisivel, setModalConfirmarVisivel] = useState(false);
+
   const amostraArray = amostras[amostraAtual] || [];
   const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
   const proximaPesagem = pesagensFeitas + 1;
   const amostraAtualConcluida = pesagensFeitas >= 4;
 
   const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
+
+  const iniciarConfirmacao = () => {
+    if (!peso || !peso.trim()) {
+      onConfirmarPesagem();
+      return;
+    }
+    setModalConfirmarVisivel(true);
+  };
 
   return (
     <>
@@ -96,28 +106,6 @@ export default function StepPesagens({
         onChangeText={setNomeProjeto}
         onBlur={salvarEstadoDoProjeto}
       />
-      <View>
-        <Text style={styles.infoText}>Quantidade de amostras</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Quantidade de Amostras"
-          placeholderTextColor="#888888"
-          keyboardType="numeric"
-          value={quantidadeAmostras.toString()}
-          onChangeText={(text) => {
-            const quantidade = parseInt(text, 10);
-            if (quantidade > 0) {
-              setQuantidadeAmostras(quantidade);
-              setAmostras(
-                Array.from({ length: quantidade }, () =>
-                  Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))
-                )
-              );
-            }
-          }}
-          onBlur={salvarEstadoDoProjeto}
-        />
-      </View>
 
       <TouchableOpacity style={styles.adicionarAmostraBtn} onPress={() => setModalAdicionarAmostra(true)}>
         <Ionicons name="add-circle" size={24} color="#1F6452" />
@@ -182,7 +170,7 @@ export default function StepPesagens({
 
       <TouchableOpacity
         style={[styles.button, { backgroundColor: confirmarDesabilitado ? '#ccc' : '#1F6452' }]}
-        onPress={onConfirmarPesagem}
+        onPress={iniciarConfirmacao}
         disabled={confirmarDesabilitado}
       >
         {!calibragemCarregada ? (
@@ -275,6 +263,31 @@ export default function StepPesagens({
           </View>
         </View>
       </Modal>
+
+      <Modal animationType="fade" transparent visible={modalConfirmarVisivel} onRequestClose={() => setModalConfirmarVisivel(false)}>
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.confirmModalLabel}>Enviando para</Text>
+            <Text style={styles.confirmModalAmostra}>Amostra {amostraAtual + 1}</Text>
+            <Text style={styles.confirmModalLabel}>Peso</Text>
+            <Text style={styles.confirmModalPeso}>{peso} g</Text>
+            <View style={styles.confirmModalActions}>
+              <TouchableOpacity
+                style={[styles.confirmModalBtn, styles.cancelarButton]}
+                onPress={() => setModalConfirmarVisivel(false)}
+              >
+                <Text style={styles.textStyle}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalBtn, styles.salvarButton]}
+                onPress={() => { setModalConfirmarVisivel(false); onConfirmarPesagem(); }}
+              >
+                <Text style={styles.textStyle}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -349,4 +362,9 @@ const styles = StyleSheet.create({
   },
   salvarButton: { backgroundColor: '#1F6452' },
   cancelarButton: { backgroundColor: '#787878' },
+  confirmModalLabel: { fontSize: 14, color: '#888', fontWeight: '600', marginBottom: 2, marginTop: 12 },
+  confirmModalAmostra: { fontSize: 44, fontWeight: '800', color: '#222' },
+  confirmModalPeso: { fontSize: 44, fontWeight: '800', color: '#1F6452' },
+  confirmModalActions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 20 },
+  confirmModalBtn: { flex: 1, padding: 14, borderRadius: 8, alignItems: 'center' },
 });
