@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Emulog — Privacidade e Exclusão de Conta</title>
+<style>
+  :root {
+    --verde: #1F6452;
+    --verde-claro: #E3F0EC;
+    --texto: #222222;
+    --texto-suave: #5A5A5A;
+    --fundo: #FAFAF8;
+    --borda: #E4E4E0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--fundo);
+    color: var(--texto);
+    line-height: 1.6;
+  }
+
+  .topo {
+    background: var(--verde);
+    padding: 40px 0 0 0;
+    color: #fff;
+  }
+
+  .topo-conteudo {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 6px;
+  }
+
+  .topo h1 {
+    margin: 0 0 20px 0;
+    font-size: 26px;
+    font-weight: 800;
+  }
+
+  .abas {
+    display: flex;
+    gap: 4px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 6px;
+  }
+
+  .aba-btn {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: rgba(255,255,255,0.75);
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+  }
+
+  .aba-btn.ativa {
+    background: var(--fundo);
+    color: var(--verde);
+  }
+
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 0;
+  }
+
+  .painel { display: none; }
+  .painel.ativo { display: block; }
+
+  section {
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+    color: var(--verde);
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  h3 {
+    font-size: 15px;
+    color: var(--texto);
+    margin: 18px 0 8px 0;
+  }
+
+  .numero {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--verde-claro);
+    color: var(--verde);
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  p {
+    margin: 0 0 12px 0;
+    color: var(--texto-suave);
+    font-size: 15px;
+  }
+
+  ul {
+    margin: 0 0 12px 0;
+    padding-left: 20px;
+    color: var(--texto-suave);
+    font-size: 15px;
+  }
+
+  li { margin-bottom: 6px; }
+
+  strong { color: var(--texto); }
+
+  .botao-email {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--verde);
+    color: #fff;
+    text-decoration: none;
+    padding: 13px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    margin-top: 4px;
+  }
+
+  .tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .tabela th, .tabela td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--borda);
+    vertical-align: top;
+  }
+
+  .tabela th {
+    color: var(--verde);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .badge-excluido { background: #FCE4E4; color: #C62828; }
+  .badge-mantido { background: #FFF3E0; color: #E65100; }
+
+  footer {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 40px 24px;
+    color: #999;
+    font-size: 13px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="topo-conteudo">
+    <h1>Emulog — Privacidade e Exclusão de Conta</h1>
+  </div>
+  <div class="abas">
+    <button class="aba-btn" data-aba="privacidade" onclick="mostrarAba('privacidade')">Política de Privacidade</button>
+    <button class="aba-btn" data-aba="exclusao" onclick="mostrarAba('exclusao')">Exclusão de Conta e Dados</button>
+  </div>
+</div>
+
+<main>
+
+  <div id="painel-privacidade" class="painel">
+
+    <section>
+      <p>
+        Esta Política de Privacidade descreve como o <strong>Emulog</strong>, aplicativo desenvolvido
+        pela <strong>Expolog</strong>, coleta, usa, armazena e protege os dados pessoais dos seus usuários,
+        em conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD)</strong>.
+      </p>
+      <p>
+        O Emulog é um aplicativo corporativo de uso interno, voltado à operação técnica de pesagem,
+        calibração e controle de projetos por empresas clientes. As contas são criadas e gerenciadas
+        pela própria empresa contratante (administradores internos ou pela Expolog), não havendo
+        autocadastro público.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">1</span> Controlador dos dados</h2>
+      <p>
+        A <strong>Expolog</strong> é a controladora dos dados pessoais tratados por meio do aplicativo Emulog,
+        nos termos do art. 5º, VI, da LGPD. Dúvidas, solicitações ou exercício de direitos podem ser
+        enviados para:
+      </p>
+      <a class="botao-email" href="mailto:emulog.app@gmail.com?subject=Privacidade%20Emulog">
+        emulog.app@gmail.com
+      </a>
+    </section>
+
+    <section>
+      <h2><span class="numero">2</span> Quais dados coletamos</h2>
+      <table class="tabela">
+        <tr><th>Dado</th><th>Finalidade</th></tr>
+        <tr><td>Nome completo</td><td>Identificação do usuário dentro da empresa e nos relatórios técnicos</td></tr>
+        <tr><td>E-mail</td><td>Autenticação e login na conta</td></tr>
+        <tr><td>Identificador único de usuário (UID)</td><td>Controle de acesso e vínculo dos registros ao usuário correto</td></tr>
+        <tr><td>Identificador do dispositivo (Device ID)</td><td>Vínculo da licença de uso ao aparelho autorizado</td></tr>
+        <tr><td>Foto (logo da empresa)</td><td>Personalização visual da conta da empresa contratante</td></tr>
+        <tr><td>Dados de projetos, pesagens e calibragens</td><td>Registro técnico e operacional da atividade da empresa</td></tr>
+        <tr><td>Conteúdo digitado pelo usuário (nome do projeto, observações)</td><td>Documentação dos projetos realizados</td></tr>
+      </table>
+      <p>
+        O Emulog <strong>não coleta</strong> dados de localização, contatos, agenda, mensagens,
+        arquivos do dispositivo, histórico de navegação, dados de saúde ou informações financeiras.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">3</span> Base legal para o tratamento</h2>
+      <p>Os dados pessoais são tratados com base nas seguintes hipóteses legais previstas no art. 7º da LGPD:</p>
+      <ul>
+        <li><strong>Execução de contrato:</strong> criação e gerenciamento da conta do usuário vinculada à empresa contratante.</li>
+        <li><strong>Cumprimento de obrigação legal ou regulatória:</strong> manutenção de registros técnicos de pesagem e calibração exigidos por obrigações contratuais e fiscais da empresa.</li>
+        <li><strong>Legítimo interesse:</strong> segurança da conta, prevenção de fraude no uso de licenças e melhoria da funcionalidade do aplicativo.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2><span class="numero">4</span> Com quem os dados são compartilhados</h2>
+      <p>
+        Os dados são processados e armazenados por meio da infraestrutura <strong>Google Firebase</strong>
+        (Firebase Authentication e Cloud Firestore), que atua como <strong>operador de dados</strong>
+        nos termos da LGPD, seguindo instruções da Expolog.
+      </p>
+      <p>
+        Dentro do próprio aplicativo, dados operacionais (projetos, calibragens, equipe) são visíveis
+        apenas para usuários autorizados da mesma empresa, conforme o papel de cada um (usuário,
+        administrador da empresa ou administrador geral).
+      </p>
+      <p>
+        O Emulog <strong>não compartilha dados com parceiros de publicidade, redes sociais ou
+        corretores de dados</strong>, e não utiliza SDKs de anúncios ou rastreamento de terceiros.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">5</span> Transferência internacional de dados</h2>
+      <p>
+        A infraestrutura do Google Firebase pode processar e armazenar dados em servidores localizados
+        fora do Brasil. Essas transferências ocorrem sob salvaguardas contratuais e técnicas adotadas
+        pelo provedor, em conformidade com o art. 33 da LGPD.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">6</span> Armazenamento e retenção</h2>
+      <p>
+        Os dados pessoais são mantidos enquanto a conta estiver ativa. Após uma solicitação de
+        exclusão de conta (veja a aba <strong>"Exclusão de Conta e Dados"</strong>), os dados de
+        identificação pessoal são removidos em até 30 dias, sendo mantidos de forma anonimizada
+        apenas os registros técnicos que a empresa contratante precise preservar por obrigação legal
+        ou contratual.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">7</span> Segurança da informação</h2>
+      <ul>
+        <li>Toda comunicação entre o aplicativo e os servidores é criptografada em trânsito (HTTPS/TLS).</li>
+        <li>O acesso aos dados é controlado por regras de segurança que isolam os dados de cada empresa entre si.</li>
+        <li>O identificador do dispositivo é armazenado em área segura e criptografada do sistema operacional (Secure Store).</li>
+        <li>O acesso a funções administrativas é restrito por papéis de usuário (usuário, administrador da empresa, administrador geral).</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2><span class="numero">8</span> Seus direitos como titular dos dados</h2>
+      <p>Nos termos do art. 18 da LGPD, você pode solicitar, a qualquer momento:</p>
+      <ul>
+        <li>Confirmação da existência de tratamento dos seus dados</li>
+        <li>Acesso aos dados pessoais tratados</li>
+        <li>Correção de dados incompletos, inexatos ou desatualizados</li>
+        <li>Anonimização, bloqueio ou eliminação de dados desnecessários ou excessivos</li>
+        <li>Portabilidade dos dados a outro fornecedor de serviço</li>
+        <li>Eliminação dos dados pessoais tratados, ressalvadas as hipóteses de conservação previstas em lei</li>
+        <li>Informação sobre as entidades com as quais os dados foram compartilhados</li>
+      </ul>
+      <p>
+        Para exercer qualquer um desses direitos, envie uma solicitação para
+        <strong> emulog.app@gmail.com</strong>. Responderemos em até 15 dias, conforme prazo legal.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">9</span> Uso por menores de idade</h2>
+      <p>
+        O Emulog é um aplicativo de uso corporativo/profissional e não é direcionado a crianças ou
+        adolescentes. As contas são criadas exclusivamente por administradores para uso de
+        colaboradores das empresas contratantes.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">10</span> Alterações desta política</h2>
+      <p>
+        Esta Política de Privacidade pode ser atualizada periodicamente para refletir melhorias no
+        aplicativo ou mudanças legais. A data da última atualização está indicada no rodapé desta página.
+      </p>
+    </section>
+
+  </div>
+
+  <div id="painel-exclusao" class="painel">
+
+    <section>
+      <p>
+        Esta página explica como você pode solicitar a <strong>exclusão da sua conta</strong>
+        e dos <strong>dados pessoais</strong> associados a ela no aplicativo <strong>Emulog</strong>.
+      </p>
+      <p>
+        O Emulog é um aplicativo corporativo: as contas de usuário são criadas e vinculadas a uma
+        empresa cliente (não há autocadastro público). Por isso, a exclusão é feita mediante
+        solicitação, para que possamos confirmar sua identidade e o vínculo com a empresa antes
+        de remover os dados.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="numero">1</span> Como solicitar a exclusão</h2>
+      <p>Envie um e-mail para o endereço abaixo, a partir do e-mail cadastrado na sua conta, com o assunto <strong>"Exclusão de conta Emulog"</strong>, informando:</p>
+      <ul>
+        <li>Nome completo</li>
+        <li>E-mail utilizado no login do aplicativo</li>
+        <li>Nome da empresa à qual sua conta está vinculada</li>
+      </ul>
+      <a class="botao-email" href="mailto:emulog.app@gmail.com?subject=Exclus%C3%A3o%20de%20conta%20Emulog">
+        emulog.app@gmail.com
+      </a>
+    </section>
+
+    <section>
+      <h2><span class="numero">2</span> O que acontece depois</h2>
+      <ul>
+        <li>Confirmamos a identidade do solicitante e o vínculo com a empresa em até <strong>5 dias úteis</strong>.</li>
+        <li>Após a confirmação, a conta é desativada imediatamente, impedindo novos logins.</li>
+        <li>A exclusão definitiva dos dados pessoais ocorre em até <strong>30 dias</strong> a partir da confirmação.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2><span class="numero">3</span> Quais dados são excluídos e quais são mantidos</h2>
+      <table class="tabela">
+        <tr>
+          <th>Dado</th>
+          <th>O que acontece</th>
+        </tr>
+        <tr>
+          <td>Credenciais de login (e-mail e senha)</td>
+          <td><span class="badge badge-excluido">Excluído</span></td>
+        </tr>
+        <tr>
+          <td>Nome e dados de perfil do usuário</td>
+          <td><span class="badge badge-excluido">Excluído</span></td>
+        </tr>
+        <tr>
+          <td>Identificador do dispositivo (Device ID) vinculado à conta</td>
+          <td><span class="badge badge-excluido">Excluído</span></td>
+        </tr>
+        <tr>
+          <td>Histórico de login</td>
+          <td><span class="badge badge-excluido">Excluído</span></td>
+        </tr>
+        <tr>
+          <td>Projetos, pesagens e calibragens registrados pelo usuário</td>
+          <td>
+            <span class="badge badge-mantido">Mantido (anonimizado)</span>
+            <div style="margin-top:6px;">
+              São registros operacionais que pertencem à empresa contratante,
+              usados para histórico técnico e obrigações fiscais/contratuais.
+              O vínculo com o usuário é removido, mas o registro em si é
+              mantido pela empresa pelo prazo exigido por lei ou contrato.
+            </div>
+          </td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <h2><span class="numero">4</span> Exclusão de dados sem excluir a conta</h2>
+      <p>
+        Caso deseje apenas corrigir ou atualizar dados pessoais (nome, e-mail) sem excluir a conta,
+        envie a solicitação para o mesmo e-mail acima com o assunto
+        <strong>"Atualização de dados Emulog"</strong>.
+      </p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer>
+  Emulog — desenvolvido por Expolog. Última atualização desta página: julho de 2026.
+</footer>
+
+<script>
+function mostrarAba(nome) {
+  document.querySelectorAll('.painel').forEach(function(p) { p.classList.remove('ativo'); });
+  document.querySelectorAll('.aba-btn').forEach(function(b) { b.classList.remove('ativa'); });
+  document.getElementById('painel-' + nome).classList.add('ativo');
+  document.querySelector('.aba-btn[data-aba="' + nome + '"]').classList.add('ativa');
+  window.location.hash = nome;
+}
+
+var abaInicial = window.location.hash.replace('#', '') || 'privacidade';
+if (abaInicial !== 'privacidade' && abaInicial !== 'exclusao') {
+  abaInicial = 'privacidade';
+}
+mostrarAba(abaInicial);
+</script>
+
+</body>
+</html>

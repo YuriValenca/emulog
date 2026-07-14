@@ -1,5 +1,5 @@
 {
-  "hosting": {
+  "hosting": [{
     "public": "web-build",
     "ignore": [
       "firebase.json",
@@ -12,5 +12,14 @@
         "destination": "/index.html"
       }
     ]
-  }
+  },
+  {
+    "site": "emulog-legal",
+    "public": "legal",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }]
 }
