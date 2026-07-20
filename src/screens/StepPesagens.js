@@ -22,7 +22,6 @@ export default function StepPesagens({
   onAdicionarAmostra,
   onAvancar,
   todasPesagensConcluidas,
-  podeAvancar,
   temporizador,
   amostraPesquisa, setAmostraPesquisa,
   historicoFiltrado,
@@ -193,7 +192,7 @@ export default function StepPesagens({
       <View style={styles.historicoContainer}>{historicoFiltrado}</View>
 
       <TouchableOpacity
-        style={[styles.avancarBtn, !podeAvancar && styles.avancarBtnDisabled]}
+        style={[styles.avancarBtn, !nomeProjeto.trim() && styles.avancarBtnDisabled]}
         onPress={onAvancar}
         activeOpacity={0.8}
       >

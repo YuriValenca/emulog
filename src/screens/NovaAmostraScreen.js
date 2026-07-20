@@ -36,6 +36,8 @@ function NovaAmostraScreenInner() {
   const [modalConfirmacaoVisivel, setModalConfirmacaoVisivel] = useState(false);
   const [modalProjetoExistenteVisivel, setModalProjetoExistenteVisivel] = useState(false);
   const [modalInformacoesAdicionaisVisivel, setModalInformacoesAdicionaisVisivel] = useState(false);
+  const [modalAmostrasIncompletasVisivel, setModalAmostrasIncompletasVisivel] = useState(false);
+  const [mensagemAmostrasIncompletas, setMensagemAmostrasIncompletas] = useState('');
 
   const [modalBleVisivel, setModalBleVisivel] = useState(false);
   const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
@@ -66,10 +68,6 @@ function NovaAmostraScreenInner() {
 
   const todasPesagensConcluidas = amostras.every(
     a => a && a.filter(p => p.peso !== '').length === 5
-  );
-
-  const podeAvancar = amostras.every(
-    a => a && a.filter(p => p.peso !== '').length >= 4
   );
 
   useEffect(() => {
@@ -362,17 +360,19 @@ function NovaAmostraScreenInner() {
     }
     const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
     if (!algumaAmostraCompleta) {
-      setMensagemAviso("Pelo menos uma amostra com 4 pesagens é necessária.");
-      setModalAvisoVisivel(true);
+      setMensagemAmostrasIncompletas("Pelo menos uma amostra com 4 pesagens é necessária antes de salvar.");
+      setModalAmostrasIncompletasVisivel(true);
       return;
     }
     const pesagensIncompletas = verificarPesagensIncompletas();
     if (pesagensIncompletas) {
-      setMensagemAviso(`Pesagens Incompletas:\n${pesagensIncompletas}\n\nDeseja salvar mesmo assim?`);
-      setModalAvisoVisivel(true);
-    } else {
-      setModalConfirmacaoVisivel(true);
+      setMensagemAmostrasIncompletas(
+        `Todas as amostras iniciadas precisam ter pelo menos 4 pesagens antes de salvar.\n\n${pesagensIncompletas}`
+      );
+      setModalAmostrasIncompletasVisivel(true);
+      return;
     }
+    setModalConfirmacaoVisivel(true);
   };
 
   const adicionarAmostra = () => {
@@ -391,14 +391,8 @@ function NovaAmostraScreenInner() {
   };
 
   const handleAvancarStep = () => {
-    if (!nomeProjeto) {
+    if (!nomeProjeto.trim()) {
       setMensagemAviso("O nome do projeto não pode estar vazio.");
-      setModalAvisoVisivel(true);
-      return;
-    }
-    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
-    if (!algumaAmostraCompleta) {
-      setMensagemAviso("Pelo menos uma amostra com 4 pesagens é necessária para avançar.");
       setModalAvisoVisivel(true);
       return;
     }
@@ -414,6 +408,16 @@ function NovaAmostraScreenInner() {
   const recusarStep2EFinalizar = () => {
     setModalInformacoesAdicionaisVisivel(false);
     finalizarOuSalvar();
+  };
+
+  const voltarParaPesagemDoAviso = () => {
+    setModalAmostrasIncompletasVisivel(false);
+    scrollToTop();
+    setCurrentStep(1);
+  };
+
+  const fecharAvisoAmostrasIncompletas = () => {
+    setModalAmostrasIncompletasVisivel(false);
   };
 
   const amostraArray = amostras[amostraAtual] || [];
@@ -500,7 +504,6 @@ function NovaAmostraScreenInner() {
           ultimaCalibragem={ultimaCalibragem}
           calibragemCarregada={ultimaCalibragem !== null}
           modalAvisoVisivel={modalAvisoVisivel}
-          modalAvisoVisivel={modalAvisoVisivel}
           setModalAvisoVisivel={setModalAvisoVisivel}
           mensagemAviso={mensagemAviso}
           setMensagemAviso={setMensagemAviso}
@@ -514,7 +517,6 @@ function NovaAmostraScreenInner() {
           onAdicionarAmostra={adicionarAmostra}
           onAvancar={handleAvancarStep}
           todasPesagensConcluidas={todasPesagensConcluidas}
-          podeAvancar={podeAvancar}
           temporizador={temporizador}
           amostraPesquisa={amostraPesquisa}
           setAmostraPesquisa={setAmostraPesquisa}
@@ -668,6 +670,32 @@ function NovaAmostraScreenInner() {
             >
               <Ionicons name="refresh-circle" size={24} color="#FFF" />
               <Text style={styles.textStyle}>Iniciar Novo</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={modalAmostrasIncompletasVisivel}
+        onRequestClose={fecharAvisoAmostrasIncompletas}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>{mensagemAmostrasIncompletas}</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.salvarButton]}
+              onPress={voltarParaPesagemDoAviso}
+            >
+              <Ionicons name="arrow-back-circle" size={24} color="#FFF" />
+              <Text style={styles.textStyle}>Voltar para pesagem</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelarButton]}
+              onPress={fecharAvisoAmostrasIncompletas}
+            >
+              <Ionicons name="checkmark" size={24} color="#FFF" />
+              <Text style={styles.textStyle}>Entendi</Text>
             </TouchableOpacity>
           </View>
         </View>
