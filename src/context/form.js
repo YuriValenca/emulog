@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProjetoFormContext = createContext(null);
+const STORAGE_KEY = 'projetoEmAndamento';
 
 export function ProjetoFormProvider({ children }) {
   const inicializado = useRef(false);
@@ -18,6 +19,7 @@ export function ProjetoFormProvider({ children }) {
   const [peso, setPeso] = useState('');
   const [ultimaCalibragem, setUltimaCalibragem] = useState(null);
   const [uidUsuario, setUidUsuario] = useState(null);
+  const [companyId, setCompanyId] = useState(null);
 
   const [numeroNF, setNumeroNF] = useState('');
   const [kgPrevisto, setKgPrevisto] = useState('');
@@ -27,7 +29,11 @@ export function ProjetoFormProvider({ children }) {
   const [informacoesGerais, setInformacoesGerais] = useState('');
 
   const salvarEstadoDoProjeto = async () => {
+    if (!companyId || !uidUsuario) return;
+
     const projeto = {
+      companyId,
+      uidUsuario,
       nomeProjeto, quantidadeAmostras, amostras,
       amostraAtual, pesagemAtual, peso,
       numeroNF, kgPrevisto, kgAplicado,
@@ -35,7 +41,7 @@ export function ProjetoFormProvider({ children }) {
       informacoesGerais,
     };
     try {
-      await AsyncStorage.setItem('projetoEmAndamento', JSON.stringify(projeto));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(projeto));
     } catch (error) {
       console.error("Erro ao salvar estado do projeto:", error);
     }
@@ -48,6 +54,7 @@ export function ProjetoFormProvider({ children }) {
     }
     salvarEstadoDoProjeto();
   }, [
+    companyId, uidUsuario,
     nomeProjeto, quantidadeAmostras, amostras,
     amostraAtual, pesagemAtual, peso,
     numeroNF, kgPrevisto, kgAplicado,
@@ -57,7 +64,7 @@ export function ProjetoFormProvider({ children }) {
 
   const limparEstadoDoProjeto = async () => {
     try {
-      await AsyncStorage.removeItem('projetoEmAndamento');
+      await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error("Erro ao limpar estado do projeto:", error);
     }
@@ -80,12 +87,26 @@ export function ProjetoFormProvider({ children }) {
     setInformacoesGerais('');
   };
 
-  const restaurarDoStorage = async () => {
+  const restaurarDoStorage = async (companyIdAtual, uidAtual) => {
     try {
-      const projetoSalvo = await AsyncStorage.getItem('projetoEmAndamento');
+      const projetoSalvo = await AsyncStorage.getItem(STORAGE_KEY);
       if (!projetoSalvo) return false;
 
       const projeto = JSON.parse(projetoSalvo);
+
+      const pertenceAoContextoAtual =
+        projeto.companyId && companyIdAtual &&
+        projeto.uidUsuario && uidAtual &&
+        projeto.companyId === companyIdAtual &&
+        projeto.uidUsuario === uidAtual;
+
+      if (!pertenceAoContextoAtual) {
+        await limparEstadoDoProjeto();
+        return false;
+      }
+
+      setCompanyId(projeto.companyId);
+      if (projeto.uidUsuario) setUidUsuario(projeto.uidUsuario);
       setNomeProjeto(projeto.nomeProjeto || '');
       setQuantidadeAmostras(projeto.quantidadeAmostras || 1);
       setAmostraAtual(projeto.amostraAtual || 0);
@@ -146,6 +167,7 @@ export function ProjetoFormProvider({ children }) {
       peso, setPeso,
       ultimaCalibragem, setUltimaCalibragem,
       uidUsuario, setUidUsuario,
+      companyId, setCompanyId,
       numeroNF, setNumeroNF,
       kgPrevisto, setKgPrevisto,
       kgAplicado, setKgAplicado,

@@ -57,6 +57,7 @@ function NovaAmostraScreenInner() {
     peso, setPeso,
     ultimaCalibragem, setUltimaCalibragem,
     uidUsuario, setUidUsuario,
+    companyId: companyIdContexto, setCompanyId,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
     informacoesGerais,
@@ -69,6 +70,10 @@ function NovaAmostraScreenInner() {
   const todasPesagensConcluidas = amostras.every(
     a => a && a.filter(p => p.peso !== '').length === 5
   );
+
+  useEffect(() => {
+    if (companyId) setCompanyId(companyId);
+  }, [companyId]);
 
   useEffect(() => {
     if (
@@ -168,11 +173,12 @@ function NovaAmostraScreenInner() {
 
   useEffect(() => {
     const init = async () => {
-      const tinha = await restaurarDoStorage();
+      if (!companyId) return;
+      const tinha = await restaurarDoStorage(companyId, uidUsuario);
       if (tinha) setModalProjetoExistenteVisivel(true);
     };
     init();
-  }, []);
+  }, [companyId]);
 
   const calcularDensidade = (pesoVal) => {
     if (!ultimaCalibragem) {
