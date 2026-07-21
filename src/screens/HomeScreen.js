@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useAppAuth } from '../context/auth';
 import NetInfo from '@react-native-community/netinfo';
@@ -11,6 +11,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function HomeScreen({ navigation }) {
   const { name, role, companyId, isSuperadmin, isCompanyAdmin } = useAppAuth();
   const [calibragemValida, setCalibragemValida] = useState(false);
+  const [balancaBtHabilitada, setBalancaBtHabilitada] = useState(false);
+
+  useEffect(() => {
+    const verificarModuloBalanca = async () => {
+      if (isSuperadmin) {
+        setBalancaBtHabilitada(true);
+        return;
+      }
+      if (!companyId) return;
+      try {
+        const companySnap = await getDoc(doc(db, 'companies', companyId));
+        if (companySnap.exists()) {
+          setBalancaBtHabilitada(!!companySnap.data().bluetoothScaleEnabled);
+        }
+      } catch (e) {
+        console.error('Erro ao verificar módulo de balança Bluetooth:', e);
+      }
+    };
+    verificarModuloBalanca();
+  }, [companyId, isSuperadmin]);
 
   useEffect(() => {
     const verificarCalibragem = async () => {
@@ -112,7 +132,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.buttonText}>Histórico</Text>
       </TouchableOpacity>
 
-      {(companyId === 'explog-founding' || isSuperadmin) && <TouchableOpacity
+      {((companyId === 'explog-founding' || isSuperadmin) || balancaBtHabilitada) && <TouchableOpacity
         style={[styles.buttonContainer, { backgroundColor: '#1A73E8', flexDirection: 'row' }]}
         onPress={() => navigation.navigate('ScaleConnect')}
       >

@@ -121,6 +121,7 @@ export default function SuperadminPanel() {
           founding: false,
           licenseLimitOverride: null,
           licenseExpiryOverride: null,
+          bluetoothScaleEnabled: false,
           createdAt: Timestamp.now(),
         });
       }
@@ -140,6 +141,21 @@ export default function SuperadminPanel() {
       setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, active: !c.active } : c));
     } catch (e) {
       Alert.alert('Erro', 'Não foi possível atualizar o status.');
+    }
+  };
+
+  const toggleBalancaBluetooth = async (company) => {
+    try {
+      await updateDoc(doc(db, 'companies', company.id), {
+        bluetoothScaleEnabled: !company.bluetoothScaleEnabled,
+      });
+      setCompanies(prev =>
+        prev.map(c =>
+          c.id === company.id ? { ...c, bluetoothScaleEnabled: !c.bluetoothScaleEnabled } : c
+        )
+      );
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível atualizar o módulo de balança Bluetooth.');
     }
   };
 
@@ -325,6 +341,64 @@ export default function SuperadminPanel() {
     ]);
   };
 
+  const handleDeleteCompany = async (company) => {
+    Alert.alert(
+      'Excluir Empresa',
+      `Tem certeza que deseja excluir "${company.name}"? Esta ação é IRREVERSÍVEL e apagará todos os usuários desta empresa, além de excluir permanentemente todas as suas licenças.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmação Final',
+              `Última chance: todos os usuários de "${company.name}" e todas as suas licenças serão excluídos permanentemente. Deseja realmente prosseguir?`,
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Excluir Definitivamente',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setSaving(true);
+                    try {
+                      const licSnap = await getDocs(collection(db, 'companies', company.id, 'licenses'));
+                      await Promise.all(
+                        licSnap.docs.map(d => deleteDoc(doc(db, 'companies', company.id, 'licenses', d.id)))
+                      );
+
+                      const usuariosDaEmpresa = users.filter(u => u.companyId === company.id);
+                      await Promise.all(
+                        usuariosDaEmpresa.map(u => deleteDoc(doc(db, 'users', u.id)))
+                      );
+
+                      await deleteDoc(doc(db, 'companies', company.id));
+
+                      setCompanies(prev => prev.filter(c => c.id !== company.id));
+                      setUsers(prev => prev.filter(u => u.companyId !== company.id));
+                      setLicenses(prev => prev.filter(l => l.companyId !== company.id));
+
+                      if (licenseCompanyFilter === company.id) {
+                        setLicenseCompanyFilter(null);
+                      }
+
+                      Alert.alert('Sucesso', 'Empresa excluída com sucesso.');
+                    } catch (e) {
+                      console.error(e);
+                      Alert.alert('Erro', 'Não foi possível excluir a empresa.');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
   const empresaFiltradaNome = useMemo(() => {
     const comp = companies.find(c => c.id === licenseCompanyFilter);
     return comp ? comp.name : '';
@@ -389,6 +463,8 @@ export default function SuperadminPanel() {
             onAddPress={() => { setSelectedCompany(null); setModalEmpresaVisivel(true); }}
             onEditPress={(c) => { setSelectedCompany(c); setModalEmpresaVisivel(true); }}
             onToggleActive={toggleEmpresaAtiva}
+            onToggleBluetoothScale={toggleBalancaBluetooth}
+            onDeletePress={handleDeleteCompany}
             formatDate={formatDate}
           />
         )}
