@@ -7,7 +7,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { printToFileAsync } from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';

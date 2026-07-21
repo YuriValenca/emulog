@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 64,
     maxHeight: '90%',
   },
   indicator: {

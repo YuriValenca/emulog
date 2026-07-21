@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, View, Text, TouchableOpacity, StatusBar } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -103,11 +104,11 @@ function BleStatusBar({ navigation }) {
   );
 }
 
-function LicenseBlockScreen() {
+function LicenseBlockScreen({ bottomInset }) {
   const handleLogout = () => signOut(auth).catch(() => {});
 
   return (
-    <View style={gateStyles.container}>
+    <View style={[gateStyles.container, { paddingBottom: bottomInset }]}>
       <MaterialCommunityIcons name="shield-lock-outline" size={64} color="#FF5C00" />
       <Text style={gateStyles.title}>Dispositivo sem licença ativa</Text>
       <Text style={gateStyles.body}>
@@ -122,9 +123,9 @@ function LicenseBlockScreen() {
   );
 }
 
-function ConfigErrorScreen({ message }) {
+function ConfigErrorScreen({ message, bottomInset }) {
   return (
-    <View style={gateStyles.container}>
+    <View style={[gateStyles.container, { paddingBottom: bottomInset }]}>
       <MaterialCommunityIcons name="account-alert-outline" size={64} color="#FF9621" />
       <Text style={gateStyles.title}>Problema na conta</Text>
       <Text style={gateStyles.body}>
@@ -136,9 +137,9 @@ function ConfigErrorScreen({ message }) {
   );
 }
 
-function GenericErrorScreen({ message }) {
+function GenericErrorScreen({ message, bottomInset }) {
   return (
-    <View style={gateStyles.container}>
+    <View style={[gateStyles.container, { paddingBottom: bottomInset }]}>
       <MaterialCommunityIcons name="alert-circle-outline" size={64} color="#f44336" />
       <Text style={gateStyles.title}>Erro ao carregar</Text>
       <Text style={gateStyles.body}>
@@ -153,6 +154,7 @@ function GenericErrorScreen({ message }) {
 function AppNavigator() {
   const { authUser, authStatus, debugError, companyId } = useAppAuth();
   const { syncReferenceData } = useReferenceData();
+  const insets = useSafeAreaInsets();
 
   const [navReady, setNavReady] = useState(false);
   const navigationRef = useRef(null);
@@ -171,19 +173,19 @@ function AppNavigator() {
   if (authStatus === 'no-license') return (
     <>
       <DefaultStatusBar />
-      <LicenseBlockScreen />
+      <LicenseBlockScreen bottomInset={insets.bottom} />
     </>
   );
   if (authStatus === 'config-error') return (
     <>
       <DefaultStatusBar />
-      <ConfigErrorScreen message={debugError} />
+      <ConfigErrorScreen message={debugError} bottomInset={insets.bottom} />
     </>
   );
   if (authStatus === 'error') return (
     <>
       <DefaultStatusBar />
-      <GenericErrorScreen message={debugError} />
+      <GenericErrorScreen message={debugError} bottomInset={insets.bottom} />
     </>
   );
 
@@ -191,7 +193,12 @@ function AppNavigator() {
     <NavigationContainer ref={navigationRef} onReady={() => setNavReady(true)}>
       <View style={styles.root}>
         <DefaultStatusBar />
-        <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: styles.screenContent }}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { ...styles.screenContent, paddingBottom: insets.bottom },
+          }}
+        >
           {authUser ? (
             <>
               <Stack.Screen name="Home" component={HomeScreen} />
@@ -216,13 +223,15 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ReferenceDataProvider>
-        <BleProvider>
-          <AppNavigator />
-        </BleProvider>
-      </ReferenceDataProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ReferenceDataProvider>
+          <BleProvider>
+            <AppNavigator />
+          </BleProvider>
+        </ReferenceDataProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
