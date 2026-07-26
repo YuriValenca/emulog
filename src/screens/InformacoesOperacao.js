@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   salvarBtnDisabled: { backgroundColor: '#8FB8AC' },
   salvarBtnTexto: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', marginBottom: 48 },
   modalCard: {
     backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36, maxHeight: '75%',
