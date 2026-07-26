@@ -3,12 +3,9 @@ import {
   View, Text, TextInput, StyleSheet, Alert, TouchableOpacity,
   ScrollView, Modal, ActivityIndicator,
 } from 'react-native';
+import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import {
-  getAuth, createUserWithEmailAndPassword,
-  onAuthStateChanged, deleteUser as deleteAuthUser,
-} from 'firebase/auth';
-import {
-  getFirestore, collection, addDoc, getDocs,
+  getFirestore, collection, addDoc, getDocs, setDoc,
   deleteDoc, updateDoc, doc, getDoc, query, where,
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
 import { useAppAuth } from '../context/auth';
+import { secondaryAuth } from '../firebaseConfig';
 
 const ABAS = ['Usuários', 'Caminhões', 'Operadores'];
 
@@ -45,7 +43,7 @@ export default function GerenciarUsuarios() {
   const [pendingDeletion, setPendingDeletion] = useState(null);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState(null); // { id, colecao }
+  const [editingItem, setEditingItem] = useState(null);
   const [editPlaca, setEditPlaca] = useState('');
   const [editNomeOperador, setEditNomeOperador] = useState('');
   const [editCargoOperador, setEditCargoOperador] = useState('');
@@ -113,11 +111,7 @@ export default function GerenciarUsuarios() {
 
   const registrarUltimoLogin = async (userId) => {
     try {
-      const ref = doc(db, 'users', userId);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await updateDoc(ref, { ultimoLogin: new Date().toISOString() });
-      }
+      await updateDoc(doc(db, 'users', userId), { ultimoLogin: new Date().toISOString() });
     } catch (e) {
       console.error('Erro ao registrar login:', e);
     }
@@ -125,9 +119,8 @@ export default function GerenciarUsuarios() {
 
   const adicionarUsuario = async () => {
     try {
-      const admin = auth.currentUser;
-      const cred = await createUserWithEmailAndPassword(auth, email, senha);
-      await addDoc(collection(db, 'users'), {
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, senha);
+      await setDoc(doc(db, 'users', cred.user.uid), {
         uid: cred.user.uid,
         email,
         nome: nomeUsuario,
@@ -135,7 +128,7 @@ export default function GerenciarUsuarios() {
         role: 'user',
         ultimoLogin: new Date().toISOString(),
       });
-      await auth.updateCurrentUser(admin);
+      await secondaryAuth.signOut();
       setEmail(''); setSenha(''); setNomeUsuario('');
       await carregarUsuarios();
       mostrarModal('Usuário adicionado com sucesso!');

@@ -6,14 +6,8 @@ import { auth, db } from '../firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const atualizarUltimoLoginEmBackground = (uid) => {
-  getDocs(query(collection(db, 'users'), where('uid', '==', uid)))
-    .then((snap) => {
-      if (!snap.empty) {
-        updateDoc(doc(db, 'users', snap.docs[0].id), { ultimoLogin: serverTimestamp() })
-          .catch((e) => console.warn('Falha ao atualizar ultimoLogin:', e.message));
-      }
-    })
-    .catch((e) => console.warn('Falha ao buscar usuário para ultimoLogin:', e.message));
+  updateDoc(doc(db, 'users', uid), { ultimoLogin: serverTimestamp() })
+    .catch((e) => console.warn('Falha ao atualizar ultimoLogin:', e.message));
 };
 
 const ERROS_LOGIN = {

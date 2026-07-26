@@ -77,9 +77,18 @@ export default function HistoricoScreen() {
 
   const buildMetaQuery = () => {
     const ref = collection(db, 'projetos_meta');
-    if (role === 'superadmin') return query(ref, orderBy('dataCriacao', 'desc'));
-    if (role === 'company_admin') return query(ref, where('companyId', '==', companyId), orderBy('dataCriacao', 'desc'));
-    return query(ref, where('uidUsuario', '==', uid), orderBy('dataCriacao', 'desc'));
+    if (role === 'superadmin') {
+      return query(ref, orderBy('dataCriacao', 'desc'));
+    }
+    if (role === 'company_admin') {
+      return query(ref, where('companyId', '==', companyId), orderBy('dataCriacao', 'desc'));
+    }
+    return query(
+      ref,
+      where('companyId', '==', companyId),
+      where('uidUsuario', '==', uid),
+      orderBy('dataCriacao', 'desc')
+    );
   };
 
   const buscarMetadados = useCallback(async () => {
@@ -179,7 +188,11 @@ export default function HistoricoScreen() {
     if (state.isConnected && idsOnline.length > 0) {
       try {
         const snap = await getDocs(
-          query(collection(db, 'projetos'), where('__name__', 'in', idsOnline))
+          query(
+            collection(db, 'projetos'),
+            where('__name__', 'in', idsOnline),
+            where('companyId', '==', companyId)
+          )
         );
         projetosOnline = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       } catch (e) {

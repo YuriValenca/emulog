@@ -9,8 +9,6 @@ import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SUPERADMIN_UID = process.env.EXPO_PUBLIC_ADMIN_UUID;
-
 const AuthContext = createContext(null);
 
 export function useAppAuth() {
@@ -20,10 +18,9 @@ export function useAppAuth() {
 }
 
 async function fetchUserData(uid) {
-  const q = query(collection(db, 'users'), where('uid', '==', uid));
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error('user-not-found');
-  return snap.docs[0].data();
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) throw new Error('user-not-found');
+  return snap.data();
 }
 
 async function fetchCompanyData(companyId) {
@@ -119,42 +116,35 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        if (user.uid === SUPERADMIN_UID) {
-          setAuthUser(user);
-          setCompanyId(null);
-          setUid(user.uid);
-          setName('Yuri - admin');
-          setRole('superadmin');
-          setDebugError(null);
-          setAuthStatus('authenticated');
-          return;
-        }
-
         const userData = await fetchUserData(user.uid);
+        const isSuperadmin = userData.role === 'superadmin';
 
-        if (!userData.companyId) throw new Error('company-not-assigned');
+        if (!isSuperadmin && !userData.companyId) throw new Error('company-not-assigned');
 
-        const companyData = await fetchCompanyData(userData.companyId);
+        let companyData = null;
+        if (userData.companyId) {
+          companyData = await fetchCompanyData(userData.companyId);
 
-        if (!companyData.founding) {
-          const did = await getOrCreateDeviceId();
-          await claimLicense(userData.companyId, did);
-        }
+          if (!companyData.founding) {
+            const did = await getOrCreateDeviceId();
+            await claimLicense(userData.companyId, did);
+          }
 
-        if (companyData.logo) {
-          await AsyncStorage.setItem('cachedCompanyLogo', companyData.logo);
-        } else {
-          await AsyncStorage.removeItem('cachedCompanyLogo');
+          if (companyData.logo) {
+            await AsyncStorage.setItem('cachedCompanyLogo', companyData.logo);
+          } else {
+            await AsyncStorage.removeItem('cachedCompanyLogo');
+          }
         }
 
         setAuthUser(user);
-        setCompanyId(userData.companyId);
+        setCompanyId(userData.companyId ?? null);
         setUid(userData.uid);
         setRole(userData.role ?? 'user');
         setName(userData.nome ?? null);
         setDebugError(null);
         setAuthStatus('authenticated');
-        setCompanyLogo(companyData.logo ?? null);
+        setCompanyLogo(companyData?.logo ?? null);
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
         setDebugError(e.message);
