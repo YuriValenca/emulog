@@ -4,7 +4,7 @@ import {
   ScrollView, Modal, Alert, StatusBar,
 } from 'react-native';
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc, where } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc, where, writeBatch } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -324,17 +324,25 @@ function NovaAmostraScreenInner() {
       Alert.alert("Erro", "Usuário não autenticado. Por favor, faça login novamente.");
       return;
     }
+    if (!dadosDoProjeto.companyId) {
+      Alert.alert("Erro", "Empresa não identificada. Feche e abra o app novamente antes de salvar.");
+      return;
+    }
     try {
       const connectionState = await NetInfo.fetch();
       if (connectionState.isConnected) {
         try {
-          const docRef = await addDoc(collection(db, 'projetos'), dadosDoProjeto);
-          await setDoc(doc(db, 'projetos_meta', docRef.id), {
+          const projetoRef = doc(collection(db, 'projetos'));
+          const metaRef = doc(db, 'projetos_meta', projetoRef.id);
+          const batch = writeBatch(db);
+          batch.set(projetoRef, dadosDoProjeto);
+          batch.set(metaRef, {
             nomeProjeto: dadosDoProjeto.nomeProjeto,
             dataCriacao: dadosDoProjeto.dataCriacao,
             uidUsuario: dadosDoProjeto.uidUsuario,
             companyId: dadosDoProjeto.companyId,
           });
+          await batch.commit();
           Alert.alert("Sucesso", "Projeto salvo com sucesso!");
           resetarFormulario();
           limparEstadoDoProjeto();

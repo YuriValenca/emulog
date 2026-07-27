@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   collection, query, where,
   getDocs, doc, getDoc, runTransaction,
-  updateDoc, Timestamp,
+  updateDoc, Timestamp, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
@@ -78,7 +78,7 @@ async function claimLicense(companyId, deviceId) {
     tx.update(licenseRef, {
       deviceId,
       status: 'active',
-      claimedAt: new Date().toISOString(),
+      claimedAt: serverTimestamp(),
       expiresAt,
     });
   });

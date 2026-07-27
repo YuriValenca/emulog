@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { db } from './firebaseConfig';
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc, writeBatch } from 'firebase/firestore';
 import { Alert } from 'react-native';
 
 export const saveProjectOffline = async (project) => {
@@ -59,16 +59,31 @@ export const syncProjects = async () => {
     }
 
     for (const project of offlineProjects) {
-      console.log('[sync] companyId on project being synced:', project.companyId);
-      const docRef = await addDoc(collection(db, 'projetos'), project);
-      await setDoc(doc(db, 'projetos_meta', docRef.id), {
-        nomeProjeto: project.nomeProjeto,
-        dataCriacao: project.dataCriacao,
-        uidUsuario: project.uidUsuario,
-        companyId: project.companyId,
+      if (!project.companyId) {
+        console.warn('[sync] projeto sem companyId, ignorado:', project._localId);
+        continue;
+      }
+      const projectNormalizado = {
+        ...project,
+        dataCriacao: new Date(project.dataCriacao),
+        calibragem: {
+          ...project.calibragem,
+          timestamp: new Date(project.calibragem.timestamp),
+        },
+      };
+      const projetoRef = doc(collection(db, 'projetos'));
+      const metaRef = doc(db, 'projetos_meta', projetoRef.id);
+      const batch = writeBatch(db);
+      batch.set(projetoRef, projectNormalizado);
+      batch.set(metaRef, {
+        nomeProjeto: projectNormalizado.nomeProjeto,
+        dataCriacao: projectNormalizado.dataCriacao,
+        uidUsuario: projectNormalizado.uidUsuario,
+        companyId: projectNormalizado.companyId,
       });
+      await batch.commit();
       await removeOfflineProject(project._localId);
-      console.log('Projeto sincronizado com Firestore:', project);
+      console.log('Projeto sincronizado com Firestore:', projectNormalizado);
     }
 
     Alert.alert("Sincronização", "Projetos salvos na nuvem com sucesso!");

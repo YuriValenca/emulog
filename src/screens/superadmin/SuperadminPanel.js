@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { auth, secondaryAuth } from '../../firebaseConfig';
@@ -278,7 +278,7 @@ export default function SuperadminPanel() {
         nome: userData.nome,
         companyId: userData.companyId,
         role: 'user',
-        ultimoLogin: new Date().toISOString(),
+        ultimoLogin: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, 'users'), novosDadosFirestore);

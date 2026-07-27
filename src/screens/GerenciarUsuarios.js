@@ -6,7 +6,7 @@ import {
 import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import {
   getFirestore, collection, addDoc, getDocs, setDoc,
-  deleteDoc, updateDoc, doc, getDoc, query, where,
+  deleteDoc, updateDoc, doc, getDoc, query, where, serverTimestamp,
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,7 +111,7 @@ export default function GerenciarUsuarios() {
 
   const registrarUltimoLogin = async (userId) => {
     try {
-      await updateDoc(doc(db, 'users', userId), { ultimoLogin: new Date().toISOString() });
+      await updateDoc(doc(db, 'users', userId), { ultimoLogin: serverTimestamp() });
     } catch (e) {
       console.error('Erro ao registrar login:', e);
     }
@@ -126,7 +126,7 @@ export default function GerenciarUsuarios() {
         nome: nomeUsuario,
         companyId: companyId || null,
         role: 'user',
-        ultimoLogin: new Date().toISOString(),
+        ultimoLogin: serverTimestamp(),
       });
       await secondaryAuth.signOut();
       setEmail(''); setSenha(''); setNomeUsuario('');
@@ -353,7 +353,7 @@ export default function GerenciarUsuarios() {
                 <Text style={styles.cardNome}>{usuario.nome}</Text>
                 <Text style={styles.cardSub}>{usuario.email}</Text>
                 <Text style={styles.cardMeta}>
-                  Último login: {usuario.ultimoLogin ? new Date(usuario.ultimoLogin).toLocaleString() : 'Não disponível'}
+                  Último login: {usuario.ultimoLogin?.toDate ? usuario.ultimoLogin.toDate().toLocaleString() : 'Não disponível'}
                 </Text>
               </View>
               {usuario.uid !== currentUserUid && (
