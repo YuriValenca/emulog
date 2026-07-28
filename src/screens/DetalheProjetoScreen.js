@@ -223,83 +223,42 @@ export default function DetalheProjetoScreen() {
 
   const gerarConteudoAmostrasPDF = (amostras) => {
     return amostras.map((amostra, index) => {
-      if (amostra.pesagens && Array.isArray(amostra.pesagens)) {
-        const pesagensValidas = amostra.pesagens.filter(p => p.peso !== '' && p.densidade !== '');
-        return `
-          ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
-          <div class="amostra-box">
-            <div class="amostra-header">Amostra ${amostra.amostraId + 1}</div>
-            ${pesagensValidas.map((p, i) => `
-              <div class="pesagem-row">
-                <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${p.timestamp}
-              </div>`).join('')}
-          </div>
-          ${index % 2 === 1 || index === amostras.length - 1 ? '</div>' : ''}`;
-      }
+      const pesagensValidas = amostra.pesagens.filter(p => p.peso !== '' && p.densidade !== '');
       return `
         ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
         <div class="amostra-box">
-          <div class="amostra-header">Amostra ${(amostra.grupoId ?? 0) + 1}</div>
-          <div class="pesagem-row"><strong>Pesagem ${(amostra.amostraId ?? 0) + 1}</strong>: ${amostra.peso} g, ${amostra.densidade} g/cm³</div>
+          <div class="amostra-header">Amostra ${amostra.amostraId + 1}</div>
+          ${pesagensValidas.map((p, i) => `
+            <div class="pesagem-row">
+              <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${p.timestamp}
+            </div>`).join('')}
         </div>
         ${index % 2 === 1 || index === amostras.length - 1 ? '</div>' : ''}`;
     }).join('');
   };
 
-  const agruparPesagensPorAmostra = (amostras) => {
-    const grupos = {};
-    amostras.forEach(p => {
-      if (!grupos[p.grupoId]) grupos[p.grupoId] = [];
-      grupos[p.grupoId].push(p);
-    });
-    return grupos;
-  };
-
   const renderizarAmostras = (amostras) => {
     if (!amostras || amostras.length === 0) return <Text style={styles.vazioTexto}>Nenhuma amostra encontrada</Text>;
 
-    if (amostras[0]?.pesagens) {
-      return amostras.map((amostra, index) => (
-        <View key={index} style={styles.amostraContainer}>
-          <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
-          {amostra.pesagens
-            .filter(pesagem => pesagem.peso !== '' && pesagem.densidade !== '')
-            .map((pesagem, i) => (
-              <View key={i} style={styles.pesagemContainer}>
-                <View style={styles.pesagemRowHeader}>
-                  <Text style={styles.pesagemHeader}>Pesagem {i + 1}</Text>
-                  <Text style={styles.pesagemHeader}>Densidade</Text>
-                  <Text style={styles.pesagemHeader}>Hora</Text>
-                </View>
-                <View style={styles.pesagemRow}>
-                  <Text style={styles.pesagemText}>{pesagem.peso} g</Text>
-                  <Text style={styles.pesagemText}>{pesagem.densidade} g/cm³</Text>
-                  <Text style={styles.pesagemText}>{pesagem.timestamp}</Text>
-                </View>
+    return amostras.map((amostra, index) => (
+      <View key={index} style={styles.amostraContainer}>
+        <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
+        {amostra.pesagens
+          .filter(pesagem => pesagem.peso !== '' && pesagem.densidade !== '')
+          .map((pesagem, i) => (
+            <View key={i} style={styles.pesagemContainer}>
+              <View style={styles.pesagemRowHeader}>
+                <Text style={styles.pesagemHeader}>Pesagem {i + 1}</Text>
+                <Text style={styles.pesagemHeader}>Densidade</Text>
+                <Text style={styles.pesagemHeader}>Hora</Text>
               </View>
-            ))}
-        </View>
-      ));
-    }
-
-    const grupos = agruparPesagensPorAmostra(amostras);
-    return Object.entries(grupos).map(([grupoId, pesagens]) => (
-      <View key={grupoId} style={styles.amostraContainer}>
-        <Text style={styles.amostraTitulo}>Amostra {parseInt(grupoId) + 1}</Text>
-        {pesagens.map((p, i) => (
-          <View key={i} style={styles.pesagemContainer}>
-            <View style={styles.pesagemRowHeader}>
-              <Text style={styles.pesagemHeader}>Pesagem {p.amostraId + 1}</Text>
-              <Text style={styles.pesagemHeader}>Densidade</Text>
-              <Text style={styles.pesagemHeader}>Hora</Text>
+              <View style={styles.pesagemRow}>
+                <Text style={styles.pesagemText}>{pesagem.peso} g</Text>
+                <Text style={styles.pesagemText}>{pesagem.densidade} g/cm³</Text>
+                <Text style={styles.pesagemText}>{pesagem.timestamp}</Text>
+              </View>
             </View>
-            <View style={styles.pesagemRow}>
-              <Text style={styles.pesagemText}>{p.peso} g</Text>
-              <Text style={styles.pesagemText}>{p.densidade} g/cm³</Text>
-              <Text style={styles.pesagemText}>{p.timestamp}</Text>
-            </View>
-          </View>
-        ))}
+          ))}
       </View>
     ));
   };
@@ -376,7 +335,7 @@ export default function DetalheProjetoScreen() {
   const infoAtual = projeto.informacoesOperacao;
   const historicoFiltrado = projeto.amostras?.filter((amostra) => {
     if (!amostraPesquisa) return true;
-    return amostra.amostraId?.toString() === amostraPesquisa || amostra.grupoId?.toString() === amostraPesquisa;
+    return amostra.amostraId?.toString() === amostraPesquisa;
   }) || [];
 
   return (
