@@ -173,12 +173,12 @@ function NovaAmostraScreenInner() {
 
   useEffect(() => {
     const init = async () => {
-      if (!companyId) return;
+      if (!companyId || !uidUsuario) return;
       const tinha = await restaurarDoStorage(companyId, uidUsuario);
       if (tinha) setModalProjetoExistenteVisivel(true);
     };
     init();
-  }, [companyId]);
+  }, [companyId, uidUsuario]);
 
   const calcularDensidade = (pesoVal) => {
     if (!ultimaCalibragem) {

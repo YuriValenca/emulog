@@ -89,14 +89,13 @@ export function ProjetoFormProvider({ children }) {
 
   const restaurarDoStorage = async (companyIdAtual, uidAtual) => {
     try {
+      if (!companyIdAtual || !uidAtual) return false;
       const projetoSalvo = await AsyncStorage.getItem(STORAGE_KEY);
       if (!projetoSalvo) return false;
 
       const projeto = JSON.parse(projetoSalvo);
 
       const pertenceAoContextoAtual =
-        projeto.companyId && companyIdAtual &&
-        projeto.uidUsuario && uidAtual &&
         projeto.companyId === companyIdAtual &&
         projeto.uidUsuario === uidAtual;
 
