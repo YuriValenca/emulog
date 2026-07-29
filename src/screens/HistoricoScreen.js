@@ -13,7 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useAppAuth } from '../context/auth';
 import { db } from '../firebaseConfig';
 
-const PROJETOS_POR_PAGINA = 20;
+const PROJETOS_POR_PAGINA = 15;
 
 export default function HistoricoScreen() {
   const [todosMetadados, setTodosMetadados] = useState([]);
