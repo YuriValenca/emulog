@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { db } from './firebaseConfig';
-import { collection, addDoc, setDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc, Timestamp } from 'firebase/firestore';
 import { Alert } from 'react-native';
 
 export const saveProjectOffline = async (project) => {
@@ -59,31 +59,32 @@ export const syncProjects = async () => {
     }
 
     for (const project of offlineProjects) {
-      if (!project.companyId) {
-        console.warn('[sync] projeto sem companyId, ignorado:', project._localId);
-        continue;
-      }
-      const projectNormalizado = {
-        ...project,
-        dataCriacao: new Date(project.dataCriacao),
-        calibragem: {
-          ...project.calibragem,
-          timestamp: new Date(project.calibragem.timestamp),
-        },
+      console.log('[sync] companyId on project being synced:', project.companyId);
+
+      const { _localId, ...projectSemLocalId } = project;
+
+      const dataCriacaoTimestamp = Timestamp.fromDate(new Date(projectSemLocalId.dataCriacao));
+      const calibragemTimestamp = projectSemLocalId.calibragem?.timestamp
+        ? Timestamp.fromDate(new Date(projectSemLocalId.calibragem.timestamp))
+        : projectSemLocalId.calibragem?.timestamp;
+
+      const projectParaSalvar = {
+        ...projectSemLocalId,
+        dataCriacao: dataCriacaoTimestamp,
+        calibragem: projectSemLocalId.calibragem
+          ? { ...projectSemLocalId.calibragem, timestamp: calibragemTimestamp }
+          : projectSemLocalId.calibragem,
       };
-      const projetoRef = doc(collection(db, 'projetos'));
-      const metaRef = doc(db, 'projetos_meta', projetoRef.id);
-      const batch = writeBatch(db);
-      batch.set(projetoRef, projectNormalizado);
-      batch.set(metaRef, {
-        nomeProjeto: projectNormalizado.nomeProjeto,
-        dataCriacao: projectNormalizado.dataCriacao,
-        uidUsuario: projectNormalizado.uidUsuario,
-        companyId: projectNormalizado.companyId,
+
+      const docRef = await addDoc(collection(db, 'projetos'), projectParaSalvar);
+      await setDoc(doc(db, 'projetos_meta', docRef.id), {
+        nomeProjeto: projectSemLocalId.nomeProjeto,
+        dataCriacao: dataCriacaoTimestamp,
+        uidUsuario: projectSemLocalId.uidUsuario,
+        companyId: projectSemLocalId.companyId,
       });
-      await batch.commit();
-      await removeOfflineProject(project._localId);
-      console.log('Projeto sincronizado com Firestore:', projectNormalizado);
+      await removeOfflineProject(_localId);
+      console.log('Projeto sincronizado com Firestore:', projectSemLocalId);
     }
 
     Alert.alert("Sincronização", "Projetos salvos na nuvem com sucesso!");

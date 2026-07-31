@@ -353,7 +353,7 @@ export default function GerenciarUsuarios() {
                 <Text style={styles.cardNome}>{usuario.nome}</Text>
                 <Text style={styles.cardSub}>{usuario.email}</Text>
                 <Text style={styles.cardMeta}>
-                  Último login: {usuario.ultimoLogin?.toDate ? usuario.ultimoLogin.toDate().toLocaleString() : 'Não disponível'}
+                  Último login: {usuario.ultimoLogin ? new Date(usuario.ultimoLogin).toLocaleString() : 'Não disponível'}
                 </Text>
               </View>
               {usuario.uid !== currentUserUid && (

@@ -223,7 +223,7 @@ export default function DetalheProjetoScreen() {
 
   const gerarConteudoAmostrasPDF = (amostras) => {
     return amostras.map((amostra, index) => {
-      const pesagensValidas = amostra.pesagens.filter(p => p.peso !== '' && p.densidade !== '');
+      const pesagensValidas = (amostra.pesagens || []).filter(p => p.peso !== '' && p.densidade !== '');
       return `
         ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
         <div class="amostra-box">
@@ -243,7 +243,7 @@ export default function DetalheProjetoScreen() {
     return amostras.map((amostra, index) => (
       <View key={index} style={styles.amostraContainer}>
         <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
-        {amostra.pesagens
+        {(amostra.pesagens || [])
           .filter(pesagem => pesagem.peso !== '' && pesagem.densidade !== '')
           .map((pesagem, i) => (
             <View key={i} style={styles.pesagemContainer}>
