@@ -32,8 +32,8 @@ async function fetchCompanyData(companyId) {
 function computeExpiryDate(validityMonths) {
   if (validityMonths === 'vitalicia') return null;
   const expDate = new Date();
-  if (validityMonths === '1min') {
-    expDate.setMinutes(expDate.getMinutes() + 1);
+  if (validityMonths === '1semana') {
+    expDate.setDate(expDate.getDate() + 7);
   } else {
     expDate.setMonth(expDate.getMonth() + Number(validityMonths));
   }

@@ -25,6 +25,7 @@ const badgeStyles = StyleSheet.create({
 function validityLabel(validityMonths) {
   if (!validityMonths && validityMonths !== 0) return null;
   if (validityMonths === 'vitalicia') return 'Plano: Vitalícia';
+  if (validityMonths === '1semana') return 'Plano: 1 semana';
   if (validityMonths === 1) return 'Plano: 1 mês';
   if (validityMonths === 12) return 'Plano: 1 ano';
   return `Plano: ${validityMonths} meses`;

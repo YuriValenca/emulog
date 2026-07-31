@@ -34,8 +34,8 @@ export default function ModalGerarLicencas({ visible, onClose, onSave, onRenew, 
   };
 
   const opcoes = [
+    { label: '1 Semana', value: '1semana' },
     { label: '1 Mês', value: 1 },
-    { label: '6 Meses', value: 6 },
     { label: '1 Ano', value: 12 },
     { label: 'Vitalícia', value: 'vitalicia', isVitalicia: true },
   ];
