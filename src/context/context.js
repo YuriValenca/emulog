@@ -39,6 +39,7 @@ const KNOWN_SCALE_NAMES = ['my_scale', 'my scale', 'swan'];
 
 const DISCOVERY_MODE = false;
 const WEIGHT_CLEAR_THRESHOLD = 10; // gramas
+const WEIGHT_STABILITY_TOLERANCE = 2; // gramas
 
 // ─── FÓRMULAS CANDIDATAS (modo descoberta) ────────────────────────────────────
 const CANDIDATE_DECODERS = [
@@ -580,13 +581,16 @@ export function BleProvider({ children }) {
           }
           return;
         }
-        if (pesoArredondado !== lastWeightRef.current) {
+        const diff = lastWeightRef.current === null
+          ? Infinity
+          : Math.abs(pesoArredondado - lastWeightRef.current);
+        if (diff > WEIGHT_STABILITY_TOLERANCE) {
           lastWeightRef.current = pesoArredondado;
           setReadingStatus('listening');
           if (stabilizeTimerRef.current) clearTimeout(stabilizeTimerRef.current);
           stabilizeTimerRef.current = setTimeout(() => {
             stabilizeTimerRef.current = null;
-            if (pesoArredondado >= WEIGHT_CLEAR_THRESHOLD) {
+            if (lastWeightRef.current >= WEIGHT_CLEAR_THRESHOLD) {
               setReadingStatus('stable');
               waitingClearRef.current = true;
             }
