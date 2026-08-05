@@ -127,92 +127,94 @@ export default function DetalheProjetoScreen() {
 
     const htmlContent = `
     <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; font-size: 10px; margin: 30px; }
-        h1 { color: #333; }
-        .header-container {
-          display: flex;
-          align-items: flex-start;
-          border-bottom: 3px solid ${primaryColor};
-          padding-bottom: 16px;
-          margin-bottom: 20px;
-        }
-        .logo { height: 48px; width: auto; max-width: 180px; object-fit: contain; margin-bottom: 0; }
-        .project-details { margin-left: 20px; flex: 1; }
-        .project-details h1 { font-size: 16px; margin: 0 0 6px 0; color: #222; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
-        th { background-color: #f2f2f2; }
-        .amostra-container { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .amostra-box { width: 48%; border: 1px solid #ccc; padding: 10px; }
-        .amostra-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-bottom: 10px; }
-        .pesagem-row { margin-bottom: 5px; }
-        .content-box {
-          border: 2px solid ${primaryColor};
-          padding: 10px;
-          border-radius: 5px;
-          color: black;
-          margin-top: 20px;
-        }
-        .content-box h2 { color: ${primaryColor}; margin: 0 0 6px 0; font-size: 12px; }
-        .informacoesGerais-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-        .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
-        .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-        .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
-        .section-title {
-          font-size: 13px;
-          font-weight: bold;
-          color: ${primaryColor};
-          margin: 20px 0 8px 0;
-          border-left: 4px solid ${primaryColor};
-          padding-left: 8px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header-container">
-        <img src="${companyLogoSrc}" class="logo" alt="Logo" />
-        <div class="project-details">
-          <h1>Projeto: ${projeto.nomeProjeto}</h1>
-          <p style="margin: 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
-          <p style="margin: 4px 0 0 0; color: #555;">
-            <strong>Calibragem:</strong>
-            Tara ${projeto.calibragem?.tara || '—'} ·
-            Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
-            ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
-          </p>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 10px; margin: 30px; }
+          h1 { color: #333; }
+          .header-container {
+            display: flex;
+            align-items: flex-start;
+            border-bottom: 3px solid ${primaryColor};
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+          }
+          .logo { height: 48px; width: auto; max-width: 180px; object-fit: contain; margin-bottom: 0; }
+          .project-details { margin-left: 20px; flex: 1; }
+          .project-details h1 { font-size: 16px; margin: 0 0 6px 0; color: #222; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
+          th { background-color: #f2f2f2; }
+          .amostra-container { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .amostra-box { width: 48%; border: 1px solid #ccc; padding: 10px; }
+          .amostra-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-bottom: 10px; }
+          .pesagem-row { margin-bottom: 5px; }
+          .content-box {
+            border: 2px solid ${primaryColor};
+            padding: 10px;
+            border-radius: 5px;
+            color: black;
+            margin-top: 20px;
+          }
+          .content-box h2 { color: ${primaryColor}; margin: 0 0 6px 0; font-size: 12px; }
+          .informacoesGerais-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
+          .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
+          .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
+          .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
+          .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: ${primaryColor};
+            margin: 20px 0 8px 0;
+            border-left: 4px solid ${primaryColor};
+            padding-left: 8px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <img src="${companyLogoSrc}" class="logo" alt="Logo" />
+          <div class="project-details">
+            <h1>Projeto: ${projeto.nomeProjeto}</h1>
+            <p style="margin: 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
+            <p style="margin: 4px 0 0 0; color: #555;">
+              <strong>Calibragem:</strong>
+              Tara ${projeto.calibragem?.tara || '—'} ·
+              Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
+              ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
+            </p>
+          </div>
         </div>
-      </div>
 
-      ${hasAdditionalInfo(info) ? `
-      <div class="info-box">
-        <div class="info-header">Informações da Operação</div>
-        <table>
-          <tbody>
-            ${info.numeroNF ? `<tr><td><strong>Nota Fiscal</strong></td><td>${info.numeroNF}</td></tr>` : ''}
-            ${info.kgPrevisto ? `<tr><td><strong>Kg Previsto</strong></td><td>${info.kgPrevisto} kg</td></tr>` : ''}
-            ${info.kgAplicado ? `<tr><td><strong>Kg Aplicado</strong></td><td>${info.kgAplicado} kg</td></tr>` : ''}
-            ${info.caminhao ? `<tr><td><strong>Unidade de Bombeamento</strong></td><td>${info.caminhao.placa || ''}</td></tr>` : ''}
-            ${info.equipe && info.equipe.length > 0 ? `<tr><td><strong>Equipe</strong></td><td>${info.equipe.map(m => m.nome).join(', ')}</td></tr>` : ''}
-          </tbody>
-        </table>
-      </div>` : ''}
+        ${hasAdditionalInfo(info) ? `
+        <div class="info-box">
+          <div class="info-header">Informações da Operação</div>
+          <table>
+            <tbody>
+              ${info.numeroNF ? `<tr><td><strong>Nota Fiscal</strong></td><td>${info.numeroNF}</td></tr>` : ''}
+              ${info.kgPrevisto ? `<tr><td><strong>Kg Previsto</strong></td><td>${info.kgPrevisto} kg</td></tr>` : ''}
+              ${info.kgAplicado ? `<tr><td><strong>Kg Aplicado</strong></td><td>${info.kgAplicado} kg</td></tr>` : ''}
+              ${info.caminhao ? `<tr><td><strong>Unidade de Bombeamento</strong></td><td>${info.caminhao.placa || ''}</td></tr>` : ''}
+              ${info.equipe && info.equipe.length > 0 ? `<tr><td><strong>Equipe</strong></td><td>${info.equipe.map(m => m.nome).join(', ')}</td></tr>` : ''}
+            </tbody>
+          </table>
+        </div>` : ''}
 
-      <div class="content-box">
-        <h2>Observação Técnica:</h2>
-        <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da empresa.</p>
-      </div>
+        ${companyId === 'explog-founding' ? 
+          `<div class="content-box">
+            <h2>Observação Técnica:</h2>
+            <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da empresa.</p>
+          </div>` : ''
+        }
 
-      ${informacoesGerais ? `<div class="informacoesGerais-box">
-        <div class="informacoesGerais-header">Observação sobre o projeto</div>
-        <p>${informacoesGerais}</p>
-      </div>` : ''}
+        ${informacoesGerais ? `<div class="informacoesGerais-box">
+          <div class="informacoesGerais-header">Observação sobre o projeto</div>
+          <p>${informacoesGerais}</p>
+        </div>` : ''}
 
-      <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
-      ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
-    </body>
+        <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
+        ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
+      </body>
     </html>`;
 
     const { uri } = await printToFileAsync({ html: htmlContent, base64: false });
