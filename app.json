@@ -17,7 +17,7 @@
       "**/*"
     ],
     "android": {
-      "versionCode": 15,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/adaptive-icon-foreground.png",
         "backgroundColor": "#07080A"
