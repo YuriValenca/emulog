@@ -59,7 +59,7 @@ export default function SuperadminPanel() {
       ]);
 
       const companiesData = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
-      setCompanies(companiesData);
+      setCompanies(companiesData.filter(c => c.modules?.mobile || c.founding));
       setUsers(snapU.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const allLicenses = [];
