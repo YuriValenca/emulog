@@ -194,7 +194,7 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return 0;
     }
-    return ((pesoMedido - pesoVazio) / tara).toFixed(3);
+    return Number(((pesoMedido - pesoVazio) / tara).toFixed(3));
   };
 
   const confirmarPesagemComValor = (pesoStr) => {
@@ -235,7 +235,7 @@ function NovaAmostraScreenInner() {
 
     const densidadeCalculada = calcularDensidade(pesoFloat);
     const timestamp = new Date().toLocaleTimeString();
-    const pesagem = { peso: String(pesoFloat), densidade: densidadeCalculada, timestamp };
+    const pesagem = { peso: pesoFloat, densidade: densidadeCalculada, timestamp };
 
     const novasAmostras = amostras.map((a, i) => {
       if (i !== amostraAtual) return a;
@@ -458,8 +458,8 @@ function NovaAmostraScreenInner() {
       {amostra.map((pesagem, indexPesagem) => (
         <View key={indexPesagem} style={styles.tableRow}>
           <Text style={styles.historicoPesagemBold}>Pesagem {indexPesagem + 1}:</Text>
-          <Text style={styles.pesagemText}> {pesagem.peso ? `${pesagem.peso} g` : '—'}</Text>
-          <Text style={styles.pesagemText}> {pesagem.densidade ? `${pesagem.densidade} g/cm³` : ''}</Text>
+          <Text style={styles.pesagemText}> {pesagem.peso !== '' ? `${pesagem.peso} g` : '—'}</Text>
+          <Text style={styles.pesagemText}> {pesagem.densidade !== '' ? `${pesagem.densidade} g/cm³` : ''}</Text>
           <Text style={styles.pesagemText}> {pesagem.timestamp}</Text>
         </View>
       ))}
