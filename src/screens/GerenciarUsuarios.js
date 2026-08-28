@@ -8,6 +8,7 @@ import {
   getFirestore, collection, addDoc, getDocs, setDoc,
   deleteDoc, updateDoc, doc, getDoc, query, where, serverTimestamp,
 } from 'firebase/firestore';
+import { formatCNPJ, unmaskCNPJ, isValidCNPJ } from '../helpers/formatCNPJ';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
@@ -15,7 +16,7 @@ import ScrollToTopButton from './ScrollToTopButton';
 import { useAppAuth } from '../context/auth';
 import { secondaryAuth } from '../firebaseConfig';
 
-const ABAS = ['Usuários', 'Caminhões', 'Operadores'];
+const ABAS = ['Usuários', 'Caminhões', 'Operadores', 'Clientes'];
 
 export default function GerenciarUsuarios() {
   const [abaAtiva, setAbaAtiva] = useState(0);
@@ -36,6 +37,12 @@ export default function GerenciarUsuarios() {
   const [operadores, setOperadores] = useState([]);
   const [termoBuscaOperador, setTermoBuscaOperador] = useState('');
 
+  const [nomeCliente, setNomeCliente] = useState('');
+  const [cnpjCliente, setCnpjCliente] = useState('');
+  const [enderecoCliente, setEnderecoCliente] = useState('');
+  const [clientes, setClientes] = useState([]);
+  const [termoBuscaCliente, setTermoBuscaCliente] = useState('');
+
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
@@ -47,6 +54,9 @@ export default function GerenciarUsuarios() {
   const [editPlaca, setEditPlaca] = useState('');
   const [editNomeOperador, setEditNomeOperador] = useState('');
   const [editCargoOperador, setEditCargoOperador] = useState('');
+  const [editNomeCliente, setEditNomeCliente] = useState('');
+  const [editCnpjCliente, setEditCnpjCliente] = useState('');
+  const [editEnderecoCliente, setEditEnderecoCliente] = useState('');
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   const navigation = useNavigation();
@@ -71,6 +81,7 @@ export default function GerenciarUsuarios() {
   useEffect(() => {
     if (abaAtiva === 1) carregarCaminhoes();
     if (abaAtiva === 2) carregarOperadores();
+    if (abaAtiva === 3) carregarClientes();
   }, [abaAtiva]);
 
   const carregarUsuarios = async () => {
@@ -106,6 +117,18 @@ export default function GerenciarUsuarios() {
       setOperadores(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('Erro ao carregar operadores:', e);
+    }
+  };
+
+  const carregarClientes = async () => {
+    try {
+      const q = companyId
+        ? query(collection(db, 'clientes'), where('companyId', '==', companyId))
+        : collection(db, 'clientes');
+      const snap = await getDocs(q);
+      setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      console.error('Erro ao carregar clientes:', e);
     }
   };
 
@@ -180,6 +203,33 @@ export default function GerenciarUsuarios() {
     }
   };
 
+  const adicionarCliente = async () => {
+    if (!nomeCliente.trim()) {
+      Alert.alert('Atenção', 'Informe o nome do cliente.');
+      return;
+    }
+    if (cnpjCliente.trim() && !isValidCNPJ(cnpjCliente)) {
+      Alert.alert('Atenção', 'CNPJ incorreto ou em formato inválido.');
+      return;
+    }
+    try {
+      await addDoc(collection(db, 'clientes'), {
+        nome: nomeCliente.trim(),
+        cnpj: cnpjCliente.trim() || null,
+        endereco: enderecoCliente.trim() || null,
+        ativo: true,
+        companyId: companyId || null,
+        criadoEm: new Date().toISOString(),
+      });
+      setNomeCliente(''); setCnpjCliente(''); setEnderecoCliente('');
+      await carregarClientes();
+      mostrarModal('Cliente cadastrado com sucesso!');
+    } catch (e) {
+      console.error('Erro ao adicionar cliente:', e);
+      Alert.alert('Erro', 'Não foi possível cadastrar o cliente.');
+    }
+  };
+
   const confirmarDelecao = (id, colecao) => {
     setPendingDeletion({ id, colecao });
     setIsConfirmationModalVisible(true);
@@ -201,6 +251,9 @@ export default function GerenciarUsuarios() {
       } else if (colecao === 'operadores') {
         await deleteDoc(doc(db, 'operadores', id));
         await carregarOperadores();
+      } else if (colecao === 'clientes') {
+        await deleteDoc(doc(db, 'clientes', id));
+        await carregarClientes();
       }
       mostrarModal('Registro removido com sucesso!');
     } catch (e) {
@@ -225,6 +278,14 @@ export default function GerenciarUsuarios() {
     setEditModalVisible(true);
   };
 
+  const abrirEdicaoCliente = (c) => {
+    setEditingItem({ id: c.id, colecao: 'clientes' });
+    setEditNomeCliente(c.nome || '');
+    setEditCnpjCliente(unmaskCNPJ(c.cnpj || ''));
+    setEditEnderecoCliente(c.endereco || '');
+    setEditModalVisible(true);
+  };
+
   const salvarEdicao = async () => {
     if (!editingItem || salvandoEdicao) return;
     const { id, colecao } = editingItem;
@@ -235,6 +296,14 @@ export default function GerenciarUsuarios() {
     }
     if (colecao === 'operadores' && !editNomeOperador.trim()) {
       Alert.alert('Atenção', 'Informe o nome do operador.');
+      return;
+    }
+    if (colecao === 'clientes' && !editNomeCliente.trim()) {
+      Alert.alert('Atenção', 'Informe o nome do cliente.');
+      return;
+    }
+    if (colecao === 'clientes' && editCnpjCliente.trim() && !isValidCNPJ(editCnpjCliente)) {
+      Alert.alert('Atenção', 'CNPJ incorreto ou em formato inválido.');
       return;
     }
 
@@ -252,6 +321,13 @@ export default function GerenciarUsuarios() {
           cargo: editCargoOperador.trim(),
         });
         await carregarOperadores();
+      } else if (colecao === 'clientes') {
+        await updateDoc(doc(db, 'clientes', id), {
+          nome: editNomeCliente.trim(),
+          cnpj: editCnpjCliente.trim() || null,
+          endereco: editEnderecoCliente.trim() || null,
+        });
+        await carregarClientes();
       }
       fecharEdicao();
       mostrarModal('Registro atualizado com sucesso!');
@@ -270,6 +346,9 @@ export default function GerenciarUsuarios() {
     setEditPlaca('');
     setEditNomeOperador('');
     setEditCargoOperador('');
+    setEditNomeCliente('');
+    setEditCnpjCliente('');
+    setEditEnderecoCliente('');
   };
 
   const mostrarModal = (msg) => {
@@ -294,6 +373,10 @@ export default function GerenciarUsuarios() {
 
   const operadoresFiltrados = operadores
     .filter(o => o.nome?.toLowerCase().includes(termoBuscaOperador.toLowerCase()))
+    .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
+
+  const clientesFiltrados = clientes
+    .filter(c => c.nome?.toLowerCase().includes(termoBuscaCliente.toLowerCase()))
     .sort((a, b) => a.nome?.localeCompare(b.nome, 'pt-BR'));
 
   return (
@@ -500,6 +583,83 @@ export default function GerenciarUsuarios() {
         </View>
       )}
 
+      {abaAtiva === 3 && (
+        <View>
+          <Text style={styles.secaoTitulo}>Cadastrar Cliente</Text>
+          <View style={styles.formulario}>
+            <Text style={styles.label}>Nome</Text>
+            <TextInput
+              value={nomeCliente}
+              onChangeText={setNomeCliente}
+              style={styles.input}
+              placeholder="Razão social ou nome do cliente"
+              placeholderTextColor="#888888"
+            />
+            <Text style={styles.label}>CNPJ (opcional)</Text>
+            <TextInput
+              value={formatCNPJ(cnpjCliente)}
+              onChangeText={(text) => setCnpjCliente(unmaskCNPJ(text))}
+              style={styles.input}
+              placeholder="00.000.000/0000-00"
+              placeholderTextColor="#888888"
+            />
+            <Text style={styles.label}>Endereço (opcional)</Text>
+            <TextInput
+              value={enderecoCliente}
+              onChangeText={setEnderecoCliente}
+              style={styles.input}
+              placeholder="Endereço completo"
+              placeholderTextColor="#888888"
+            />
+            <TouchableOpacity style={styles.adicionarBtn} onPress={adicionarCliente} activeOpacity={0.8}>
+              <Ionicons name="business-outline" size={20} color="white" />
+              <Text style={styles.adicionarBtnTexto}>Cadastrar Cliente</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Buscar por nome</Text>
+          <TextInput
+            value={termoBuscaCliente}
+            onChangeText={setTermoBuscaCliente}
+            style={styles.input}
+            placeholder="Digite o nome"
+            placeholderTextColor="#888888"
+          />
+
+          <Text style={styles.listaTitulo}>Clientes cadastrados ({clientesFiltrados.length})</Text>
+          {clientesFiltrados.length === 0 && (
+            <Text style={styles.vazio}>Nenhum cliente cadastrado.</Text>
+          )}
+          {clientesFiltrados.map((c) => (
+            <View key={c.id} style={styles.card}>
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardNome}>{c.nome}</Text>
+                <Text style={styles.cardSub}>{c.cnpj ? formatCNPJ(c.cnpj) : 'CNPJ não informado'}</Text>
+                <Text style={styles.cardMeta}>
+                  Cadastrado em: {c.criadoEm ? new Date(c.criadoEm).toLocaleDateString() : '—'}
+                </Text>
+              </View>
+              <View style={styles.acoesCard}>
+                <TouchableOpacity
+                  onPress={() => abrirEdicaoCliente(c)}
+                  style={styles.botaoEditar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="pencil-outline" size={18} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => confirmarDelecao(c.id, 'clientes')}
+                  style={styles.botaoDeletar}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="trash-outline" size={18} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
       {showScrollButton && <ScrollToTopButton onPress={scrollToTop} />}
 
       <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={fecharModais}>
@@ -566,6 +726,39 @@ export default function GerenciarUsuarios() {
                   onChangeText={setEditCargoOperador}
                   style={styles.input}
                   placeholder="Ex: Operador, Motorista"
+                  placeholderTextColor="#888888"
+                  editable={!salvandoEdicao}
+                />
+              </>
+            )}
+
+            {editingItem?.colecao === 'clientes' && (
+              <>
+                <Text style={styles.modalTitulo}>Editar Cliente</Text>
+                <Text style={styles.label}>Nome</Text>
+                <TextInput
+                  value={editNomeCliente}
+                  onChangeText={setEditNomeCliente}
+                  style={styles.input}
+                  placeholder="Razão social ou nome do cliente"
+                  placeholderTextColor="#888888"
+                  editable={!salvandoEdicao}
+                />
+                <Text style={styles.label}>CNPJ (opcional)</Text>
+                <TextInput
+                  value={formatCNPJ(editCnpjCliente)}
+                  onChangeText={(text) => setEditCnpjCliente(unmaskCNPJ(text))}
+                  style={styles.input}
+                  placeholder="00.000.000/0000-00"
+                  placeholderTextColor="#888888"
+                  editable={!salvandoEdicao}
+                />
+                <Text style={styles.label}>Endereço (opcional)</Text>
+                <TextInput
+                  value={editEnderecoCliente}
+                  onChangeText={setEditEnderecoCliente}
+                  style={styles.input}
+                  placeholder="Endereço completo"
                   placeholderTextColor="#888888"
                   editable={!salvandoEdicao}
                 />

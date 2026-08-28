@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Dimensions, Modal, ActivityIndicator,
+  StyleSheet, Platform, Dimensions, Modal, ActivityIndicator, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useProjetoForm } from '../context/form';
 import { useBle } from '../context/context';
+import { useReferenceData } from '../context/referenceData';
+import { formatCNPJ, unmaskCNPJ } from '../helpers/formatCNPJ';
 
 export default function StepPesagens({
   ultimaCalibragem,
@@ -28,6 +30,7 @@ export default function StepPesagens({
 }) {
   const navigation = useNavigation();
   const { bleStatus, connectedDevice, readingStatus } = useBle();
+  const { clientes } = useReferenceData();
   const {
     nomeProjeto, setNomeProjeto,
     quantidadeAmostras, setQuantidadeAmostras,
@@ -35,17 +38,36 @@ export default function StepPesagens({
     amostraAtual, setAmostraAtual,
     setPesagemAtual,
     peso, setPeso,
+    clienteSelecionado, setClienteSelecionado,
     salvarEstadoDoProjeto,
   } = useProjetoForm();
 
   const [modalConfirmarVisivel, setModalConfirmarVisivel] = useState(false);
+  const [modalClienteVisivel, setModalClienteVisivel] = useState(false);
+  const [buscaCliente, setBuscaCliente] = useState('');
 
   const amostraArray = amostras[amostraAtual] || [];
   const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
   const proximaPesagem = pesagensFeitas + 1;
-  const amostraAtualConcluida = pesagensFeitas >= 4;
 
   const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
+
+  const clientesAtivos = clientes.filter(c => c.ativo !== false);
+
+  const clientesFiltrados = clientesAtivos.filter(c => {
+    if (!buscaCliente.trim()) return true;
+    const termo = buscaCliente.toLowerCase();
+    const nomeMatch = c.nome?.toLowerCase().includes(termo);
+    const cnpjMatch = c.cnpj && unmaskCNPJ(c.cnpj).includes(unmaskCNPJ(buscaCliente));
+    return nomeMatch || cnpjMatch;
+  });
+
+  const selecionarCliente = (cliente) => {
+    setClienteSelecionado({ id: cliente.id, nome: cliente.nome });
+    salvarEstadoDoProjeto();
+    setModalClienteVisivel(false);
+    setBuscaCliente('');
+  };
 
   const iniciarConfirmacao = () => {
     if (!peso || !peso.trim()) {
@@ -97,9 +119,24 @@ export default function StepPesagens({
         </View>
       ) : null}
 
+      <Text style={styles.label}>Cliente</Text>
+      {clientesAtivos.length === 0 ? (
+        <View style={styles.avisoContainer}>
+          <Ionicons name="information-circle-outline" size={16} color="#aaa" />
+          <Text style={styles.avisoTexto}>Nenhum cliente cadastrado.</Text>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.selectBtn} onPress={() => setModalClienteVisivel(true)} activeOpacity={0.8}>
+          <Text style={clienteSelecionado ? styles.selectBtnTexto : styles.selectBtnPlaceholder}>
+            {clienteSelecionado ? clienteSelecionado.nome : 'Selecionar cliente'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#aaa" />
+        </TouchableOpacity>
+      )}
+
       <TextInput
         style={styles.input}
-        placeholder="Nome do Projeto/Cliente"
+        placeholder="Nome do Projeto"
         placeholderTextColor="#888888"
         value={nomeProjeto}
         onChangeText={setNomeProjeto}
@@ -192,13 +229,64 @@ export default function StepPesagens({
       <View style={styles.historicoContainer}>{historicoFiltrado}</View>
 
       <TouchableOpacity
-        style={[styles.avancarBtn, !nomeProjeto.trim() && styles.avancarBtnDisabled]}
+        style={[styles.avancarBtn, (!nomeProjeto.trim() || !clienteSelecionado) && styles.avancarBtnDisabled]}
         onPress={onAvancar}
         activeOpacity={0.8}
       >
         <Text style={styles.avancarBtnTexto}>Continuar</Text>
         <Ionicons name="arrow-forward-circle" size={24} color="#FFF" />
       </TouchableOpacity>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={modalClienteVisivel}
+        onRequestClose={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitulo}>Selecionar Cliente</Text>
+              <TouchableOpacity onPress={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Buscar por nome ou CNPJ"
+              placeholderTextColor="#888888"
+              value={buscaCliente}
+              onChangeText={setBuscaCliente}
+              autoFocus
+            />
+
+            <FlatList
+              data={clientesFiltrados}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.opcaoItem, clienteSelecionado?.id === item.id && styles.opcaoItemSelecionado]}
+                  onPress={() => selecionarCliente(item)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.opcaoItemTexto, clienteSelecionado?.id === item.id && styles.opcaoItemTextoSelecionado]}>
+                      {item.nome}
+                    </Text>
+                    {item.cnpj ? <Text style={styles.opcaoItemSub}>{formatCNPJ(item.cnpj)}</Text> : null}
+                  </View>
+                  {clienteSelecionado?.id === item.id && <Ionicons name="checkmark" size={20} color="#1F6452" />}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.separador} />}
+              ListEmptyComponent={
+                <Text style={styles.vazioBuscaTexto}>Nenhum cliente encontrado</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="slide"
@@ -331,6 +419,18 @@ const styles = StyleSheet.create({
   adicionarAmostraBtnTexto: { color: '#1F6452', fontSize: 18, marginLeft: 5 },
   selectContainer: { marginBottom: 15 },
   label: { color: '#000000', fontWeight: 'bold', marginBottom: 5 },
+  avisoContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 15,
+    backgroundColor: '#f9f9f9', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#eee',
+  },
+  avisoTexto: { fontSize: 13, color: '#aaa', flex: 1 },
+  selectBtn: {
+    backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
+    borderRadius: 5, padding: 12, marginBottom: 15,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48,
+  },
+  selectBtnTexto: { fontSize: 16, color: '#222', flex: 1 },
+  selectBtnPlaceholder: { fontSize: 16, color: '#aaa', flex: 1 },
   amostrasContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   amostraBtn: { backgroundColor: '#ddd', padding: 15, borderRadius: 5, marginVertical: 5, alignItems: 'center' },
   amostraBtnMobile: { width: Dimensions.get('window').width - 40 },
@@ -352,6 +452,20 @@ const styles = StyleSheet.create({
     padding: 35, alignItems: 'center', shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5,
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', marginBottom: 48 },
+  modalCard: {
+    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36, maxHeight: '75%',
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },
+  opcaoItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+  opcaoItemSelecionado: { backgroundColor: '#E3F0EC', borderRadius: 8, paddingHorizontal: 8 },
+  opcaoItemTexto: { fontSize: 15, color: '#333' },
+  opcaoItemTextoSelecionado: { color: '#1F6452', fontWeight: '600' },
+  opcaoItemSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  separador: { height: 1, backgroundColor: '#f0f0f0' },
+  vazioBuscaTexto: { textAlign: 'center', color: '#aaa', fontStyle: 'italic', paddingVertical: 24 },
   textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
   modalText: { marginBottom: 15, textAlign: 'center', color: '#000000' },
   modalDensidade: { fontSize: 20, fontWeight: 'bold', color: '#000' },

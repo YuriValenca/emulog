@@ -19,9 +19,11 @@ import { ProjetoFormProvider, useProjetoForm } from '../context/form';
 import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
 import { useAppAuth } from '../context/auth';
+import { useReferenceData } from '../context/referenceData';
 
 function NovaAmostraScreenInner() {
   const { companyId } = useAppAuth();
+  const { syncReferenceData } = useReferenceData();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [modalVisivel, setModalVisivel] = useState(false);
@@ -60,6 +62,7 @@ function NovaAmostraScreenInner() {
     companyId: companyIdContexto, setCompanyId,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
+    clienteSelecionado,
     informacoesGerais,
     salvarEstadoDoProjeto,
     limparEstadoDoProjeto,
@@ -73,6 +76,10 @@ function NovaAmostraScreenInner() {
 
   useEffect(() => {
     if (companyId) setCompanyId(companyId);
+  }, [companyId]);
+
+  useEffect(() => {
+    if (companyId) syncReferenceData(companyId);
   }, [companyId]);
 
   useEffect(() => {
@@ -297,6 +304,7 @@ function NovaAmostraScreenInner() {
       nomeProjeto: nomeProjeto.trim(),
       dataCriacao: new Date(),
       uidUsuario,
+      cliente: clienteSelecionado,
       calibragem: {
         tara: ultimaCalibragem?.tara || 0,
         pesoCheio: ultimaCalibragem?.pesoCheio || 0,
@@ -372,6 +380,11 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return;
     }
+    if (!clienteSelecionado) {
+      setMensagemAviso("Selecione um cliente antes de salvar o projeto.");
+      setModalAvisoVisivel(true);
+      return;
+    }
     const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
     if (!algumaAmostraCompleta) {
       setMensagemAmostrasIncompletas("Pelo menos uma amostra com 4 pesagens é necessária antes de salvar.");
@@ -407,6 +420,11 @@ function NovaAmostraScreenInner() {
   const handleAvancarStep = () => {
     if (!nomeProjeto.trim()) {
       setMensagemAviso("O nome do projeto não pode estar vazio.");
+      setModalAvisoVisivel(true);
+      return;
+    }
+    if (!clienteSelecionado) {
+      setMensagemAviso("Selecione um cliente antes de continuar.");
       setModalAvisoVisivel(true);
       return;
     }

@@ -8,13 +8,15 @@ import BackButton from '../BackButton';
 import ModalEmpresa from './addCompanyModal';
 import ModalGerarLicencas from './addLicenseModal';
 import ModalAdicionarUsuario from './addUserModal';
+import ModalCliente from './addClientModal';
 import AbaDashboard from './dashboard';
 import AbaEmpresas from './companies';
 import AbaLicencas from './licenses';
 import AbaUsuarios from './users';
+import AbaClientes from './clients';
 
 const db = getFirestore();
-const ABAS = ['Dashboard', 'Empresas', 'Licenças', 'Usuários'];
+const ABAS = ['Dashboard', 'Empresas', 'Licenças', 'Usuários', 'Clientes'];
 
 function formatDate(value) {
   if (!value) return '—';
@@ -40,27 +42,33 @@ export default function SuperadminPanel() {
   const [companies, setCompanies] = useState([]);
   const [licenses, setLicenses] = useState([]);
   const [users, setUsers] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [licenseCompanyFilter, setLicenseCompanyFilter] = useState(null);
+  const [clientCompanyFilter, setClientCompanyFilter] = useState(null);
 
   const [modalEmpresaVisivel, setModalEmpresaVisivel] = useState(false);
   const [modalLicencaVisivel, setModalLicencaVisivel] = useState(false);
   const [modalUsuarioVisivel, setModalUsuarioVisivel] = useState(false);
+  const [modalClienteVisivel, setModalClienteVisivel] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [licenseToRenew, setLicenseToRenew] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const carregarTudo = useCallback(async () => {
     setLoading(true);
     try {
-      const [snapC, snapU] = await Promise.all([
+      const [snapC, snapU, snapCli] = await Promise.all([
         getDocs(collection(db, 'companies')),
         getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'clientes')),
       ]);
 
       const companiesData = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
       setCompanies(companiesData.filter(c => c.modules?.mobile || c.founding));
       setUsers(snapU.docs.map(d => ({ id: d.id, ...d.data() })));
+      setClients(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const allLicenses = [];
 
@@ -87,12 +95,16 @@ export default function SuperadminPanel() {
         const initialCompany = companiesData.find(c => c.name !== 'Explog');
         if (initialCompany) setLicenseCompanyFilter(initialCompany.id);
       }
+      if (!clientCompanyFilter && companiesData.length > 0) {
+        const initialCompany = companiesData.find(c => c.name !== 'Explog');
+        if (initialCompany) setClientCompanyFilter(initialCompany.id);
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [licenseCompanyFilter]);
+  }, [licenseCompanyFilter, clientCompanyFilter]);
 
   useEffect(() => { carregarTudo(); }, []);
 
@@ -341,10 +353,75 @@ export default function SuperadminPanel() {
     ]);
   };
 
+  const handleSalvarCliente = async (formData) => {
+    if (!formData.nome.trim()) {
+      Alert.alert('Atenção', 'Nome do cliente é obrigatório.');
+      return;
+    }
+    if (!clientCompanyFilter) return;
+    setSaving(true);
+    try {
+      if (selectedClient) {
+        const dadosAtualizados = {
+          nome: formData.nome.trim(),
+          cnpj: formData.cnpj?.trim() || null,
+          endereco: formData.endereco?.trim() || null,
+        };
+        await updateDoc(doc(db, 'clientes', selectedClient.id), dadosAtualizados);
+        setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, ...dadosAtualizados } : c));
+      } else {
+        const novoCliente = {
+          nome: formData.nome.trim(),
+          cnpj: formData.cnpj?.trim() || null,
+          endereco: formData.endereco?.trim() || null,
+          ativo: true,
+          companyId: clientCompanyFilter,
+          criadoEm: new Date().toISOString(),
+        };
+        const docRef = await addDoc(collection(db, 'clientes'), novoCliente);
+        setClients(prev => [...prev, { id: docRef.id, ...novoCliente }]);
+      }
+      setModalClienteVisivel(false);
+      setSelectedClient(null);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Erro', 'Não foi possível salvar o cliente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleClienteAtivo = async (cliente) => {
+    try {
+      await updateDoc(doc(db, 'clientes', cliente.id), { ativo: !cliente.ativo });
+      setClients(prev => prev.map(c => c.id === cliente.id ? { ...c, ativo: !c.ativo } : c));
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível atualizar o status do cliente.');
+    }
+  };
+
+  const handleExcluirCliente = (cliente) => {
+    Alert.alert('Excluir Cliente', `Deseja remover permanentemente "${cliente.nome}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteDoc(doc(db, 'clientes', cliente.id));
+            setClients(prev => prev.filter(c => c.id !== cliente.id));
+          } catch (e) {
+            Alert.alert('Erro', 'Não foi possível remover o cliente.');
+          }
+        }
+      }
+    ]);
+  };
+
   const handleDeleteCompany = async (company) => {
     Alert.alert(
       'Excluir Empresa',
-      `Tem certeza que deseja excluir "${company.name}"? Esta ação é IRREVERSÍVEL e apagará todos os usuários desta empresa, além de excluir permanentemente todas as suas licenças.`,
+      `Tem certeza que deseja excluir "${company.name}"? Esta ação é IRREVERSÍVEL e apagará todos os usuários e clientes desta empresa, além de excluir permanentemente todas as suas licenças.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -353,7 +430,7 @@ export default function SuperadminPanel() {
           onPress: () => {
             Alert.alert(
               'Confirmação Final',
-              `Última chance: todos os usuários de "${company.name}" e todas as suas licenças serão excluídos permanentemente. Deseja realmente prosseguir?`,
+              `Última chance: todos os usuários e clientes de "${company.name}" e todas as suas licenças serão excluídos permanentemente. Deseja realmente prosseguir?`,
               [
                 { text: 'Cancelar', style: 'cancel' },
                 {
@@ -372,14 +449,23 @@ export default function SuperadminPanel() {
                         usuariosDaEmpresa.map(u => deleteDoc(doc(db, 'users', u.id)))
                       );
 
+                      const clientesDaEmpresa = clients.filter(c => c.companyId === company.id);
+                      await Promise.all(
+                        clientesDaEmpresa.map(c => deleteDoc(doc(db, 'clientes', c.id)))
+                      );
+
                       await deleteDoc(doc(db, 'companies', company.id));
 
                       setCompanies(prev => prev.filter(c => c.id !== company.id));
                       setUsers(prev => prev.filter(u => u.companyId !== company.id));
                       setLicenses(prev => prev.filter(l => l.companyId !== company.id));
+                      setClients(prev => prev.filter(c => c.companyId !== company.id));
 
                       if (licenseCompanyFilter === company.id) {
                         setLicenseCompanyFilter(null);
+                      }
+                      if (clientCompanyFilter === company.id) {
+                        setClientCompanyFilter(null);
                       }
 
                       Alert.alert('Sucesso', 'Empresa excluída com sucesso.');
@@ -403,6 +489,11 @@ export default function SuperadminPanel() {
     const comp = companies.find(c => c.id === licenseCompanyFilter);
     return comp ? comp.name : '';
   }, [companies, licenseCompanyFilter]);
+
+  const clienteEmpresaNome = useMemo(() => {
+    const comp = companies.find(c => c.id === clientCompanyFilter);
+    return comp ? comp.name : '';
+  }, [companies, clientCompanyFilter]);
 
   const dashStats = useMemo(() => {
     return {
@@ -492,6 +583,20 @@ export default function SuperadminPanel() {
             onDeletePress={handleExcluirUsuario}
           />
         )}
+
+        {abaAtiva === 4 && (
+          <AbaClientes
+            companies={companies}
+            clients={clients}
+            filteredFilterId={clientCompanyFilter}
+            onSetFilterId={setClientCompanyFilter}
+            onAddPress={() => { setSelectedClient(null); setModalClienteVisivel(true); }}
+            onEditPress={(c) => { setSelectedClient(c); setModalClienteVisivel(true); }}
+            onDeletePress={handleExcluirCliente}
+            onToggleAtivo={handleToggleClienteAtivo}
+            formatDate={formatDate}
+          />
+        )}
       </ScrollView>
 
       <ModalEmpresa
@@ -517,6 +622,15 @@ export default function SuperadminPanel() {
         companies={companies}
         onClose={() => setModalUsuarioVisivel(false)}
         onSave={handleAdicionarUsuario}
+        saving={saving}
+      />
+
+      <ModalCliente
+        visible={modalClienteVisivel}
+        companyName={clienteEmpresaNome}
+        clientToEdit={selectedClient}
+        onClose={() => { setModalClienteVisivel(false); setSelectedClient(null); }}
+        onSave={handleSalvarCliente}
         saving={saving}
       />
     </View>

@@ -26,6 +26,7 @@ export function ProjetoFormProvider({ children }) {
   const [kgAplicado, setKgAplicado] = useState('');
   const [caminhaoSelecionado, setCaminhaoSelecionado] = useState(null);
   const [equipeSelecionada, setEquipeSelecionada] = useState([]);
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [informacoesGerais, setInformacoesGerais] = useState('');
 
   const salvarEstadoDoProjeto = async () => {
@@ -38,6 +39,7 @@ export function ProjetoFormProvider({ children }) {
       amostraAtual, pesagemAtual, peso,
       numeroNF, kgPrevisto, kgAplicado,
       caminhaoSelecionado, equipeSelecionada,
+      clienteSelecionado,
       informacoesGerais,
     };
     try {
@@ -59,6 +61,7 @@ export function ProjetoFormProvider({ children }) {
     amostraAtual, pesagemAtual, peso,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
+    clienteSelecionado,
     informacoesGerais,
   ]);
 
@@ -84,6 +87,7 @@ export function ProjetoFormProvider({ children }) {
     setKgAplicado('');
     setCaminhaoSelecionado(null);
     setEquipeSelecionada([]);
+    setClienteSelecionado(null);
     setInformacoesGerais('');
   };
 
@@ -116,6 +120,7 @@ export function ProjetoFormProvider({ children }) {
       setKgAplicado(projeto.kgAplicado || '');
       setCaminhaoSelecionado(projeto.caminhaoSelecionado || null);
       setEquipeSelecionada(projeto.equipeSelecionada || []);
+      setClienteSelecionado(projeto.clienteSelecionado || null);
       setInformacoesGerais(projeto.informacoesGerais || '');
 
       let novasAmostras = [];
@@ -172,6 +177,7 @@ export function ProjetoFormProvider({ children }) {
       kgAplicado, setKgAplicado,
       caminhaoSelecionado, setCaminhaoSelecionado,
       equipeSelecionada, setEquipeSelecionada,
+      clienteSelecionado, setClienteSelecionado,
       informacoesGerais, setInformacoesGerais,
       salvarEstadoDoProjeto,
       limparEstadoDoProjeto,

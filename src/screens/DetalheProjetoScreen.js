@@ -176,7 +176,8 @@ export default function DetalheProjetoScreen() {
           <img src="${companyLogoSrc}" class="logo" alt="Logo" />
           <div class="project-details">
             <h1>Projeto: ${projeto.nomeProjeto}</h1>
-            <p style="margin: 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
+            ${projeto.cliente ? `<p style="margin: 0; color: #555;"><strong>Cliente:</strong> ${projeto.cliente.nome}</p>` : ''}
+            <p style="margin: 4px 0 0 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
             <p style="margin: 4px 0 0 0; color: #555;">
               <strong>Calibragem:</strong>
               Tara ${projeto.calibragem?.tara || '—'} ·
@@ -348,6 +349,10 @@ export default function DetalheProjetoScreen() {
 
       <Text style={styles.titulo}>{projeto.nomeProjeto}</Text>
 
+      {projeto.cliente ? (
+        <Text style={styles.clienteTexto}>{projeto.cliente.nome}</Text>
+      ) : null}
+
       <Text style={styles.label}>Data de Criação</Text>
       <Text style={styles.valor}>{projeto.dataCriacao}</Text>
 
@@ -421,7 +426,8 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
   backButtonWrapper: { marginTop: 32, marginBottom: 8 },
-  titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, marginTop: 8, color: '#1F6452' },
+  titulo: { fontSize: 24, fontWeight: 'bold', marginBottom: 2, marginTop: 8, color: '#1F6452' },
+  clienteTexto: { fontSize: 18, color: '#555', fontWeight: '600' },
   label: { fontSize: 15, fontWeight: '700', color: '#444', marginTop: 16, marginBottom: 6 },
   valor: { fontSize: 15, color: '#333' },
   calibragemBox: { borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },

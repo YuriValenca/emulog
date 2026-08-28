@@ -293,11 +293,11 @@ export default function HistoricoScreen() {
           renderItem={({ item }) => (
             <View style={styles.projetoCard}>
               <View style={styles.projetoInfo}>
-                <Text style={styles.projetoNome}>{item.nomeProjeto}</Text>
-                <Text style={styles.projetoData}>{item.dataCriacaoFormatada}</Text>
-                {item.informacoesOperacao?.numeroNF ? (
-                  <Text style={styles.projetoMeta}>NF: {item.informacoesOperacao.numeroNF}</Text>
-                ) : null}
+              <Text style={styles.projetoNome}>{item.nomeProjeto}</Text>
+              {item.cliente?.nome ? (
+                <Text style={styles.projetoCliente}>{item.cliente.nome}</Text>
+              ) : null}
+              <Text style={styles.projetoData}>{item.dataCriacaoFormatada}</Text>
               </View>
               <TouchableOpacity
                 style={styles.verMaisBtn}
@@ -432,9 +432,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   projetoInfo: { flex: 1 },
-  projetoNome: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
+  projetoNome: { fontSize: 15, fontWeight: '700', color: '#222' },
   projetoData: { fontSize: 12, color: '#888' },
-  projetoMeta: { fontSize: 12, color: '#aaa', marginTop: 2 },
   verMaisBtn: {
     backgroundColor: '#1F6452',
     borderRadius: 8,
@@ -443,6 +442,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 10,
   },
+  projetoCliente: { fontSize: 13, color: '#1F6452', fontWeight: '600' },
   vazioContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
   vazioTexto: { color: '#ccc', fontSize: 15 },
   paginacaoContainer: {

@@ -7,11 +7,13 @@ const ReferenceDataContext = createContext(null);
 
 const keyCaminhoes = (companyId) => `cachedCaminhoes:${companyId}`;
 const keyOperadores = (companyId) => `cachedOperadores:${companyId}`;
-const KEY_ULTIMA_CALIBRAGEM = 'ultimaCalibragem'; // mesma chave já usada no app, não prefixada
+const keyClientes = (companyId) => `cachedClientes:${companyId}`;
+const KEY_ULTIMA_CALIBRAGEM = 'ultimaCalibragem';
 
 export function ReferenceDataProvider({ children }) {
   const [caminhoes, setCaminhoes] = useState([]);
   const [operadores, setOperadores] = useState([]);
+  const [clientes, setClientes] = useState([]);
   const [ultimaCalibragem, setUltimaCalibragem] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
@@ -20,13 +22,15 @@ export function ReferenceDataProvider({ children }) {
   const hydrateFromStorage = useCallback(async (companyId) => {
     if (!companyId) return;
     try {
-      const [cStr, oStr, calStr] = await Promise.all([
+      const [cStr, oStr, clStr, calStr] = await Promise.all([
         AsyncStorage.getItem(keyCaminhoes(companyId)),
         AsyncStorage.getItem(keyOperadores(companyId)),
+        AsyncStorage.getItem(keyClientes(companyId)),
         AsyncStorage.getItem(KEY_ULTIMA_CALIBRAGEM),
       ]);
       setCaminhoes(cStr ? JSON.parse(cStr) : []);
       setOperadores(oStr ? JSON.parse(oStr) : []);
+      setClientes(clStr ? JSON.parse(clStr) : []);
       if (calStr) {
         const cal = JSON.parse(calStr);
         setUltimaCalibragem({ ...cal, timestamp: new Date(cal.timestamp) });
@@ -56,6 +60,7 @@ export function ReferenceDataProvider({ children }) {
 
       const qCaminhoes = query(collection(db, 'caminhoes'), where('companyId', '==', companyId));
       const qOperadores = query(collection(db, 'operadores'), where('companyId', '==', companyId));
+      const qClientes = query(collection(db, 'clientes'), where('companyId', '==', companyId));
       const qCalibragem = query(
         collection(db, 'calibragens'),
         where('companyId', '==', companyId),
@@ -63,21 +68,25 @@ export function ReferenceDataProvider({ children }) {
         limit(1)
       );
 
-      const [snapC, snapO, snapCal] = await Promise.all([
+      const [snapC, snapO, snapCl, snapCal] = await Promise.all([
         getDocs(qCaminhoes),
         getDocs(qOperadores),
+        getDocs(qClientes),
         getDocs(qCalibragem),
       ]);
 
       const listaCaminhoes = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
       const listaOperadores = snapO.docs.map(d => ({ id: d.id, ...d.data() }));
+      const listaClientes = snapCl.docs.map(d => ({ id: d.id, ...d.data() }));
 
       setCaminhoes(listaCaminhoes);
       setOperadores(listaOperadores);
+      setClientes(listaClientes);
 
       const storagePromises = [
         AsyncStorage.setItem(keyCaminhoes(companyId), JSON.stringify(listaCaminhoes)),
         AsyncStorage.setItem(keyOperadores(companyId), JSON.stringify(listaOperadores)),
+        AsyncStorage.setItem(keyClientes(companyId), JSON.stringify(listaClientes)),
       ];
 
       if (!snapCal.empty) {
@@ -111,7 +120,11 @@ export function ReferenceDataProvider({ children }) {
 
   return (
     <ReferenceDataContext.Provider
-      value={{ caminhoes, operadores, ultimaCalibragem, setUltimaCalibragem, isSyncing, lastSyncedAt, syncReferenceData }}
+      value={{
+        caminhoes, operadores, clientes,
+        ultimaCalibragem, setUltimaCalibragem,
+        isSyncing, lastSyncedAt, syncReferenceData,
+      }}
     >
       {children}
     </ReferenceDataContext.Provider>
