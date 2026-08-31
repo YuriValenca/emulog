@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Platform, Dimensions, Modal, ActivityIndicator, FlatList,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -243,7 +244,7 @@ export default function StepPesagens({
         visible={modalClienteVisivel}
         onRequestClose={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitulo}>Selecionar Cliente</Text>
@@ -285,7 +286,7 @@ export default function StepPesagens({
               }
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', marginBottom: 48 },
   modalCard: {
     backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36, maxHeight: '75%',
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8, maxHeight: '75%',
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitulo: { fontSize: 17, fontWeight: '700', color: '#222' },

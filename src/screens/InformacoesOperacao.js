@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Modal, FlatList, ActivityIndicator,
-  Alert, ScrollView,
+  Alert, ScrollView, Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
-import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
@@ -111,7 +112,8 @@ export default function InformacoesOperacao({
   };
 
   const conteudo = (
-    <ScrollView contentContainerStyle={styles.form}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Número da Nota Fiscal</Text>
       <TextInput
         style={styles.input}
@@ -220,6 +222,7 @@ export default function InformacoesOperacao({
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const modaisSelecao = (
