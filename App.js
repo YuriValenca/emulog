@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -224,17 +223,15 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <KeyboardProvider>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <ReferenceDataProvider>
-            <BleProvider>
-              <AppNavigator />
-            </BleProvider>
-          </ReferenceDataProvider>
-        </AuthProvider>
-      </SafeAreaProvider>
-    </KeyboardProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ReferenceDataProvider>
+          <BleProvider>
+            <AppNavigator />
+          </BleProvider>
+        </ReferenceDataProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

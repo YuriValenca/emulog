@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Modal, FlatList, ActivityIndicator,
-  Alert, ScrollView, Platform,
+  Alert, ScrollView, findNodeHandle, UIManager, Dimensions,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import useKeyboardHeight from '../hooks/useKeyboardHeight';
 import { Ionicons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
@@ -20,6 +20,8 @@ export default function InformacoesOperacao({
   onSalvo,
   projetoId,
   infoInicial,
+  scrollExternoRef,   // ref do ScrollView do componente PAI (só usado quando modoModal=false)
+  offsetExternoRef,   // ref com o offset atual de scroll do ScrollView do PAI
 }) {
   const [nfLocal, setNfLocal] = useState('');
   const [kgPrevistoLocal, setKgPrevistoLocal] = useState('');
@@ -32,6 +34,10 @@ export default function InformacoesOperacao({
   const form = !modoModal ? useProjetoForm() : null;
   const { companyId } = useAppAuth();
   const { caminhoes, operadores } = useReferenceData();
+  const scrollRef = useRef(null);
+  const focoAtualRef = useRef(null);
+  const scrollOffsetRef = useRef(0);
+  const keyboardHeight = useKeyboardHeight();
 
   const numeroNF        = modoModal ? nfLocal          : form.numeroNF;
   const setNumeroNF     = modoModal ? setNfLocal        : form.setNumeroNF;
@@ -64,6 +70,56 @@ export default function InformacoesOperacao({
       setInfoGeraisLocal(infoInicial.informacoesGerais || '');
     }
   }, [modoModal ? visivel : true, companyId]);
+
+  // Guarda qual TextInput está focado (não precisa de re-render, por isso é ref e não state).
+  // Chamar isso no onFocus de QUALQUER campo — não só o de observações.
+  const registrarFoco = (event) => {
+    const node = findNodeHandle(event.target);
+    console.log('🔶 [foco] campo focado, node:', node);
+    focoAtualRef.current = node;
+  };
+
+  const limparFoco = () => {
+    console.log('🔶 [foco] campo desfocado');
+    focoAtualRef.current = null;
+  };
+
+  useEffect(() => {
+    console.log('🔷 [efeito] keyboardHeight =', keyboardHeight, '| focoAtualRef =', focoAtualRef.current);
+    if (keyboardHeight > 0 && focoAtualRef.current) {
+      // Quando NÃO é modal, este componente não tem mais ScrollView próprio
+      // (era esse o bug: ScrollView dentro de ScrollView do pai nunca rola de
+      // verdade). Rolamos o ScrollView do PAI, recebido via prop.
+      const scrollAlvo = modoModal ? scrollRef.current : scrollExternoRef?.current;
+      const offsetAtual = modoModal ? scrollOffsetRef.current : (offsetExternoRef?.current ?? 0);
+
+      if (!scrollAlvo) {
+        console.log('⚠️ [scroll] nenhum ScrollView alvo disponível (scrollExternoRef não foi passado?)');
+        return;
+      }
+
+      const raf1 = requestAnimationFrame(() => {
+        const raf2 = requestAnimationFrame(() => {
+          UIManager.measure(focoAtualRef.current, (x, y, width, height, pageX, pageY) => {
+            const { height: alturaTela } = Dimensions.get('window');
+            const limiteVisivel = alturaTela - keyboardHeight;
+            const fundoDoCampo = pageY + height;
+            const overflow = fundoDoCampo - limiteVisivel + 24; // 24 de folga
+            console.log('📐 [medida]', { alvo: modoModal ? 'interno' : 'externo', pageY, height, alturaTela, limiteVisivel, overflow });
+            if (overflow > 0) {
+              const alvo = offsetAtual + overflow;
+              console.log('📐 [scroll] offsetAtual:', offsetAtual, '→ alvo:', alvo);
+              scrollAlvo.scrollTo({ y: alvo, animated: true });
+            } else {
+              console.log('📐 [scroll] campo já visível, nada a fazer');
+            }
+          });
+        });
+        return () => cancelAnimationFrame(raf2);
+      });
+      return () => cancelAnimationFrame(raf1);
+    }
+  }, [keyboardHeight]);
 
   const toggleMembro = (membro) => {
     const jaEsta = equipeSelecionada.some(m => m.id === membro.id);
@@ -111,9 +167,34 @@ export default function InformacoesOperacao({
     }
   };
 
+  // Só o modo modal tem ScrollView próprio de verdade (é o único elemento
+  // rolável dentro do <Modal>). No modo inline, este componente vive dentro
+  // do ScrollView do componente pai — colocar outro ScrollView aqui dentro
+  // era o bug: ScrollView-dentro-de-ScrollView nunca ganha altura própria
+  // pra rolar, só cresce pra caber o conteúdo. Por isso viramos uma View
+  // simples nesse caso e deixamos quem rola de verdade ser o pai.
+  const ConteudoWrapper = modoModal ? ScrollView : View;
+  const propsWrapper = modoModal
+    ? {
+        ref: scrollRef,
+        style: { flex: 1 },
+        contentContainerStyle: [
+          styles.form,
+          keyboardHeight > 0 && { paddingBottom: keyboardHeight + 60 },
+        ],
+        keyboardShouldPersistTaps: 'handled',
+        onScroll: (e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; },
+        scrollEventThrottle: 16,
+      }
+    : {
+        style: [
+          styles.form,
+          keyboardHeight > 0 && { paddingBottom: keyboardHeight + 60 },
+        ],
+      };
+
   const conteudo = (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+    <ConteudoWrapper {...propsWrapper}>
       <Text style={styles.label}>Número da Nota Fiscal</Text>
       <TextInput
         style={styles.input}
@@ -122,7 +203,8 @@ export default function InformacoesOperacao({
         keyboardType="numeric"
         value={numeroNF}
         onChangeText={setNumeroNF}
-        onBlur={salvarEstado}
+        onFocus={registrarFoco}
+        onBlur={() => { salvarEstado(); limparFoco(); }}
       />
 
       <Text style={styles.label}>Kg Previsto</Text>
@@ -133,7 +215,8 @@ export default function InformacoesOperacao({
         keyboardType="numeric"
         value={kgPrevisto}
         onChangeText={setKgPrevisto}
-        onBlur={salvarEstado}
+        onFocus={registrarFoco}
+        onBlur={() => { salvarEstado(); limparFoco(); }}
       />
 
       <Text style={styles.label}>Kg Aplicado</Text>
@@ -144,7 +227,8 @@ export default function InformacoesOperacao({
         keyboardType="numeric"
         value={kgAplicado}
         onChangeText={setKgAplicado}
-        onBlur={salvarEstado}
+        onFocus={registrarFoco}
+        onBlur={() => { salvarEstado(); limparFoco(); }}
       />
 
       <Text style={styles.label}>Unidade de Bombeamento</Text>
@@ -205,7 +289,8 @@ export default function InformacoesOperacao({
         textAlignVertical="top"
         value={informacoesGerais}
         onChangeText={setInformacoesGerais}
-        onBlur={salvarEstado}
+        onFocus={registrarFoco}
+        onBlur={() => { salvarEstado(); limparFoco(); }}
       />
 
       <TouchableOpacity
@@ -221,8 +306,7 @@ export default function InformacoesOperacao({
           {salvando ? 'Salvando...' : 'Salvar Projeto'}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </ConteudoWrapper>
   );
 
   const modaisSelecao = (
@@ -279,7 +363,7 @@ export default function InformacoesOperacao({
             )}
 
             {membrosDisponiveis.length > 0 ? (
-              <ScrollView>
+              <ScrollView keyboardShouldPersistTaps="handled">
                 {Object.entries(gruposDisponiveis)
                   .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
                   .map(([categoria, membros]) => (
@@ -360,7 +444,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingTexto: { color: '#aaa', fontSize: 14 },
-  form: { padding: 12 },
+  form: { padding: 12, paddingBottom: 40 },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6 },
   input: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,

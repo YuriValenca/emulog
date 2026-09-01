@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Platform, Dimensions, Modal, ActivityIndicator, FlatList,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import useKeyboardHeight from '../hooks/useKeyboardHeight';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -42,6 +42,8 @@ export default function StepPesagens({
     clienteSelecionado, setClienteSelecionado,
     salvarEstadoDoProjeto,
   } = useProjetoForm();
+
+  const keyboardHeight = useKeyboardHeight();
 
   const [modalConfirmarVisivel, setModalConfirmarVisivel] = useState(false);
   const [modalClienteVisivel, setModalClienteVisivel] = useState(false);
@@ -244,7 +246,7 @@ export default function StepPesagens({
         visible={modalClienteVisivel}
         onRequestClose={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.modalOverlay, keyboardHeight > 0 && { marginBottom: 48 + keyboardHeight }]}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitulo}>Selecionar Cliente</Text>
@@ -286,7 +288,7 @@ export default function StepPesagens({
               }
             />
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <Modal

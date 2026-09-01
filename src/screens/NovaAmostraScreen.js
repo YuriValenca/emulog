@@ -46,6 +46,10 @@ function NovaAmostraScreenInner() {
   const lastBleWeightShown = useRef(null);
 
   const scrollViewRef = useRef(null);
+  // Guarda o offset atual de scroll deste ScrollView (o único "de verdade"
+  // nessa tela). O InformacoesOperacao inline usa isso pra saber quanto
+  // precisa rolar quando o teclado abre em cima de um dos campos dele.
+  const scrollOffsetRef = useRef(0);
   const navigation = useNavigation();
 
   const { bleStatus, weight, readingStatus, resumeMonitor } = useBle();
@@ -410,7 +414,9 @@ function NovaAmostraScreenInner() {
   };
 
   const handleScroll = (event) => {
-    setShowScrollButton(event.nativeEvent.contentOffset.y > 200);
+    const y = event.nativeEvent.contentOffset.y;
+    scrollOffsetRef.current = y;
+    setShowScrollButton(y > 200);
   };
 
   const scrollToTop = () => {
@@ -558,6 +564,8 @@ function NovaAmostraScreenInner() {
         <InformacoesOperacao
           onVoltar={() => { scrollToTop(); setCurrentStep(1); }}
           onSalvar={finalizarOuSalvar}
+          scrollExternoRef={scrollViewRef}
+          offsetExternoRef={scrollOffsetRef}
         />
       )}
 
