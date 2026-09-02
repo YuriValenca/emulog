@@ -46,9 +46,6 @@ function NovaAmostraScreenInner() {
   const lastBleWeightShown = useRef(null);
 
   const scrollViewRef = useRef(null);
-  // Guarda o offset atual de scroll deste ScrollView (o único "de verdade"
-  // nessa tela). O InformacoesOperacao inline usa isso pra saber quanto
-  // precisa rolar quando o teclado abre em cima de um dos campos dele.
   const scrollOffsetRef = useRef(0);
   const navigation = useNavigation();
 
@@ -559,6 +556,8 @@ function NovaAmostraScreenInner() {
           amostraPesquisa={amostraPesquisa}
           setAmostraPesquisa={setAmostraPesquisa}
           historicoFiltrado={historicoFiltrado}
+          scrollExternoRef={scrollViewRef}
+          offsetExternoRef={scrollOffsetRef}
         />
       ) : (
         <InformacoesOperacao

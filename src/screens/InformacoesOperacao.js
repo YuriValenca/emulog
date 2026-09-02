@@ -20,8 +20,8 @@ export default function InformacoesOperacao({
   onSalvo,
   projetoId,
   infoInicial,
-  scrollExternoRef,   // ref do ScrollView do componente PAI (só usado quando modoModal=false)
-  offsetExternoRef,   // ref com o offset atual de scroll do ScrollView do PAI
+  scrollExternoRef,
+  offsetExternoRef,
 }) {
   const [nfLocal, setNfLocal] = useState('');
   const [kgPrevistoLocal, setKgPrevistoLocal] = useState('');
@@ -71,8 +71,6 @@ export default function InformacoesOperacao({
     }
   }, [modoModal ? visivel : true, companyId]);
 
-  // Guarda qual TextInput está focado (não precisa de re-render, por isso é ref e não state).
-  // Chamar isso no onFocus de QUALQUER campo — não só o de observações.
   const registrarFoco = (event) => {
     const node = findNodeHandle(event.target);
     console.log('🔶 [foco] campo focado, node:', node);
@@ -87,9 +85,6 @@ export default function InformacoesOperacao({
   useEffect(() => {
     console.log('🔷 [efeito] keyboardHeight =', keyboardHeight, '| focoAtualRef =', focoAtualRef.current);
     if (keyboardHeight > 0 && focoAtualRef.current) {
-      // Quando NÃO é modal, este componente não tem mais ScrollView próprio
-      // (era esse o bug: ScrollView dentro de ScrollView do pai nunca rola de
-      // verdade). Rolamos o ScrollView do PAI, recebido via prop.
       const scrollAlvo = modoModal ? scrollRef.current : scrollExternoRef?.current;
       const offsetAtual = modoModal ? scrollOffsetRef.current : (offsetExternoRef?.current ?? 0);
 
@@ -104,7 +99,7 @@ export default function InformacoesOperacao({
             const { height: alturaTela } = Dimensions.get('window');
             const limiteVisivel = alturaTela - keyboardHeight;
             const fundoDoCampo = pageY + height;
-            const overflow = fundoDoCampo - limiteVisivel + 24; // 24 de folga
+            const overflow = fundoDoCampo - limiteVisivel + 24;
             console.log('📐 [medida]', { alvo: modoModal ? 'interno' : 'externo', pageY, height, alturaTela, limiteVisivel, overflow });
             if (overflow > 0) {
               const alvo = offsetAtual + overflow;
@@ -167,12 +162,6 @@ export default function InformacoesOperacao({
     }
   };
 
-  // Só o modo modal tem ScrollView próprio de verdade (é o único elemento
-  // rolável dentro do <Modal>). No modo inline, este componente vive dentro
-  // do ScrollView do componente pai — colocar outro ScrollView aqui dentro
-  // era o bug: ScrollView-dentro-de-ScrollView nunca ganha altura própria
-  // pra rolar, só cresce pra caber o conteúdo. Por isso viramos uma View
-  // simples nesse caso e deixamos quem rola de verdade ser o pai.
   const ConteudoWrapper = modoModal ? ScrollView : View;
   const propsWrapper = modoModal
     ? {
