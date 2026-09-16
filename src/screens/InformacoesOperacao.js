@@ -73,23 +73,19 @@ export default function InformacoesOperacao({
 
   const registrarFoco = (event) => {
     const node = findNodeHandle(event.target);
-    console.log('🔶 [foco] campo focado, node:', node);
     focoAtualRef.current = node;
   };
 
   const limparFoco = () => {
-    console.log('🔶 [foco] campo desfocado');
     focoAtualRef.current = null;
   };
 
   useEffect(() => {
-    console.log('🔷 [efeito] keyboardHeight =', keyboardHeight, '| focoAtualRef =', focoAtualRef.current);
     if (keyboardHeight > 0 && focoAtualRef.current) {
       const scrollAlvo = modoModal ? scrollRef.current : scrollExternoRef?.current;
       const offsetAtual = modoModal ? scrollOffsetRef.current : (offsetExternoRef?.current ?? 0);
 
       if (!scrollAlvo) {
-        console.log('⚠️ [scroll] nenhum ScrollView alvo disponível (scrollExternoRef não foi passado?)');
         return;
       }
 
@@ -100,13 +96,10 @@ export default function InformacoesOperacao({
             const limiteVisivel = alturaTela - keyboardHeight;
             const fundoDoCampo = pageY + height;
             const overflow = fundoDoCampo - limiteVisivel + 24;
-            console.log('📐 [medida]', { alvo: modoModal ? 'interno' : 'externo', pageY, height, alturaTela, limiteVisivel, overflow });
             if (overflow > 0) {
               const alvo = offsetAtual + overflow;
-              console.log('📐 [scroll] offsetAtual:', offsetAtual, '→ alvo:', alvo);
               scrollAlvo.scrollTo({ y: alvo, animated: true });
             } else {
-              console.log('📐 [scroll] campo já visível, nada a fazer');
             }
           });
         });
