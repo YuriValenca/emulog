@@ -5,6 +5,7 @@ import {
   getDocs, doc, getDoc, runTransaction,
   updateDoc, Timestamp, serverTimestamp,
 } from 'firebase/firestore';
+import NetInfo from '@react-native-community/netinfo';
 import { db } from '../firebaseConfig'
 import { getOrCreateDeviceId } from '../deviceId';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -84,6 +85,35 @@ async function claimLicense(companyId, deviceId) {
   });
 }
 
+const cachedAuthKey = (uid) => `cachedAuthBootstrap:${uid}`;
+
+async function saveCachedAuthBootstrap(uid, userData, companyData) {
+  try {
+    await AsyncStorage.setItem(cachedAuthKey(uid), JSON.stringify({ userData, companyData }));
+  } catch (e) {
+    console.warn('[Auth] Falha ao cachear bootstrap:', e.message);
+  }
+}
+
+async function loadCachedAuthBootstrap(uid) {
+  try {
+    const str = await AsyncStorage.getItem(cachedAuthKey(uid));
+    return str ? JSON.parse(str) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isNetworkError(e) {
+  return (
+    e?.code === 'unavailable' ||
+    e?.code === 'deadline-exceeded' ||
+    e?.code === 'failed-precondition' ||
+    e?.message === 'offline-no-cache' ||
+    /network|offline/i.test(e?.message ?? '')
+  );
+}
+
 export function AuthProvider({ children }) {
   const [authUser, setAuthUser]       = useState(null);
   const [authStatus, setAuthStatus]   = useState('loading');
@@ -116,25 +146,38 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        const userData = await fetchUserData(user.uid);
-        const isSuperadmin = userData.role === 'superadmin';
+        const netState = await NetInfo.fetch();
+        const isOnline = !!netState.isConnected;
 
-        if (!isSuperadmin && !userData.companyId) throw new Error('company-not-assigned');
+        let userData, companyData = null;
 
-        let companyData = null;
-        if (userData.companyId) {
-          companyData = await fetchCompanyData(userData.companyId);
+        if (!isOnline) {
+          const cached = await loadCachedAuthBootstrap(user.uid);
+          if (!cached) throw new Error('offline-no-cache');
+          userData = cached.userData;
+          companyData = cached.companyData;
+        } else {
+          userData = await fetchUserData(user.uid);
+          const isSuperadmin = userData.role === 'superadmin';
 
-          if (!companyData.founding) {
-            const did = await getOrCreateDeviceId();
-            await claimLicense(userData.companyId, did);
+          if (!isSuperadmin && !userData.companyId) throw new Error('company-not-assigned');
+
+          if (userData.companyId) {
+            companyData = await fetchCompanyData(userData.companyId);
+
+            if (!companyData.founding) {
+              const did = await getOrCreateDeviceId();
+              await claimLicense(userData.companyId, did);
+            }
+
+            if (companyData.logo) {
+              await AsyncStorage.setItem('cachedCompanyLogo', companyData.logo);
+            } else {
+              await AsyncStorage.removeItem('cachedCompanyLogo');
+            }
           }
 
-          if (companyData.logo) {
-            await AsyncStorage.setItem('cachedCompanyLogo', companyData.logo);
-          } else {
-            await AsyncStorage.removeItem('cachedCompanyLogo');
-          }
+          await saveCachedAuthBootstrap(user.uid, userData, companyData);
         }
 
         setAuthUser(user);
@@ -148,6 +191,21 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
         setDebugError(e.message);
+
+        if (isNetworkError(e) && user) {
+          const cached = await loadCachedAuthBootstrap(user.uid);
+          if (cached) {
+            setAuthUser(user);
+            setCompanyId(cached.userData.companyId ?? null);
+            setUid(cached.userData.uid);
+            setRole(cached.userData.role ?? 'user');
+            setName(cached.userData.nome ?? null);
+            setDebugError(null);
+            setAuthStatus('authenticated');
+            setCompanyLogo(cached.companyData?.logo ?? null);
+            return;
+          }
+        }
 
         if (e.message === 'no-license') {
           setAuthStatus('no-license');
