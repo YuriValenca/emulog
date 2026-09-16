@@ -90,7 +90,8 @@ export default function DetalheProjetoScreen() {
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
-    return `${projeto.nomeProjeto} - ${d}-${m}-${y}`;
+    const nomeSafe = projeto.nomeProjeto.replace(/[\/\\:*?"<>|]/g, '-');
+    return `${nomeSafe} - ${d}-${m}-${y}`;
   };
 
   const fetchImageAsBase64 = async (url) => {
@@ -112,6 +113,7 @@ export default function DetalheProjetoScreen() {
   };
 
   const gerarPDF = async () => {
+    console.log(projeto);
     if (!projeto) return;
 
     const info = projeto.informacoesOperacao;
