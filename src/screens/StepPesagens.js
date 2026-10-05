@@ -66,11 +66,21 @@ export default function StepPesagens({
     return nomeMatch || cnpjMatch;
   });
 
+  const buscaSemSelecao = buscaCliente.trim() !== '' && clientesFiltrados.length > 0;
+
+  const fecharModalCliente = () => {
+    setModalClienteVisivel(false);
+    setBuscaCliente('');
+  };
+
   const selecionarCliente = (cliente) => {
     setClienteSelecionado({ id: cliente.id, nome: cliente.nome });
     salvarEstadoDoProjeto();
-    setModalClienteVisivel(false);
-    setBuscaCliente('');
+    fecharModalCliente();
+  };
+
+  const selecionarResultadoUnico = () => {
+    if (clientesFiltrados.length === 1) selecionarCliente(clientesFiltrados[0]);
   };
 
   const iniciarConfirmacao = () => {
@@ -245,13 +255,13 @@ export default function StepPesagens({
         animationType="slide"
         transparent
         visible={modalClienteVisivel}
-        onRequestClose={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}
+        onRequestClose={fecharModalCliente}
       >
         <View style={[styles.modalOverlay, keyboardHeight > 0 && { marginBottom: 48 + keyboardHeight }]}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitulo}>Selecionar Cliente</Text>
-              <TouchableOpacity onPress={() => { setModalClienteVisivel(false); setBuscaCliente(''); }}>
+              <TouchableOpacity onPress={fecharModalCliente}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
@@ -262,8 +272,21 @@ export default function StepPesagens({
               placeholderTextColor="#888888"
               value={buscaCliente}
               onChangeText={setBuscaCliente}
+              onSubmitEditing={selecionarResultadoUnico}
+              returnKeyType="done"
               autoFocus
             />
+
+            {buscaSemSelecao && (
+              <View style={styles.dicaSelecao}>
+                <Ionicons name="hand-left-outline" size={16} color="#1F6452" />
+                <Text style={styles.dicaSelecaoTexto}>
+                  {clientesFiltrados.length === 1
+                    ? 'Toque no cliente abaixo (ou em OK no teclado) para selecioná-lo.'
+                    : 'Toque em um cliente da lista para selecioná-lo.'}
+                </Text>
+              </View>
+            )}
 
             <FlatList
               data={clientesFiltrados}
@@ -468,6 +491,11 @@ const styles = StyleSheet.create({
   opcaoItemTexto: { fontSize: 15, color: '#333' },
   opcaoItemTextoSelecionado: { color: '#1F6452', fontWeight: '600' },
   opcaoItemSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  dicaSelecao: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#E3F0EC', borderRadius: 8, padding: 10, marginBottom: 8,
+  },
+  dicaSelecaoTexto: { flex: 1, fontSize: 13, color: '#1F6452', fontWeight: '600' },
   separador: { height: 1, backgroundColor: '#f0f0f0' },
   vazioBuscaTexto: { textAlign: 'center', color: '#aaa', fontStyle: 'italic', paddingVertical: 24 },
   textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
