@@ -10,6 +10,7 @@ import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
+import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 
 export default function InformacoesOperacao({
   modoModal = false,
@@ -137,15 +138,14 @@ export default function InformacoesOperacao({
   const salvarModal = async () => {
     setSalvando(true);
     try {
-      await updateDoc(doc(db, 'projetos', projetoId), {
-        informacoesOperacao: {
-          numeroNF, kgPrevisto, kgAplicado,
-          caminhao: caminhaoSelecionado,
-          equipe: equipeSelecionada,
-          informacoesGerais,
-        },
-      });
-      onSalvo({ numeroNF, kgPrevisto, kgAplicado, caminhao: caminhaoSelecionado, equipe: equipeSelecionada, informacoesGerais });
+      const informacoesOperacao = {
+        numeroNF, kgPrevisto, kgAplicado,
+        caminhao: paraRefCaminhao(caminhaoSelecionado),
+        equipe: paraRefsEquipe(equipeSelecionada),
+        informacoesGerais,
+      };
+      await updateDoc(doc(db, 'projetos', projetoId), { informacoesOperacao });
+      onSalvo(informacoesOperacao);
       onFechar();
     } catch (e) {
       console.error('Erro ao salvar:', e);

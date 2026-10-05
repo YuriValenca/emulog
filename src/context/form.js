@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia } from '../helpers/pesagem';
 
 const ProjetoFormContext = createContext(null);
 const STORAGE_KEY = 'projetoEmAndamento';
@@ -9,11 +10,7 @@ export function ProjetoFormProvider({ children }) {
 
   const [nomeProjeto, setNomeProjeto] = useState('');
   const [quantidadeAmostras, setQuantidadeAmostras] = useState(1);
-  const [amostras, setAmostras] = useState(
-    Array.from({ length: 1 }, () =>
-      Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))
-    )
-  );
+  const [amostras, setAmostras] = useState(() => [criarAmostraVazia()]);
   const [amostraAtual, setAmostraAtual] = useState(0);
   const [pesagemAtual, setPesagemAtual] = useState(1);
   const [peso, setPeso] = useState('');
@@ -76,9 +73,7 @@ export function ProjetoFormProvider({ children }) {
   const resetarFormulario = () => {
     setNomeProjeto('');
     setQuantidadeAmostras(1);
-    setAmostras(Array.from({ length: 1 }, () =>
-      Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))
-    ));
+    setAmostras([criarAmostraVazia()]);
     setAmostraAtual(0);
     setPesagemAtual(1);
     setPeso('');
@@ -132,25 +127,21 @@ export function ProjetoFormProvider({ children }) {
         } else if (typeof projeto.amostras[0] === 'object' && projeto.amostras[0].peso !== undefined) {
           novasAmostras = [projeto.amostras];
         } else {
-          novasAmostras = Array.from({ length: projeto.quantidadeAmostras }, () =>
-            Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))
-          );
+          novasAmostras = Array.from({ length: projeto.quantidadeAmostras }, criarAmostraVazia);
         }
       } else {
-        novasAmostras = Array.from({ length: projeto.quantidadeAmostras }, () =>
-          Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))
-        );
+        novasAmostras = Array.from({ length: projeto.quantidadeAmostras }, criarAmostraVazia);
       }
 
       while (novasAmostras.length < projeto.quantidadeAmostras) {
-        novasAmostras.push(Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' })));
+        novasAmostras.push(criarAmostraVazia());
       }
       novasAmostras = novasAmostras.map(amostra => {
         if (Array.isArray(amostra)) {
-          while (amostra.length < 5) amostra.push({ peso: '', densidade: '', timestamp: '' });
+          while (amostra.length < PESAGENS_POR_AMOSTRA) amostra.push(criarPesagemVazia());
           return amostra;
         }
-        return Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }));
+        return criarAmostraVazia();
       });
 
       setAmostras(novasAmostras);

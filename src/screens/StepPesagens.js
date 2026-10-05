@@ -11,6 +11,7 @@ import { useProjetoForm } from '../context/form';
 import { useBle } from '../context/context';
 import { useReferenceData } from '../context/referenceData';
 import { formatCNPJ, unmaskCNPJ } from '../helpers/formatCNPJ';
+import { contarPesagensConcluidas } from '../helpers/pesagem';
 
 export default function StepPesagens({
   ultimaCalibragem,
@@ -50,7 +51,7 @@ export default function StepPesagens({
   const [buscaCliente, setBuscaCliente] = useState('');
 
   const amostraArray = amostras[amostraAtual] || [];
-  const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
+  const pesagensFeitas = contarPesagensConcluidas(amostraArray);
   const proximaPesagem = pesagensFeitas + 1;
 
   const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
@@ -156,7 +157,7 @@ export default function StepPesagens({
         <View style={styles.amostrasContainer}>
           {Array.from({ length: quantidadeAmostras }, (_, i) => {
             const amostra = amostras[i] || [];
-            const feitas = amostra.filter(p => p.peso !== '').length;
+            const feitas = contarPesagensConcluidas(amostra);
             const pesagensFaltantes = 4 - feitas;
             const amostraConcluida = feitas >= 4;
             return (
@@ -174,7 +175,7 @@ export default function StepPesagens({
                     setModalAvisoVisivel(true);
                   } else {
                     setAmostraAtual(i);
-                    const f = (amostras[i] || []).filter(p => p.peso !== '').length;
+                    const f = contarPesagensConcluidas(amostras[i]);
                     setPesagemAtual(f + 1);
                     salvarEstadoDoProjeto();
                   }

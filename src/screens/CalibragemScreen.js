@@ -11,6 +11,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
+import { paraDecimal } from '../helpers/numeros';
+import { calcularTara, normalizarCalibragem, serializarCalibragem } from '../helpers/calibragem';
 
 export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
@@ -71,27 +73,19 @@ export default function CalibragemScreen() {
     }
   }, []);
 
-  const parseInput = (input) => {
-    const sanitizedInput = input.replace(/[^0-9.]/g, '');
-    return parseFloat(sanitizedInput);
-  };
-
   useEffect(() => {
-    const atualizarCalculos = () => {
-      if (pesoVazio && pesoCheio) {
-        const pesoVazioFloat = parseInput(pesoVazio);
-        const pesoCheioFloat = parseInput(pesoCheio);
-        if (isNaN(pesoVazioFloat) || isNaN(pesoCheioFloat)) {
-          Alert.alert('Erro', 'Por favor, insira valores numéricos válidos.');
-          return;
-        }
-        const taraCalculada = pesoCheioFloat - pesoVazioFloat;
-        setTara(taraCalculada % 1 === 0 ? taraCalculada.toString() : taraCalculada.toFixed(3));
-      } else {
-        setTara('');
-      }
-    };
-    atualizarCalculos();
+    if (!pesoVazio || !pesoCheio) {
+      setTara('');
+      return;
+    }
+    const pesoVazioNumero = paraDecimal(pesoVazio);
+    const pesoCheioNumero = paraDecimal(pesoCheio);
+    if (isNaN(pesoVazioNumero) || isNaN(pesoCheioNumero)) {
+      setTara('');
+      Alert.alert('Erro', 'Por favor, insira valores numéricos válidos.');
+      return;
+    }
+    setTara(String(calcularTara(pesoVazioNumero, pesoCheioNumero)));
   }, [pesoVazio, pesoCheio]);
 
   const registrarCalibragem = async () => {
@@ -101,14 +95,18 @@ export default function CalibragemScreen() {
     }
     try {
       if (!auth.currentUser) return;
-      const timestamp = new Date();
-      const calibragem = { pesoVazio, pesoCheio, tara, timestamp, userId: auth.currentUser.uid };
-      
-      await addDoc(collection(db, 'calibragens'), { ...calibragem, companyId });
+      const calibragem = {
+        pesoVazio: paraDecimal(pesoVazio),
+        pesoCheio: paraDecimal(pesoCheio),
+        tara: paraDecimal(tara),
+        timestamp: new Date(),
+      };
 
-      await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify({ ...calibragem, timestamp: timestamp.toISOString() }));
+      await addDoc(collection(db, 'calibragens'), { ...calibragem, userId: auth.currentUser.uid, companyId });
 
-      setUltimaCalibragem({ pesoVazio, pesoCheio, tara, timestamp });
+      const calibragemNormalizada = normalizarCalibragem(calibragem);
+      await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
+      setUltimaCalibragem(calibragemNormalizada);
       Alert.alert("Sucesso", "Calibragem registrada com sucesso.");
       navigation.goBack();
     } catch (error) {

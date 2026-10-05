@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getFirestore, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { normalizarCalibragem, serializarCalibragem } from '../helpers/calibragem';
 
 const ReferenceDataContext = createContext(null);
 
@@ -32,8 +33,7 @@ export function ReferenceDataProvider({ children }) {
       setOperadores(oStr ? JSON.parse(oStr) : []);
       setClientes(clStr ? JSON.parse(clStr) : []);
       if (calStr) {
-        const cal = JSON.parse(calStr);
-        setUltimaCalibragem({ ...cal, timestamp: new Date(cal.timestamp) });
+        setUltimaCalibragem(normalizarCalibragem(JSON.parse(calStr)));
       } else {
         setUltimaCalibragem(null);
       }
@@ -90,23 +90,9 @@ export function ReferenceDataProvider({ children }) {
       ];
 
       if (!snapCal.empty) {
-        const calDoc = snapCal.docs[0].data();
-        const ts = calDoc.timestamp?.seconds
-          ? new Date(calDoc.timestamp.seconds * 1000 + calDoc.timestamp.nanoseconds / 1000000)
-          : new Date(calDoc.timestamp);
-        const calData = {
-          tara: calDoc.tara,
-          pesoCheio: calDoc.pesoCheio,
-          pesoVazio: calDoc.pesoVazio,
-          timestamp: ts,
-        };
-        setUltimaCalibragem(calData);
-        storagePromises.push(
-          AsyncStorage.setItem(KEY_ULTIMA_CALIBRAGEM, JSON.stringify({
-            ...calData,
-            timestamp: ts.toISOString(),
-          }))
-        );
+        const calibragemNormalizada = normalizarCalibragem(snapCal.docs[0].data());
+        setUltimaCalibragem(calibragemNormalizada);
+        storagePromises.push(AsyncStorage.setItem(KEY_ULTIMA_CALIBRAGEM, serializarCalibragem(calibragemNormalizada)));
       }
 
       setLastSyncedAt(new Date());

@@ -20,6 +20,12 @@ import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
+import { paraDecimal } from '../helpers/numeros';
+import { normalizarCalibragem, serializarCalibragem, calibragemDoProjeto } from '../helpers/calibragem';
+import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
+import {
+  PESAGENS_POR_AMOSTRA, criarAmostraVazia, pesagemConcluida, contarPesagensConcluidas, formatarHoraPesagem,
+} from '../helpers/pesagem';
 
 function NovaAmostraScreenInner() {
   const { companyId } = useAppAuth();
@@ -72,7 +78,7 @@ function NovaAmostraScreenInner() {
   } = useProjetoForm();
 
   const todasPesagensConcluidas = amostras.every(
-    a => a && a.filter(p => p.peso !== '').length === 5
+    a => a && contarPesagensConcluidas(a) === PESAGENS_POR_AMOSTRA
   );
 
   useEffect(() => {
@@ -139,37 +145,16 @@ function NovaAmostraScreenInner() {
           const querySnapshot = await getDocs(q);
 
           if (!querySnapshot.empty) {
-            const calibragemDoc = querySnapshot.docs[0].data();
-            const calibragemData = new Date(
-              calibragemDoc.timestamp.seconds * 1000 + calibragemDoc.timestamp.nanoseconds / 1000000
-            );
-            const horasDesdeCalibragem = Math.abs(new Date() - calibragemData) / 36e5;
-            const necessitaCalibragem = horasDesdeCalibragem > 14;
-            const dados = {
-              tara: calibragemDoc.tara,
-              pesoCheio: calibragemDoc.pesoCheio,
-              pesoVazio: calibragemDoc.pesoVazio,
-              timestamp: calibragemData,
-              necessitaCalibragem,
-            };
-            setUltimaCalibragem(dados);
-            await AsyncStorage.setItem('ultimaCalibragem', JSON.stringify({
-              ...dados, timestamp: calibragemData.toISOString(),
-            }));
+            const calibragemNormalizada = normalizarCalibragem(querySnapshot.docs[0].data());
+            setUltimaCalibragem(calibragemNormalizada);
+            await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
             return;
           }
         }
 
         const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
         if (calibragemOffline) {
-          const calibragem = JSON.parse(calibragemOffline);
-          const calibragemData = new Date(calibragem.timestamp);
-          const horasDesdeCalibragem = Math.abs(new Date() - calibragemData) / 36e5;
-          setUltimaCalibragem({
-            ...calibragem,
-            timestamp: calibragemData,
-            necessitaCalibragem: horasDesdeCalibragem > 14,
-          });
+          setUltimaCalibragem(normalizarCalibragem(JSON.parse(calibragemOffline)));
         }
       } catch (error) {
         console.error("Erro ao buscar calibragem:", error);
@@ -194,9 +179,8 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return 0;
     }
-    const tara = parseFloat(ultimaCalibragem.tara);
-    const pesoVazio = parseFloat(ultimaCalibragem.pesoVazio);
-    const pesoMedido = parseFloat(pesoVal);
+    const { tara, pesoVazio } = ultimaCalibragem;
+    const pesoMedido = paraDecimal(pesoVal);
     if (isNaN(tara) || isNaN(pesoVazio) || isNaN(pesoMedido)) {
       setMensagemAviso("Erro na calibragem ou na entrada de peso. Valores devem ser numéricos.");
       setModalAvisoVisivel(true);
@@ -211,7 +195,7 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return;
     }
-    const pesoFloat = parseFloat(pesoStr);
+    const pesoFloat = paraDecimal(pesoStr);
     if (isNaN(pesoFloat)) {
       setMensagemAviso("Peso deve ser um valor numérico.");
       setModalAvisoVisivel(true);
@@ -219,7 +203,7 @@ function NovaAmostraScreenInner() {
     }
 
     const amostraArray = amostras[amostraAtual] || [];
-    const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
+    const pesagensFeitas = contarPesagensConcluidas(amostraArray);
     const pesagemCorreta = pesagensFeitas + 1;
 
     if (pesagemCorreta > 5) {
@@ -232,7 +216,7 @@ function NovaAmostraScreenInner() {
 
     if (pesagemCorreta > 1 && pesagemCorreta <= 5) {
       const pesagemAnterior = amostraArray[pesagemCorreta - 2];
-      if (pesagemAnterior?.peso && pesoFloat > parseFloat(pesagemAnterior.peso)) {
+      if (pesagemConcluida(pesagemAnterior) && pesoFloat > paraDecimal(pesagemAnterior.peso)) {
         setMensagemAviso(
           `Peso inválido!\n\nPesagem ${pesagemCorreta} (${pesoFloat}g) é maior que a Pesagem ${pesagemCorreta - 1} (${pesagemAnterior.peso}g).\n\nAs pesagens subsequentes devem ser iguais ou menores que a anterior.`
         );
@@ -242,7 +226,7 @@ function NovaAmostraScreenInner() {
     }
 
     const densidadeCalculada = calcularDensidade(pesoFloat);
-    const timestamp = new Date().toLocaleTimeString();
+    const timestamp = new Date().toISOString();
     const pesagem = { peso: pesoFloat, densidade: densidadeCalculada, timestamp };
 
     const novasAmostras = amostras.map((a, i) => {
@@ -253,7 +237,7 @@ function NovaAmostraScreenInner() {
     setAmostras(novasAmostras);
     setPeso('');
 
-    const todasConcluidas = novasAmostras.every(a => a && a.filter(p => p.peso !== '').length >= 4);
+    const todasConcluidas = novasAmostras.every(a => a && contarPesagensConcluidas(a) >= 4);
 
     if (pesagemCorreta < 5) {
       setPesagemAtual(pesagemCorreta + 1);
@@ -285,7 +269,7 @@ function NovaAmostraScreenInner() {
     const msgs = amostras
       .map((amostra, index) => {
         if (amostra) {
-          const feitas = amostra.filter(p => p.peso !== '').length;
+          const feitas = contarPesagensConcluidas(amostra);
           if (feitas < 4) {
             const faltam = 4 - feitas;
             return `Amostra ${index + 1}: faltam ${faltam} pesagem${faltam !== 1 ? 'ns' : ''} obrigatória${faltam !== 1 ? 's' : ''}.`;
@@ -300,28 +284,26 @@ function NovaAmostraScreenInner() {
   };
 
   const prepararDadosDoProjetoParaSalvar = () => {
-    const amostrasPlanificadas = amostras.map((amostra, i) => ({ amostraId: i, pesagens: amostra }));
+    const amostrasPlanificadas = amostras.map((amostra, i) => ({
+      amostraId: i,
+      pesagens: amostra.filter(pesagemConcluida),
+    }));
     return {
       nomeProjeto: nomeProjeto.trim(),
       dataCriacao: new Date(),
       uidUsuario,
       cliente: clienteSelecionado,
-      calibragem: {
-        tara: ultimaCalibragem?.tara || 0,
-        pesoCheio: ultimaCalibragem?.pesoCheio || 0,
-        densidade: ultimaCalibragem?.densidade || 0,
-        timestamp: ultimaCalibragem?.timestamp || new Date(),
-        necessitaCalibragem: ultimaCalibragem?.necessitaCalibragem || false,
-      },
+      calibragem: calibragemDoProjeto(ultimaCalibragem),
       quantidadeAmostras,
       amostras: amostrasPlanificadas,
       companyId,
       informacoesOperacao: {
         numeroNF,
+        // TODO: gravar kg como número quando o informacoesOperacaoSchema do portal aceitar
         kgPrevisto,
         kgAplicado,
-        caminhao: caminhaoSelecionado,
-        equipe: equipeSelecionada,
+        caminhao: paraRefCaminhao(caminhaoSelecionado),
+        equipe: paraRefsEquipe(equipeSelecionada),
         informacoesGerais
       },
     };
@@ -386,7 +368,7 @@ function NovaAmostraScreenInner() {
       setModalAvisoVisivel(true);
       return;
     }
-    const algumaAmostraCompleta = amostras.some(a => a && a.filter(p => p.peso !== '').length >= 4);
+    const algumaAmostraCompleta = amostras.some(a => a && contarPesagensConcluidas(a) >= 4);
     if (!algumaAmostraCompleta) {
       setMensagemAmostrasIncompletas("Pelo menos uma amostra com 4 pesagens é necessária antes de salvar.");
       setModalAmostrasIncompletasVisivel(true);
@@ -405,7 +387,7 @@ function NovaAmostraScreenInner() {
 
   const adicionarAmostra = () => {
     setQuantidadeAmostras(quantidadeAmostras + 1);
-    setAmostras([...amostras, Array.from({ length: 5 }, () => ({ peso: '', densidade: '', timestamp: '' }))]);
+    setAmostras([...amostras, criarAmostraVazia()]);
     setModalAdicionarAmostra(false);
     salvarEstadoDoProjeto();
   };
@@ -456,13 +438,13 @@ function NovaAmostraScreenInner() {
   };
 
   const amostraArray = amostras[amostraAtual] || [];
-  const pesagensFeitas = amostraArray.filter(p => p.peso !== '').length;
+  const pesagensFeitas = contarPesagensConcluidas(amostraArray);
   const proximaPesagem = pesagensFeitas + 1;
 
   const amostrasComStatus = amostras.map((grupoAmostras, indexGrupo) => ({
     indexGrupo,
     amostra: grupoAmostras || [],
-    concluida: (grupoAmostras || []).filter(p => p.peso !== '').length >= 4,
+    concluida: contarPesagensConcluidas(grupoAmostras) >= 4,
   }));
 
   const passaNaBusca = (item) => {
@@ -479,9 +461,9 @@ function NovaAmostraScreenInner() {
       {amostra.map((pesagem, indexPesagem) => (
         <View key={indexPesagem} style={styles.tableRow}>
           <Text style={styles.historicoPesagemBold}>Pesagem {indexPesagem + 1}:</Text>
-          <Text style={styles.pesagemText}> {pesagem.peso !== '' ? `${pesagem.peso} g` : '—'}</Text>
-          <Text style={styles.pesagemText}> {pesagem.densidade !== '' ? `${pesagem.densidade} g/cm³` : ''}</Text>
-          <Text style={styles.pesagemText}> {pesagem.timestamp}</Text>
+          <Text style={styles.pesagemText}> {pesagemConcluida(pesagem) ? `${pesagem.peso} g` : '—'}</Text>
+          <Text style={styles.pesagemText}> {pesagemConcluida(pesagem) ? `${pesagem.densidade} g/cm³` : ''}</Text>
+          <Text style={styles.pesagemText}> {formatarHoraPesagem(pesagem.timestamp)}</Text>
         </View>
       ))}
     </View>

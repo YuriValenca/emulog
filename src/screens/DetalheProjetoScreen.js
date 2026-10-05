@@ -13,6 +13,7 @@ import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
 import { useAppAuth } from '../context/auth';
+import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
 
 const db = getFirestore();
 
@@ -228,14 +229,14 @@ export default function DetalheProjetoScreen() {
 
   const gerarConteudoAmostrasPDF = (amostras) => {
     return amostras.map((amostra, index) => {
-      const pesagensValidas = (amostra.pesagens || []).filter(p => p.peso !== '' && p.densidade !== '');
+      const pesagensValidas = (amostra.pesagens || []).filter(pesagemConcluida);
       return `
         ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
         <div class="amostra-box">
           <div class="amostra-header">Amostra ${amostra.amostraId + 1}</div>
           ${pesagensValidas.map((p, i) => `
             <div class="pesagem-row">
-              <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${p.timestamp}
+              <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${formatarHoraPesagem(p.timestamp)}
             </div>`).join('')}
         </div>
         ${index % 2 === 1 || index === amostras.length - 1 ? '</div>' : ''}`;
@@ -249,7 +250,7 @@ export default function DetalheProjetoScreen() {
       <View key={index} style={styles.amostraContainer}>
         <Text style={styles.amostraTitulo}>Amostra {amostra.amostraId + 1}</Text>
         {(amostra.pesagens || [])
-          .filter(pesagem => pesagem.peso !== '' && pesagem.densidade !== '')
+          .filter(pesagemConcluida)
           .map((pesagem, i) => (
             <View key={i} style={styles.pesagemContainer}>
               <View style={styles.pesagemRowHeader}>
@@ -260,7 +261,7 @@ export default function DetalheProjetoScreen() {
               <View style={styles.pesagemRow}>
                 <Text style={styles.pesagemText}>{pesagem.peso} g</Text>
                 <Text style={styles.pesagemText}>{pesagem.densidade} g/cm³</Text>
-                <Text style={styles.pesagemText}>{pesagem.timestamp}</Text>
+                <Text style={styles.pesagemText}>{formatarHoraPesagem(pesagem.timestamp)}</Text>
               </View>
             </View>
           ))}
