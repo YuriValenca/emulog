@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
@@ -7,11 +7,30 @@ import { db } from '../firebaseConfig';
 import { useAppAuth } from '../context/auth';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { buscarProjetoEmAndamento, projetoTemDados, descartarProjetoEmAndamento } from '../context/form';
+import ModalProjetoEmAndamento from './ModalProjetoEmAndamento';
 
 export default function HomeScreen({ navigation }) {
-  const { name, role, companyId, isSuperadmin, isCompanyAdmin } = useAppAuth();
+  const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin } = useAppAuth();
   const [calibragemValida, setCalibragemValida] = useState(false);
   const [balancaBtHabilitada, setBalancaBtHabilitada] = useState(false);
+  const [projetoEmAndamento, setProjetoEmAndamento] = useState(null);
+  const [modalProjetoVisivel, setModalProjetoVisivel] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const verificarProjetoEmAndamento = async () => {
+        try {
+          const projeto = await buscarProjetoEmAndamento(companyId, uid);
+          setProjetoEmAndamento(projetoTemDados(projeto) ? projeto : null);
+        } catch (e) {
+          console.error('Erro ao verificar projeto em andamento:', e);
+        }
+      };
+      verificarProjetoEmAndamento();
+    }, [companyId, uid])
+  );
 
   useEffect(() => {
     const verificarModuloBalanca = async () => {
@@ -70,6 +89,28 @@ export default function HomeScreen({ navigation }) {
       );
       return;
     }
+    if (projetoEmAndamento) {
+      setModalProjetoVisivel(true);
+      return;
+    }
+    navigation.navigate('NovaAmostra');
+  };
+
+  const continuarProjeto = () => {
+    setModalProjetoVisivel(false);
+    navigation.navigate('NovaAmostra');
+  };
+
+  const iniciarNovoProjeto = async () => {
+    setModalProjetoVisivel(false);
+    try {
+      await descartarProjetoEmAndamento();
+    } catch (e) {
+      console.error('Erro ao descartar projeto em andamento:', e);
+      Alert.alert('Erro', 'Não foi possível apagar o projeto. Tente novamente.');
+      return;
+    }
+    setProjetoEmAndamento(null);
     navigation.navigate('NovaAmostra');
   };
 
@@ -122,7 +163,7 @@ export default function HomeScreen({ navigation }) {
         style={[styles.buttonContainer, { backgroundColor: '#1F6452' }]}
         onPress={handleNovaAmostra}
       >
-        <Text style={styles.buttonText}>Novo Projeto</Text>
+        <Text style={styles.buttonText}>{projetoEmAndamento ? 'Continuar' : 'Novo Projeto'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -147,6 +188,14 @@ export default function HomeScreen({ navigation }) {
         <MaterialCommunityIcons name="logout" size={24} color="#FFFFFF" />
         <Text style={[styles.buttonText, { marginLeft: 10 }]}>Desconectar</Text>
       </TouchableOpacity>
+      <ModalProjetoEmAndamento
+        visivel={modalProjetoVisivel}
+        projeto={projetoEmAndamento}
+        onContinuar={continuarProjeto}
+        onIniciarNovo={iniciarNovoProjeto}
+        onFechar={() => setModalProjetoVisivel(false)}
+      />
+
       <Text style={styles.versionText}>Versão: 2.1.3</Text>
     </View>
   );

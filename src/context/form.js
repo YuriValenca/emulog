@@ -1,9 +1,33 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia } from '../helpers/pesagem';
+import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia, pesagemConcluida } from '../helpers/pesagem';
 
 const ProjetoFormContext = createContext(null);
 const STORAGE_KEY = 'projetoEmAndamento';
+
+const pesagensDaAmostra = (amostra) => (Array.isArray(amostra) ? amostra : amostra?.pesagens || []);
+
+export const projetoTemDados = (projeto) =>
+  !!projeto?.nomeProjeto?.trim() ||
+  (projeto?.amostras || []).some(amostra => pesagensDaAmostra(amostra).some(pesagemConcluida));
+
+export const contarPesagensDoProjeto = (projeto) =>
+  (projeto?.amostras || []).reduce(
+    (total, amostra) => total + pesagensDaAmostra(amostra).filter(pesagemConcluida).length,
+    0
+  );
+
+export const descartarProjetoEmAndamento = () => AsyncStorage.removeItem(STORAGE_KEY);
+
+export async function buscarProjetoEmAndamento(companyIdAtual, uidAtual) {
+  if (!companyIdAtual || !uidAtual) return null;
+  const projetoSalvo = await AsyncStorage.getItem(STORAGE_KEY);
+  if (!projetoSalvo) return null;
+
+  const projeto = JSON.parse(projetoSalvo);
+  const pertenceAoContextoAtual = projeto.companyId === companyIdAtual && projeto.uidUsuario === uidAtual;
+  return pertenceAoContextoAtual ? projeto : null;
+}
 
 export function ProjetoFormProvider({ children }) {
   const inicializado = useRef(false);
@@ -64,7 +88,7 @@ export function ProjetoFormProvider({ children }) {
 
   const limparEstadoDoProjeto = async () => {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await descartarProjetoEmAndamento();
     } catch (error) {
       console.error("Erro ao limpar estado do projeto:", error);
     }
@@ -89,16 +113,9 @@ export function ProjetoFormProvider({ children }) {
   const restaurarDoStorage = async (companyIdAtual, uidAtual) => {
     try {
       if (!companyIdAtual || !uidAtual) return false;
-      const projetoSalvo = await AsyncStorage.getItem(STORAGE_KEY);
-      if (!projetoSalvo) return false;
+      const projeto = await buscarProjetoEmAndamento(companyIdAtual, uidAtual);
 
-      const projeto = JSON.parse(projetoSalvo);
-
-      const pertenceAoContextoAtual =
-        projeto.companyId === companyIdAtual &&
-        projeto.uidUsuario === uidAtual;
-
-      if (!pertenceAoContextoAtual) {
+      if (!projeto) {
         await limparEstadoDoProjeto();
         return false;
       }

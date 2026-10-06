@@ -43,7 +43,6 @@ function NovaAmostraScreenInner() {
   const [amostraPesquisa, setAmostraPesquisa] = useState('');
   const [modalAdicionarAmostra, setModalAdicionarAmostra] = useState(false);
   const [modalConfirmacaoVisivel, setModalConfirmacaoVisivel] = useState(false);
-  const [modalProjetoExistenteVisivel, setModalProjetoExistenteVisivel] = useState(false);
   const [modalInformacoesAdicionaisVisivel, setModalInformacoesAdicionaisVisivel] = useState(false);
   const [modalAmostrasIncompletasVisivel, setModalAmostrasIncompletasVisivel] = useState(false);
   const [mensagemAmostrasIncompletas, setMensagemAmostrasIncompletas] = useState('');
@@ -166,12 +165,7 @@ function NovaAmostraScreenInner() {
   }, [companyId]);
 
   useEffect(() => {
-    const init = async () => {
-      if (!companyId || !uidUsuario) return;
-      const tinha = await restaurarDoStorage(companyId, uidUsuario);
-      if (tinha) setModalProjetoExistenteVisivel(true);
-    };
-    init();
+    if (companyId && uidUsuario) restaurarDoStorage(companyId, uidUsuario);
   }, [companyId, uidUsuario]);
 
   const calcularDensidade = (pesoVal) => {
@@ -660,38 +654,6 @@ function NovaAmostraScreenInner() {
         </View>
       </Modal>
 
-      <Modal
-        animationType="slide"
-        transparent
-        visible={modalProjetoExistenteVisivel}
-        onRequestClose={() => setModalProjetoExistenteVisivel(false)}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>
-              Você tem um projeto em andamento. Deseja continuar ou iniciar um novo?
-            </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.salvarButton]}
-              onPress={() => setModalProjetoExistenteVisivel(false)}
-            >
-              <Ionicons name="play-circle" size={24} color="#FFF" />
-              <Text style={styles.textStyle}>Continuar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelarButton]}
-              onPress={() => {
-                resetarFormulario();
-                setModalProjetoExistenteVisivel(false);
-                setCurrentStep(1);
-              }}
-            >
-              <Ionicons name="refresh-circle" size={24} color="#FFF" />
-              <Text style={styles.textStyle}>Iniciar Novo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
       <Modal
         animationType="slide"
         transparent
