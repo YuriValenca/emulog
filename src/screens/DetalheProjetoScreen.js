@@ -14,6 +14,7 @@ import InformacoesOperacao from './InformacoesOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
+import { paraData, mesmoDia } from '../helpers/datas';
 
 const db = getFirestore();
 
@@ -35,6 +36,9 @@ export default function DetalheProjetoScreen() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        data.dataConclusao = data.dataConclusao && !mesmoDia(data.dataCriacao, data.dataConclusao)
+          ? paraData(data.dataConclusao).toLocaleDateString()
+          : null;
         if (data.dataCriacao && typeof data.dataCriacao.toDate === 'function') {
           data.dataCriacao = data.dataCriacao.toDate().toLocaleDateString();
         } else if (typeof data.dataCriacao === 'string') {
@@ -181,6 +185,7 @@ export default function DetalheProjetoScreen() {
             <h1>Projeto: ${projeto.nomeProjeto}</h1>
             ${projeto.cliente ? `<p style="margin: 0; color: #555;"><strong>Cliente:</strong> ${projeto.cliente.nome}</p>` : ''}
             <p style="margin: 4px 0 0 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
+            ${projeto.dataConclusao ? `<p style="margin: 4px 0 0 0; color: #555;"><strong>Data de Conclusão:</strong> ${projeto.dataConclusao}</p>` : ''}
             <p style="margin: 4px 0 0 0; color: #555;">
               <strong>Calibragem:</strong>
               Tara ${projeto.calibragem?.tara || '—'} ·
@@ -358,6 +363,13 @@ export default function DetalheProjetoScreen() {
 
       <Text style={styles.label}>Data de Criação</Text>
       <Text style={styles.valor}>{projeto.dataCriacao}</Text>
+
+      {projeto.dataConclusao ? (
+        <>
+          <Text style={styles.label}>Data de Conclusão</Text>
+          <Text style={styles.valor}>{projeto.dataConclusao}</Text>
+        </>
+      ) : null}
 
       <Text style={styles.label}>Calibragem</Text>
       <View style={styles.calibragemBox}>

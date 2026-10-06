@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { db } from './firebaseConfig';
-import { collection, addDoc, setDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc, Timestamp, writeBatch } from 'firebase/firestore';
 import { Alert } from 'react-native';
+import { sincronizarRascunhosDaUltimaSessao } from './rascunhos';
 
 export const saveProjectOffline = async (project) => {
   try {
@@ -45,6 +46,21 @@ const removeOfflineProject = async (localId) => {
   }
 };
 
+const paraTimestamp = (valor) => (valor ? Timestamp.fromDate(new Date(valor)) : valor);
+
+async function salvarProjetoComIdDoRascunho({ id, ...projeto }, meta) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'projetos', id), projeto);
+  batch.set(doc(db, 'projetos_meta', id), meta);
+  await batch.commit();
+}
+
+// TODO: remover quando não houver mais projetos offline salvos sem id (versões anteriores aos rascunhos)
+async function salvarProjetoLegado(projeto, meta) {
+  const docRef = await addDoc(collection(db, 'projetos'), projeto);
+  await setDoc(doc(db, 'projetos_meta', docRef.id), meta);
+}
+
 let isSyncing = false;
 
 export const syncProjects = async () => {
@@ -63,26 +79,27 @@ export const syncProjects = async () => {
 
       const { _localId, ...projectSemLocalId } = project;
 
-      const dataCriacaoTimestamp = Timestamp.fromDate(new Date(projectSemLocalId.dataCriacao));
-      const calibragemTimestamp = projectSemLocalId.calibragem?.timestamp
-        ? Timestamp.fromDate(new Date(projectSemLocalId.calibragem.timestamp))
-        : projectSemLocalId.calibragem?.timestamp;
-
+      const dataCriacaoTimestamp = paraTimestamp(projectSemLocalId.dataCriacao);
       const projectParaSalvar = {
         ...projectSemLocalId,
         dataCriacao: dataCriacaoTimestamp,
+        ...(projectSemLocalId.dataConclusao && { dataConclusao: paraTimestamp(projectSemLocalId.dataConclusao) }),
         calibragem: projectSemLocalId.calibragem
-          ? { ...projectSemLocalId.calibragem, timestamp: calibragemTimestamp }
+          ? { ...projectSemLocalId.calibragem, timestamp: paraTimestamp(projectSemLocalId.calibragem.timestamp) }
           : projectSemLocalId.calibragem,
       };
-
-      const docRef = await addDoc(collection(db, 'projetos'), projectParaSalvar);
-      await setDoc(doc(db, 'projetos_meta', docRef.id), {
+      const meta = {
         nomeProjeto: projectSemLocalId.nomeProjeto,
         dataCriacao: dataCriacaoTimestamp,
         uidUsuario: projectSemLocalId.uidUsuario,
         companyId: projectSemLocalId.companyId,
-      });
+      };
+
+      if (projectParaSalvar.id) {
+        await salvarProjetoComIdDoRascunho(projectParaSalvar, meta);
+      } else {
+        await salvarProjetoLegado(projectParaSalvar, meta);
+      }
       await removeOfflineProject(_localId);
       console.log('Projeto sincronizado com Firestore:', projectSemLocalId);
     }
@@ -96,18 +113,22 @@ export const syncProjects = async () => {
 };
 
 let isListenerSet = false;
-let wasConnected = null;
+let estavaOnline = null;
+
+// Mesmo critério do estaOnline: Wi-Fi sem internet não conta como reconexão
+const estadoOnline = (state) => !!state.isConnected && state.isInternetReachable !== false;
 
 export const checkConnectionAndSync = () => {
   if (isListenerSet) return;
   isListenerSet = true;
 
   NetInfo.addEventListener(async state => {
-    const isNowConnected = !!state.isConnected;
-    if (isNowConnected && wasConnected === false) {
+    const estaOnlineAgora = estadoOnline(state);
+    if (estaOnlineAgora && estavaOnline === false) {
       console.log('Dispositivo reconectou, sincronizando...');
       await syncProjects();
+      await sincronizarRascunhosDaUltimaSessao();
     }
-    wasConnected = isNowConnected;
+    estavaOnline = estaOnlineAgora;
   });
 };

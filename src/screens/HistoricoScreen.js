@@ -1,22 +1,46 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet,
-  TouchableOpacity, Modal, ActivityIndicator,
+  TouchableOpacity, Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import NetInfo from '@react-native-community/netinfo';
 import { useAppAuth } from '../context/auth';
 import { db } from '../firebaseConfig';
+import {
+  buscarProjetoEmAndamento, definirProjetoEmAndamento, descartarProjetoEmAndamento,
+  projetoTemDados, contarPesagensDoProjeto,
+} from '../context/form';
+import {
+  listarRascunhosDoHistorico, salvarComoRascunho, removerRascunhoLocal, excluirRascunho,
+} from '../rascunhos';
+import { paraData, formatarDataHora, mesmoDia } from '../helpers/datas';
+import { textoAmostras, textoPesagens } from '../helpers/pesagem';
 
 const PROJETOS_POR_PAGINA = 15;
 
+const ABA_CONCLUIDOS = 'concluidos';
+const ABA_RASCUNHOS = 'rascunhos';
+
+const nomeDoRascunho = (rascunho) => rascunho.nomeProjeto?.trim() || 'Sem nome';
+
+const momentoDoRascunho = (rascunho) =>
+  paraData(rascunho.dataAtualizacao || rascunho.dataCriacao || 0).getTime() || 0;
+
+const formatarConclusaoSeOutroDia = (projeto) =>
+  projeto.dataConclusao && !mesmoDia(projeto.dataCriacao, projeto.dataConclusao)
+    ? formatarDataHora(projeto.dataConclusao)
+    : null;
+
 export default function HistoricoScreen() {
   const [todosMetadados, setTodosMetadados] = useState([]);
+  const [rascunhos, setRascunhos] = useState([]);
+  const [abaAtiva, setAbaAtiva] = useState(ABA_CONCLUIDOS);
   const [projetosDaPagina, setProjetosDaPagina] = useState([]);
 
   const [ordem, setOrdem] = useState('recente');
@@ -36,6 +60,7 @@ export default function HistoricoScreen() {
 
   const navigation = useNavigation();
   const { uid, role, companyId } = useAppAuth();
+  const sessao = { companyId, uid };
 
   const getTimestamp = (dataCriacao) => {
     if (dataCriacao?.seconds) return dataCriacao.seconds * 1000;
@@ -141,6 +166,118 @@ export default function HistoricoScreen() {
     buscarMetadados();
   }, [buscarMetadados]);
 
+  const carregarRascunhos = useCallback(async () => {
+    try {
+      const emAndamento = await buscarProjetoEmAndamento(companyId, uid);
+      const salvos = await listarRascunhosDoHistorico(sessao, role, emAndamento?.id);
+      const aberto = projetoTemDados(emAndamento) ? [{ ...emAndamento, emAndamento: true }] : [];
+      setRascunhos([...aberto, ...salvos]);
+    } catch (e) {
+      logErro(`Erro ao carregar rascunhos: ${e.message}`);
+    }
+  }, [companyId, uid, role]);
+
+  useFocusEffect(
+    useCallback(() => {
+      carregarRascunhos();
+    }, [carregarRascunhos])
+  );
+
+  const rascunhosFiltrados = React.useMemo(() => {
+    const lower = busca.trim().toLowerCase();
+    return rascunhos
+      .filter(r => !lower || nomeDoRascunho(r).toLowerCase().includes(lower))
+      .sort((a, b) => (ordem === 'recente'
+        ? momentoDoRascunho(b) - momentoDoRascunho(a)
+        : momentoDoRascunho(a) - momentoDoRascunho(b)));
+  }, [rascunhos, busca, ordem]);
+
+  const trocarParaRascunho = async (rascunho, emAndamento) => {
+    try {
+      if (emAndamento) await salvarComoRascunho(emAndamento, sessao);
+      await definirProjetoEmAndamento(rascunho, companyId, uid);
+      await removerRascunhoLocal(rascunho.id, sessao);
+      navigation.navigate('NovaAmostra');
+    } catch (e) {
+      console.error('Erro ao abrir rascunho:', e);
+      Alert.alert('Erro', 'Não foi possível abrir o rascunho. Tente novamente.');
+    }
+  };
+
+  const abrirRascunho = async (rascunho) => {
+    if (rascunho.emAndamento) {
+      navigation.navigate('NovaAmostra');
+      return;
+    }
+    const emAndamento = await buscarProjetoEmAndamento(companyId, uid);
+    if (!projetoTemDados(emAndamento)) {
+      trocarParaRascunho(rascunho, null);
+      return;
+    }
+    Alert.alert(
+      'Projeto em andamento',
+      `"${nomeDoRascunho(emAndamento)}" será salvo como rascunho.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Continuar', onPress: () => trocarParaRascunho(rascunho, emAndamento) },
+      ]
+    );
+  };
+
+  const confirmarExclusaoDoRascunho = (rascunho) => {
+    Alert.alert(
+      'Excluir rascunho?',
+      `"${nomeDoRascunho(rascunho)}" será apagado.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (rascunho.emAndamento) await descartarProjetoEmAndamento(companyId, uid);
+              if (rascunho.id) await excluirRascunho(rascunho.id, sessao);
+              setRascunhos(atuais => atuais.filter(r => r.id !== rascunho.id));
+            } catch (e) {
+              console.error('Erro ao excluir rascunho:', e);
+              Alert.alert('Erro', 'Não foi possível excluir o rascunho. Tente novamente.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderRascunho = (rascunho) => (
+    <View style={[styles.projetoCard, styles.rascunhoCard]}>
+      <View style={styles.projetoInfo}>
+        <View style={styles.seloRascunho}>
+          <Text style={styles.seloRascunhoTexto}>{rascunho.emAndamento ? 'EM ANDAMENTO' : 'RASCUNHO'}</Text>
+        </View>
+        <Text style={styles.projetoNome}>{nomeDoRascunho(rascunho)}</Text>
+        {rascunho.clienteSelecionado?.nome ? (
+          <Text style={styles.projetoCliente}>{rascunho.clienteSelecionado.nome}</Text>
+        ) : null}
+        <Text style={styles.projetoData}>
+          {textoAmostras(rascunho.amostras?.length || 0)} - {textoPesagens(contarPesagensDoProjeto(rascunho))}
+        </Text>
+        <Text style={styles.projetoData}>
+          Atualizado em {formatarDataHora(rascunho.dataAtualizacao || rascunho.dataCriacao)}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.excluirRascunhoBtn}
+        onPress={() => confirmarExclusaoDoRascunho(rascunho)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={20} color="#D32F2F" />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.verMaisBtn} onPress={() => abrirRascunho(rascunho)} activeOpacity={0.8}>
+        <Ionicons name="play" size={18} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+
   const metadataFiltrada = React.useMemo(() => {
     let resultado = [...todosMetadados];
 
@@ -210,6 +347,7 @@ export default function HistoricoScreen() {
       .map(p => ({
         ...p,
         dataCriacaoFormatada: convertTimestampToDateTime(p.dataCriacao),
+        dataConclusaoFormatada: formatarConclusaoSeOutroDia(p),
       }));
 
     setProjetosDaPagina(ordenados);
@@ -276,6 +414,36 @@ export default function HistoricoScreen() {
         </View>
       </View>
 
+      <View style={styles.abaContainer}>
+        {[
+          { id: ABA_CONCLUIDOS, rotulo: `Concluídos (${totalFiltrado})` },
+          { id: ABA_RASCUNHOS, rotulo: `Rascunhos (${rascunhosFiltrados.length})` },
+        ].map(aba => (
+          <TouchableOpacity
+            key={aba.id}
+            style={[styles.abaBtn, abaAtiva === aba.id && styles.abaBtnAtiva]}
+            onPress={() => setAbaAtiva(aba.id)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.abaBtnTexto, abaAtiva === aba.id && styles.abaBtnTextoAtivo]}>{aba.rotulo}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {abaAtiva === ABA_RASCUNHOS ? (
+        <FlatList
+          data={rascunhosFiltrados}
+          keyExtractor={(item) => item.id || 'em-andamento'}
+          renderItem={({ item }) => renderRascunho(item)}
+          ListEmptyComponent={
+            <View style={styles.vazioContainer}>
+              <Ionicons name="document-text-outline" size={48} color="#ddd" />
+              <Text style={styles.vazioTexto}>Nenhum rascunho encontrado</Text>
+            </View>
+          }
+        />
+      ) : (
+      <>
       <Text style={styles.resumo}>
         {totalFiltrado} projeto{totalFiltrado !== 1 ? 's' : ''} encontrado{totalFiltrado !== 1 ? 's' : ''} · Página {paginaAtual} de {totalPaginas}
       </Text>
@@ -298,6 +466,9 @@ export default function HistoricoScreen() {
                 <Text style={styles.projetoCliente}>{item.cliente.nome}</Text>
               ) : null}
               <Text style={styles.projetoData}>{item.dataCriacaoFormatada}</Text>
+              {item.dataConclusaoFormatada ? (
+                <Text style={styles.projetoData}>Concluído em {item.dataConclusaoFormatada}</Text>
+              ) : null}
               </View>
               <TouchableOpacity
                 style={styles.verMaisBtn}
@@ -356,6 +527,8 @@ export default function HistoricoScreen() {
             ) : null
           }
         />
+      )}
+      </>
       )}
 
       <Modal
@@ -443,6 +616,24 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   projetoCliente: { fontSize: 13, color: '#1F6452', fontWeight: '600' },
+  abaContainer: {
+    flexDirection: 'row', borderRadius: 10, backgroundColor: '#f0f0f0',
+    padding: 4, marginBottom: 12,
+  },
+  abaBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  abaBtnAtiva: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  abaBtnTexto: { fontSize: 14, color: '#888', fontWeight: '600' },
+  abaBtnTextoAtivo: { color: '#1F6452' },
+  rascunhoCard: { backgroundColor: '#fff8e1', borderColor: '#FF9621' },
+  seloRascunho: {
+    alignSelf: 'flex-start', backgroundColor: '#FF9621', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4,
+  },
+  seloRascunhoTexto: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  excluirRascunhoBtn: {
+    borderWidth: 1, borderColor: '#D32F2F', borderRadius: 8, padding: 9,
+    alignItems: 'center', justifyContent: 'center', marginLeft: 10, backgroundColor: '#fff',
+  },
   vazioContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
   vazioTexto: { color: '#ccc', fontSize: 15 },
   paginacaoContainer: {
