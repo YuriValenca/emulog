@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ColorPicker from 'react-native-wheel-color-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { formatCNPJ, unmaskCNPJ } from '../../helpers/formatCNPJ';
 import {
   getFirestore, collection, query, where,
   getDocs, addDoc, deleteDoc, doc,
@@ -54,7 +55,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
     if (companyToEdit) {
       setForm({
         name: companyToEdit.name || '',
-        cnpj: companyToEdit.cnpj || '',
+        cnpj: unmaskCNPJ(companyToEdit.cnpj || ''),
         logo: companyToEdit.logo || '',
         primaryColor: companyToEdit.primaryColor || '#9E9E9E',
         active: !!companyToEdit.active,
@@ -93,14 +94,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
   };
 
   const handleCnpjChange = (text) => {
-    const raw = text.replace(/\D/g, '');
-    let masked = '';
-    if (raw.length <= 2) masked = raw;
-    else if (raw.length <= 5) masked = `${raw.slice(0, 2)}.${raw.slice(2)}`;
-    else if (raw.length <= 8) masked = `${raw.slice(0, 2)}.${raw.slice(2, 5)}.${raw.slice(5)}`;
-    else if (raw.length <= 12) masked = `${raw.slice(0, 2)}.${raw.slice(2, 5)}.${raw.slice(5, 8)}/${raw.slice(8)}`;
-    else masked = `${raw.slice(0, 2)}.${raw.slice(2, 5)}.${raw.slice(5, 8)}/${raw.slice(8, 12)}-${raw.slice(12, 14)}`;
-    setForm(p => ({ ...p, cnpj: masked }));
+    setForm(p => ({ ...p, cnpj: unmaskCNPJ(text).slice(0, 14) }));
   };
 
   const pickAndUploadLogo = async () => {
@@ -216,7 +210,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
             <Text style={styles.formLabel}>CNPJ</Text>
             <TextInput
               style={styles.formInput}
-              value={form.cnpj}
+              value={formatCNPJ(form.cnpj)}
               onChangeText={handleCnpjChange}
               placeholder="00.000.000/0000-00"
               placeholderTextColor="#888888"

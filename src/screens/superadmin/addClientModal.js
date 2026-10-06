@@ -4,7 +4,7 @@ import {
   TextInput, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { formatCNPJ, isValidCNPJ } from '../../helpers/formatCNPJ';
+import { formatCNPJ, unmaskCNPJ, isValidCNPJ } from '../../helpers/formatCNPJ';
 
 export default function ModalCliente({ visible, onClose, onSave, saving, companyName, clientToEdit }) {
   const [nome, setNome] = useState('');
@@ -16,7 +16,7 @@ export default function ModalCliente({ visible, onClose, onSave, saving, company
   useEffect(() => {
     if (visible) {
       setNome(clientToEdit?.nome || '');
-      setCnpj(clientToEdit?.cnpj || '');
+      setCnpj(unmaskCNPJ(clientToEdit?.cnpj || ''));
       setEndereco(clientToEdit?.endereco || '');
     }
   }, [visible, clientToEdit]);
@@ -79,7 +79,7 @@ export default function ModalCliente({ visible, onClose, onSave, saving, company
             <TextInput
               style={styles.input}
               value={formatCNPJ(cnpj)}
-              onChangeText={setCnpj}
+              onChangeText={(texto) => setCnpj(unmaskCNPJ(texto))}
               placeholder="00.000.000/0000-00"
               placeholderTextColor="#888888"
               editable={!saving}

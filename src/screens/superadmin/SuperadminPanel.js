@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { auth, secondaryAuth } from '../../firebaseConfig';
 import BackButton from '../BackButton';
+import { unmaskCNPJ } from '../../helpers/formatCNPJ';
 import ModalEmpresa from './addCompanyModal';
 import ModalGerarLicencas from './addLicenseModal';
 import ModalAdicionarUsuario from './addUserModal';
@@ -118,7 +119,7 @@ export default function SuperadminPanel() {
       if (selectedCompany) {
         await updateDoc(doc(db, 'companies', selectedCompany.id), {
           name: formData.name.trim(),
-          cnpj: formData.cnpj.trim(),
+          cnpj: unmaskCNPJ(formData.cnpj) || null,
           logo: formData.logo,
           primaryColor: formData.primaryColor,
           active: formData.active,
@@ -126,7 +127,7 @@ export default function SuperadminPanel() {
       } else {
         await addDoc(collection(db, 'companies'), {
           name: formData.name.trim(),
-          cnpj: formData.cnpj.trim(),
+          cnpj: unmaskCNPJ(formData.cnpj) || null,
           logo: formData.logo,
           primaryColor: formData.primaryColor,
           active: formData.active,

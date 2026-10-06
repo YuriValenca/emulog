@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { formatCNPJ } from '../../helpers/formatCNPJ';
 
 export default function AbaEmpresas({
   companies,
@@ -27,7 +28,7 @@ export default function AbaEmpresas({
           <TouchableOpacity style={styles.cardTopRow} onPress={() => onEditPress(c)} activeOpacity={0.9}>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardNome}>{c.name}</Text>
-              <Text style={styles.cardSub}>{c.cnpj || '—'}</Text>
+              <Text style={styles.cardSub}>{c.cnpj ? formatCNPJ(c.cnpj) : '—'}</Text>
               {c.founding && <Text style={styles.foundingTag}>✦ Founding — sem limite de licenças</Text>}
               <Text style={styles.cardMeta}>
                 {licenses.filter(l => l.companyId === c.id).length} licença(s) · criada em {formatDate(c.createdAt)}
