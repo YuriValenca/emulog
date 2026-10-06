@@ -11,6 +11,9 @@ export const pesagemConcluida = (pesagem) =>
 
 export const contarPesagensConcluidas = (amostra) => (amostra || []).filter(pesagemConcluida).length;
 
+export const textoPesagens = (quantidade) => (quantidade === 1 ? '1 pesagem' : `${quantidade} pesagens`);
+export const textoAmostras = (quantidade) => (quantidade === 1 ? '1 amostra' : `${quantidade} amostras`);
+
 export function formatarHoraPesagem(timestamp) {
   if (!timestamp) return '';
   const data = new Date(timestamp);
