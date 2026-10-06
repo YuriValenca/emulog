@@ -7,12 +7,12 @@ import { db } from '../firebaseConfig';
 import BackButton from './BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraDecimal } from '../helpers/numeros';
-import { calcularTara, normalizarCalibragem, serializarCalibragem } from '../helpers/calibragem';
+import { calcularTara, normalizarCalibragem } from '../helpers/calibragem';
+import { guardarCalibragemNoAparelho } from '../calibragemLocal';
 
 export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
@@ -105,7 +105,7 @@ export default function CalibragemScreen() {
       await addDoc(collection(db, 'calibragens'), { ...calibragem, userId: auth.currentUser.uid, companyId });
 
       const calibragemNormalizada = normalizarCalibragem(calibragem);
-      await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
+      await guardarCalibragemNoAparelho(companyId, calibragemNormalizada);
       setUltimaCalibragem(calibragemNormalizada);
       Alert.alert("Sucesso", "Calibragem registrada com sucesso.");
       navigation.goBack();

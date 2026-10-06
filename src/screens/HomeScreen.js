@@ -6,11 +6,11 @@ import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from '
 import { db } from '../firebaseConfig';
 import { useAppAuth } from '../context/auth';
 import NetInfo from '@react-native-community/netinfo';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { buscarProjetoEmAndamento, projetoTemDados, descartarProjetoEmAndamento } from '../context/form';
 import ModalProjetoEmAndamento from './ModalProjetoEmAndamento';
 import { salvarComoRascunho, excluirRascunho, sincronizarRascunhos } from '../rascunhos';
+import { lerCalibragemDoAparelho } from '../calibragemLocal';
 
 export default function HomeScreen({ navigation }) {
   const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin } = useAppAuth();
@@ -75,8 +75,7 @@ export default function HomeScreen({ navigation }) {
             return;
           }
         }
-        const stored = await AsyncStorage.getItem('ultimaCalibragem');
-        if (stored) setCalibragemValida(true);
+        if (await lerCalibragemDoAparelho(companyId)) setCalibragemValida(true);
       } catch (e) {
         console.error('Erro ao verificar calibragem:', e);
       }

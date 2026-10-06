@@ -2,14 +2,14 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getFirestore, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { normalizarCalibragem, serializarCalibragem } from '../helpers/calibragem';
+import { normalizarCalibragem } from '../helpers/calibragem';
+import { lerCalibragemDoAparelho, guardarCalibragemNoAparelho } from '../calibragemLocal';
 
 const ReferenceDataContext = createContext(null);
 
 const keyCaminhoes = (companyId) => `cachedCaminhoes:${companyId}`;
 const keyOperadores = (companyId) => `cachedOperadores:${companyId}`;
 const keyClientes = (companyId) => `cachedClientes:${companyId}`;
-const KEY_ULTIMA_CALIBRAGEM = 'ultimaCalibragem';
 
 export function ReferenceDataProvider({ children }) {
   const [caminhoes, setCaminhoes] = useState([]);
@@ -23,20 +23,16 @@ export function ReferenceDataProvider({ children }) {
   const hydrateFromStorage = useCallback(async (companyId) => {
     if (!companyId) return;
     try {
-      const [cStr, oStr, clStr, calStr] = await Promise.all([
+      const [cStr, oStr, clStr, calibragem] = await Promise.all([
         AsyncStorage.getItem(keyCaminhoes(companyId)),
         AsyncStorage.getItem(keyOperadores(companyId)),
         AsyncStorage.getItem(keyClientes(companyId)),
-        AsyncStorage.getItem(KEY_ULTIMA_CALIBRAGEM),
+        lerCalibragemDoAparelho(companyId),
       ]);
       setCaminhoes(cStr ? JSON.parse(cStr) : []);
       setOperadores(oStr ? JSON.parse(oStr) : []);
       setClientes(clStr ? JSON.parse(clStr) : []);
-      if (calStr) {
-        setUltimaCalibragem(normalizarCalibragem(JSON.parse(calStr)));
-      } else {
-        setUltimaCalibragem(null);
-      }
+      setUltimaCalibragem(calibragem);
     } catch (e) {
       console.warn('Erro ao hidratar dados de referência do storage:', e);
     } finally {
@@ -92,7 +88,7 @@ export function ReferenceDataProvider({ children }) {
       if (!snapCal.empty) {
         const calibragemNormalizada = normalizarCalibragem(snapCal.docs[0].data());
         setUltimaCalibragem(calibragemNormalizada);
-        storagePromises.push(AsyncStorage.setItem(KEY_ULTIMA_CALIBRAGEM, serializarCalibragem(calibragemNormalizada)));
+        storagePromises.push(guardarCalibragemNoAparelho(companyId, calibragemNormalizada));
       }
 
       setLastSyncedAt(new Date());

@@ -11,10 +11,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
 import { saveProjectOffline, checkConnectionAndSync } from '../db';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
 import { ProjetoFormProvider, useProjetoForm, contarPesagensDoProjeto } from '../context/form';
 import { excluirRascunho } from '../rascunhos';
+import { lerCalibragemDoAparelho, guardarCalibragemNoAparelho } from '../calibragemLocal';
 import { estaOnline, comTempoLimite, estourouTempoLimite } from '../helpers/rede';
 import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
@@ -22,7 +22,7 @@ import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraDecimal, paraKg } from '../helpers/numeros';
 import {
-  normalizarCalibragem, serializarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
+  normalizarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
 } from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaAvancar } from '../helpers/pendencias';
@@ -135,7 +135,7 @@ function NovaAmostraScreenInner() {
       if (querySnapshot.empty) return null;
 
       const calibragemNormalizada = normalizarCalibragem(querySnapshot.docs[0].data());
-      await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
+      await guardarCalibragemNoAparelho(companyId, calibragemNormalizada);
       return calibragemNormalizada;
     } catch (error) {
       console.warn('Calibragem online indisponível, usando a do aparelho:', error.message);
@@ -143,14 +143,9 @@ function NovaAmostraScreenInner() {
     }
   };
 
-  const buscarCalibragemDoAparelho = async () => {
-    const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
-    return calibragemOffline ? normalizarCalibragem(JSON.parse(calibragemOffline)) : null;
-  };
-
   const buscarUltimaCalibragem = async () => {
     try {
-      const calibragem = (await buscarCalibragemOnline()) ?? (await buscarCalibragemDoAparelho());
+      const calibragem = (await buscarCalibragemOnline()) ?? (await lerCalibragemDoAparelho(companyId));
       if (calibragem) setUltimaCalibragem(calibragem);
     } catch (error) {
       console.error("Erro ao buscar calibragem:", error);
