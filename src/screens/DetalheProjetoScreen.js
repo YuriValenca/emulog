@@ -15,6 +15,7 @@ import { LOGO_BASE_64 } from '../assets/base64Logo';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
 import { paraData, mesmoDia } from '../helpers/datas';
+import { calibragemVencidaNoProjeto } from '../helpers/calibragem';
 import { kgPreenchido, formatarKg } from '../helpers/numeros';
 
 const db = getFirestore();
@@ -37,6 +38,7 @@ export default function DetalheProjetoScreen() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        data.calibragemVencida = calibragemVencidaNoProjeto(data);
         data.dataConclusao = data.dataConclusao && !mesmoDia(data.dataCriacao, data.dataConclusao)
           ? paraData(data.dataConclusao).toLocaleDateString()
           : null;
@@ -191,7 +193,7 @@ export default function DetalheProjetoScreen() {
               <strong>Calibragem:</strong>
               Tara ${projeto.calibragem?.tara || '—'} ·
               Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
-              ${projeto.calibragem?.necessitaCalibragem ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
+              ${projeto.calibragemVencida ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
             </p>
           </div>
         </div>
@@ -384,8 +386,8 @@ export default function DetalheProjetoScreen() {
         </View>
         <View style={styles.calibragemRow}>
           <Text style={styles.calibragemLabel}>Necessita Calibragem</Text>
-          <Text style={[styles.calibragemValor, { color: projeto.calibragem?.necessitaCalibragem ? '#D32F2F' : '#4CAF50' }]}>
-            {projeto.calibragem?.necessitaCalibragem ? 'Sim' : 'Não'}
+          <Text style={[styles.calibragemValor, { color: projeto.calibragemVencida ? '#D32F2F' : '#4CAF50' }]}>
+            {projeto.calibragemVencida ? 'Sim' : 'Não'}
           </Text>
         </View>
       </View>

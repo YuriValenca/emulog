@@ -8,9 +8,13 @@ export function calcularTara(pesoVazio, pesoCheio) {
   return Number((pesoCheio - pesoVazio).toFixed(3));
 }
 
-export function precisaRecalibrar(timestamp) {
-  return Math.abs(Date.now() - timestamp.getTime()) / MS_POR_HORA > HORAS_ATE_RECALIBRAGEM;
+export function precisaRecalibrar(timestamp, referencia = new Date()) {
+  return Math.abs(referencia.getTime() - timestamp.getTime()) / MS_POR_HORA > HORAS_ATE_RECALIBRAGEM;
 }
+
+export const calibragemVencidaNoProjeto = (projeto) =>
+  !!projeto.calibragem?.timestamp && !!projeto.dataCriacao
+  && precisaRecalibrar(paraData(projeto.calibragem.timestamp), paraData(projeto.dataCriacao));
 
 export function normalizarCalibragem(bruta) {
   const timestamp = paraData(bruta.timestamp);
@@ -40,7 +44,5 @@ export function calibragemDoProjeto(calibragem) {
     pesoCheio: calibragem?.pesoCheio ?? 0,
     pesoVazio: calibragem?.pesoVazio ?? 0,
     timestamp: calibragem?.timestamp ?? new Date(),
-    // TODO: remover quando o projetoCalibragemSchema do portal deixar de exigir o campo
-    necessitaCalibragem: calibragem?.necessitaCalibragem ?? false,
   };
 }
