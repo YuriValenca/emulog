@@ -3,6 +3,8 @@ import { collection, doc, setDoc, deleteDoc, getDocs, query, where, Timestamp } 
 import { db } from './firebaseConfig';
 import { paraData } from './helpers/datas';
 import { estaOnline, comTempoLimite } from './helpers/rede';
+import { pesagemConcluida } from './helpers/pesagem';
+import { paraRefCaminhao, paraRefsEquipe } from './helpers/referencias';
 
 const COLECAO = 'projetos_rascunho';
 const TEMPO_LIMITE_FIRESTORE_MS = 10000;
@@ -24,12 +26,31 @@ const gravarJson = (chave, valor) => AsyncStorage.setItem(chave, JSON.stringify(
 
 const pesagensDaAmostra = (amostra) => (Array.isArray(amostra) ? amostra : amostra?.pesagens || []);
 
+// No Firestore o rascunho segue o formato de projetos (cliente, informacoesOperacao, só pesagens feitas),
+// que é o que o portal lê; no aparelho continua no formato do formulário
 function paraFirestore(rascunho) {
-  const { peso, uidSessao, ...dados } = JSON.parse(JSON.stringify(rascunho));
+  const {
+    peso, uidSessao,
+    clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
+    numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
+    ...dados
+  } = JSON.parse(JSON.stringify(rascunho));
   return {
     ...dados,
+    cliente: clienteSelecionado ?? null,
+    informacoesOperacao: {
+      numeroNF: numeroNF ?? '',
+      kgPrevisto: kgPrevisto ?? '',
+      kgAplicado: kgAplicado ?? '',
+      caminhao: paraRefCaminhao(caminhaoSelecionado),
+      equipe: paraRefsEquipe(equipeSelecionada),
+      informacoesGerais: informacoesGerais ?? '',
+    },
     // Firestore não aceita array dentro de array
-    amostras: (dados.amostras || []).map((amostra, indice) => ({ amostraId: indice, pesagens: pesagensDaAmostra(amostra) })),
+    amostras: (dados.amostras || []).map((amostra, indice) => ({
+      amostraId: indice,
+      pesagens: pesagensDaAmostra(amostra).filter(pesagemConcluida),
+    })),
     dataCriacao: Timestamp.fromDate(paraData(dados.dataCriacao)),
     dataAtualizacao: Timestamp.fromDate(paraData(dados.dataAtualizacao)),
     calibragem: dados.calibragem
@@ -39,10 +60,17 @@ function paraFirestore(rascunho) {
 }
 
 function doFirestore(documento) {
-  const dados = documento.data();
+  const { cliente, informacoesOperacao = {}, ...dados } = documento.data();
   return {
     ...dados,
     id: documento.id,
+    clienteSelecionado: cliente ?? null,
+    caminhaoSelecionado: informacoesOperacao.caminhao ?? null,
+    equipeSelecionada: informacoesOperacao.equipe ?? [],
+    numeroNF: informacoesOperacao.numeroNF ?? '',
+    kgPrevisto: informacoesOperacao.kgPrevisto ?? '',
+    kgAplicado: informacoesOperacao.kgAplicado ?? '',
+    informacoesGerais: informacoesOperacao.informacoesGerais ?? '',
     amostras: (dados.amostras || []).map(pesagensDaAmostra),
     dataCriacao: paraData(dados.dataCriacao).toISOString(),
     dataAtualizacao: paraData(dados.dataAtualizacao).toISOString(),
