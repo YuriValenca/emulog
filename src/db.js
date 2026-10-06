@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { db } from './firebaseConfig';
-import { collection, addDoc, setDoc, doc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, Timestamp, writeBatch } from 'firebase/firestore';
 import { Alert } from 'react-native';
 import { sincronizarRascunhosDaUltimaSessao } from './rascunhos';
 
@@ -48,17 +48,13 @@ const removeOfflineProject = async (localId) => {
 
 const paraTimestamp = (valor) => (valor ? Timestamp.fromDate(new Date(valor)) : valor);
 
-async function salvarProjetoComIdDoRascunho({ id, ...projeto }, meta) {
+async function salvarProjetoSincronizado({ id, ...projeto }, meta) {
+  // Projetos salvos offline antes dos rascunhos não têm id
+  const idDoProjeto = id || doc(collection(db, 'projetos')).id;
   const batch = writeBatch(db);
-  batch.set(doc(db, 'projetos', id), projeto);
-  batch.set(doc(db, 'projetos_meta', id), meta);
+  batch.set(doc(db, 'projetos', idDoProjeto), projeto);
+  batch.set(doc(db, 'projetos_meta', idDoProjeto), meta);
   await batch.commit();
-}
-
-// TODO: remover quando não houver mais projetos offline salvos sem id (versões anteriores aos rascunhos)
-async function salvarProjetoLegado(projeto, meta) {
-  const docRef = await addDoc(collection(db, 'projetos'), projeto);
-  await setDoc(doc(db, 'projetos_meta', docRef.id), meta);
 }
 
 let isSyncing = false;
@@ -95,11 +91,7 @@ export const syncProjects = async () => {
         companyId: projectSemLocalId.companyId,
       };
 
-      if (projectParaSalvar.id) {
-        await salvarProjetoComIdDoRascunho(projectParaSalvar, meta);
-      } else {
-        await salvarProjetoLegado(projectParaSalvar, meta);
-      }
+      await salvarProjetoSincronizado(projectParaSalvar, meta);
       await removeOfflineProject(_localId);
       console.log('Projeto sincronizado com Firestore:', projectSemLocalId);
     }
