@@ -12,6 +12,7 @@ import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaSalvar } from '../helpers/pendencias';
+import { paraKg, kgParaTexto, limparKgDigitado } from '../helpers/numeros';
 import AvisoPendencias from './AvisoPendencias';
 
 export default function InformacoesOperacao({
@@ -67,8 +68,8 @@ export default function InformacoesOperacao({
 
     if (modoModal && infoInicial) {
       setNfLocal(infoInicial.numeroNF || '');
-      setKgPrevistoLocal(infoInicial.kgPrevisto || '');
-      setKgAplicadoLocal(infoInicial.kgAplicado || '');
+      setKgPrevistoLocal(kgParaTexto(infoInicial.kgPrevisto));
+      setKgAplicadoLocal(kgParaTexto(infoInicial.kgAplicado));
       setCaminhaoLocal(infoInicial.caminhao || null);
       setEquipeLocal(infoInicial.equipe || []);
       setInfoGeraisLocal(infoInicial.informacoesGerais || '');
@@ -142,7 +143,9 @@ export default function InformacoesOperacao({
     setSalvando(true);
     try {
       const informacoesOperacao = {
-        numeroNF, kgPrevisto, kgAplicado,
+        numeroNF,
+        kgPrevisto: paraKg(kgPrevisto),
+        kgAplicado: paraKg(kgAplicado),
         caminhao: paraRefCaminhao(caminhaoSelecionado),
         equipe: paraRefsEquipe(equipeSelecionada),
         informacoesGerais,
@@ -199,7 +202,7 @@ export default function InformacoesOperacao({
         placeholderTextColor="#888888"
         keyboardType="numeric"
         value={kgPrevisto}
-        onChangeText={setKgPrevisto}
+        onChangeText={(texto) => setKgPrevisto(limparKgDigitado(texto))}
         onFocus={registrarFoco}
         onBlur={() => { salvarEstado(); limparFoco(); }}
       />
@@ -211,7 +214,7 @@ export default function InformacoesOperacao({
         placeholderTextColor="#888888"
         keyboardType="numeric"
         value={kgAplicado}
-        onChangeText={setKgAplicado}
+        onChangeText={(texto) => setKgAplicado(limparKgDigitado(texto))}
         onFocus={registrarFoco}
         onBlur={() => { salvarEstado(); limparFoco(); }}
       />

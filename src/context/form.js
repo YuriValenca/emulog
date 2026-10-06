@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia, pesagemConcluida } from '../helpers/pesagem';
 import { calibragemParaArmazenar } from '../helpers/calibragem';
+import { kgParaTexto } from '../helpers/numeros';
 import { gerarIdRascunho, prepararRascunho, enviarRascunho } from '../rascunhos';
 import { useAppAuth } from './auth';
 
@@ -200,8 +201,8 @@ export function ProjetoFormProvider({ children }) {
       setPesagemAtual(projeto.pesagemAtual || 1);
       setPeso(projeto.peso || '');
       setNumeroNF(projeto.numeroNF || '');
-      setKgPrevisto(projeto.kgPrevisto || '');
-      setKgAplicado(projeto.kgAplicado || '');
+      setKgPrevisto(kgParaTexto(projeto.kgPrevisto));
+      setKgAplicado(kgParaTexto(projeto.kgAplicado));
       setCaminhaoSelecionado(projeto.caminhaoSelecionado || null);
       setEquipeSelecionada(projeto.equipeSelecionada || []);
       setClienteSelecionado(projeto.clienteSelecionado || null);

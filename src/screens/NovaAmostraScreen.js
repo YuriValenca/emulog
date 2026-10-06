@@ -20,7 +20,7 @@ import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
-import { paraDecimal } from '../helpers/numeros';
+import { paraDecimal, paraKg } from '../helpers/numeros';
 import {
   normalizarCalibragem, serializarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
 } from '../helpers/calibragem';
@@ -299,9 +299,8 @@ function NovaAmostraScreenInner() {
       companyId: companyIdDoProjeto || companyId,
       informacoesOperacao: {
         numeroNF,
-        // TODO: gravar kg como número quando o informacoesOperacaoSchema do portal aceitar
-        kgPrevisto,
-        kgAplicado,
+        kgPrevisto: paraKg(kgPrevisto),
+        kgAplicado: paraKg(kgAplicado),
         caminhao: paraRefCaminhao(caminhaoSelecionado),
         equipe: paraRefsEquipe(equipeSelecionada),
         informacoesGerais

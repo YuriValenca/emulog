@@ -5,6 +5,7 @@ import { paraData } from './helpers/datas';
 import { estaOnline, comTempoLimite } from './helpers/rede';
 import { pesagemConcluida } from './helpers/pesagem';
 import { paraRefCaminhao, paraRefsEquipe } from './helpers/referencias';
+import { paraKg, kgParaTexto } from './helpers/numeros';
 
 const COLECAO = 'projetos_rascunho';
 const TEMPO_LIMITE_FIRESTORE_MS = 10000;
@@ -40,8 +41,8 @@ function paraFirestore(rascunho) {
     cliente: clienteSelecionado ?? null,
     informacoesOperacao: {
       numeroNF: numeroNF ?? '',
-      kgPrevisto: kgPrevisto ?? '',
-      kgAplicado: kgAplicado ?? '',
+      kgPrevisto: paraKg(kgPrevisto),
+      kgAplicado: paraKg(kgAplicado),
       caminhao: paraRefCaminhao(caminhaoSelecionado),
       equipe: paraRefsEquipe(equipeSelecionada),
       informacoesGerais: informacoesGerais ?? '',
@@ -68,8 +69,8 @@ function doFirestore(documento) {
     caminhaoSelecionado: informacoesOperacao.caminhao ?? null,
     equipeSelecionada: informacoesOperacao.equipe ?? [],
     numeroNF: informacoesOperacao.numeroNF ?? '',
-    kgPrevisto: informacoesOperacao.kgPrevisto ?? '',
-    kgAplicado: informacoesOperacao.kgAplicado ?? '',
+    kgPrevisto: kgParaTexto(informacoesOperacao.kgPrevisto),
+    kgAplicado: kgParaTexto(informacoesOperacao.kgAplicado),
     informacoesGerais: informacoesOperacao.informacoesGerais ?? '',
     amostras: (dados.amostras || []).map(pesagensDaAmostra),
     dataCriacao: paraData(dados.dataCriacao).toISOString(),

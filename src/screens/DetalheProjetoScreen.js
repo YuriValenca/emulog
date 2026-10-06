@@ -15,6 +15,7 @@ import { LOGO_BASE_64 } from '../assets/base64Logo';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
 import { paraData, mesmoDia } from '../helpers/datas';
+import { kgPreenchido, formatarKg } from '../helpers/numeros';
 
 const db = getFirestore();
 
@@ -82,8 +83,8 @@ export default function DetalheProjetoScreen() {
     if (!info) return false;
     return !!(
       info.numeroNF?.trim() ||
-      info.kgPrevisto?.trim() ||
-      info.kgAplicado?.trim() ||
+      kgPreenchido(info.kgPrevisto) ||
+      kgPreenchido(info.kgAplicado) ||
       info.caminhao ||
       (info.equipe && info.equipe.length > 0) ||
       info.informacoesGerais?.trim()
@@ -201,8 +202,8 @@ export default function DetalheProjetoScreen() {
           <table>
             <tbody>
               ${info.numeroNF ? `<tr><td><strong>Nota Fiscal</strong></td><td>${info.numeroNF}</td></tr>` : ''}
-              ${info.kgPrevisto ? `<tr><td><strong>Kg Previsto</strong></td><td>${info.kgPrevisto} kg</td></tr>` : ''}
-              ${info.kgAplicado ? `<tr><td><strong>Kg Aplicado</strong></td><td>${info.kgAplicado} kg</td></tr>` : ''}
+              ${kgPreenchido(info.kgPrevisto) ? `<tr><td><strong>Kg Previsto</strong></td><td>${formatarKg(info.kgPrevisto)} kg</td></tr>` : ''}
+              ${kgPreenchido(info.kgAplicado) ? `<tr><td><strong>Kg Aplicado</strong></td><td>${formatarKg(info.kgAplicado)} kg</td></tr>` : ''}
               ${info.caminhao ? `<tr><td><strong>Unidade de Bombeamento</strong></td><td>${info.caminhao.placa || ''}</td></tr>` : ''}
               ${info.equipe && info.equipe.length > 0 ? `<tr><td><strong>Equipe</strong></td><td>${info.equipe.map(m => m.nome).join(', ')}</td></tr>` : ''}
             </tbody>
@@ -284,16 +285,16 @@ export default function DetalheProjetoScreen() {
             <Text style={styles.infoValor}>{info.numeroNF}</Text>
           </View>
         ) : null}
-        {info.kgPrevisto ? (
+        {kgPreenchido(info.kgPrevisto) ? (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Kg Previsto</Text>
-            <Text style={styles.infoValor}>{info.kgPrevisto} kg</Text>
+            <Text style={styles.infoValor}>{formatarKg(info.kgPrevisto)} kg</Text>
           </View>
         ) : null}
-        {info.kgAplicado ? (
+        {kgPreenchido(info.kgAplicado) ? (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Kg Aplicado</Text>
-            <Text style={styles.infoValor}>{info.kgAplicado} kg</Text>
+            <Text style={styles.infoValor}>{formatarKg(info.kgAplicado)} kg</Text>
           </View>
         ) : null}
         {info.caminhao ? (
