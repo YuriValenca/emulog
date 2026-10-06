@@ -1,13 +1,8 @@
 import { paraDecimal } from './numeros';
+import { paraData } from './datas';
 
 const HORAS_ATE_RECALIBRAGEM = 14;
 const MS_POR_HORA = 36e5;
-
-function paraData(valor) {
-  if (valor?.toDate) return valor.toDate();
-  if (valor?.seconds !== undefined) return new Date(valor.seconds * 1000 + (valor.nanoseconds ?? 0) / 1e6);
-  return new Date(valor);
-}
 
 export function calcularTara(pesoVazio, pesoCheio) {
   return Number((pesoCheio - pesoVazio).toFixed(3));
@@ -28,9 +23,16 @@ export function normalizarCalibragem(bruta) {
   };
 }
 
+export const calibragemParaArmazenar = (calibragem) => ({ ...calibragem, timestamp: calibragem.timestamp.toISOString() });
+
 export function serializarCalibragem(calibragem) {
-  return JSON.stringify({ ...calibragem, timestamp: calibragem.timestamp.toISOString() });
+  return JSON.stringify(calibragemParaArmazenar(calibragem));
 }
+
+export const restaurarCalibragemCongelada = (armazenada) => ({
+  ...normalizarCalibragem(armazenada),
+  necessitaCalibragem: armazenada.necessitaCalibragem ?? false,
+});
 
 export function calibragemDoProjeto(calibragem) {
   return {

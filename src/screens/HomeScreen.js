@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { buscarProjetoEmAndamento, projetoTemDados, descartarProjetoEmAndamento } from '../context/form';
 import ModalProjetoEmAndamento from './ModalProjetoEmAndamento';
+import { salvarComoRascunho, excluirRascunho, sincronizarRascunhos } from '../rascunhos';
 
 export default function HomeScreen({ navigation }) {
   const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin } = useAppAuth();
@@ -17,6 +18,13 @@ export default function HomeScreen({ navigation }) {
   const [balancaBtHabilitada, setBalancaBtHabilitada] = useState(false);
   const [projetoEmAndamento, setProjetoEmAndamento] = useState(null);
   const [modalProjetoVisivel, setModalProjetoVisivel] = useState(false);
+  const sessao = { companyId, uid };
+
+  useFocusEffect(
+    useCallback(() => {
+      sincronizarRascunhos({ companyId, uid });
+    }, [companyId, uid])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -96,15 +104,29 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('NovaAmostra');
   };
 
-  const continuarProjeto = () => {
+  const abrirTelaDoProjeto = () => {
     setModalProjetoVisivel(false);
     navigation.navigate('NovaAmostra');
   };
 
-  const iniciarNovoProjeto = async () => {
+  const salvarProjetoComoRascunho = async () => {
+    try {
+      await salvarComoRascunho(projetoEmAndamento, sessao);
+      await descartarProjetoEmAndamento(companyId, uid);
+    } catch (e) {
+      console.error('Erro ao salvar rascunho:', e);
+      Alert.alert('Erro', 'Não foi possível salvar o rascunho. Tente novamente.');
+      return false;
+    }
+    setProjetoEmAndamento(null);
+    return true;
+  };
+
+  const apagarEIniciarNovoProjeto = async () => {
     setModalProjetoVisivel(false);
     try {
-      await descartarProjetoEmAndamento();
+      await descartarProjetoEmAndamento(companyId, uid);
+      if (projetoEmAndamento.id) await excluirRascunho(projetoEmAndamento.id, sessao);
     } catch (e) {
       console.error('Erro ao descartar projeto em andamento:', e);
       Alert.alert('Erro', 'Não foi possível apagar o projeto. Tente novamente.');
@@ -191,8 +213,10 @@ export default function HomeScreen({ navigation }) {
       <ModalProjetoEmAndamento
         visivel={modalProjetoVisivel}
         projeto={projetoEmAndamento}
-        onContinuar={continuarProjeto}
-        onIniciarNovo={iniciarNovoProjeto}
+        onContinuar={abrirTelaDoProjeto}
+        onSalvarRascunho={salvarProjetoComoRascunho}
+        onApagarEIniciarNovo={apagarEIniciarNovoProjeto}
+        onIniciarNovo={abrirTelaDoProjeto}
         onFechar={() => setModalProjetoVisivel(false)}
       />
 

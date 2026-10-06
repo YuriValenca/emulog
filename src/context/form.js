@@ -1,15 +1,29 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia, pesagemConcluida } from '../helpers/pesagem';
+import { calibragemParaArmazenar } from '../helpers/calibragem';
+import { gerarIdRascunho, prepararRascunho, enviarRascunho } from '../rascunhos';
+import { useAppAuth } from './auth';
 
 const ProjetoFormContext = createContext(null);
-const STORAGE_KEY = 'projetoEmAndamento';
+const CHAVE_LEGADA = 'projetoEmAndamento';
+const ATRASO_ENVIO_RASCUNHO_MS = 2000;
+
+const chaveProjetoEmAndamento = (companyId, uid) => `projetoEmAndamento:${companyId}:${uid}`;
 
 const pesagensDaAmostra = (amostra) => (Array.isArray(amostra) ? amostra : amostra?.pesagens || []);
 
+const temTexto = (valor) => !!String(valor ?? '').trim();
+
 export const projetoTemDados = (projeto) =>
-  !!projeto?.nomeProjeto?.trim() ||
-  (projeto?.amostras || []).some(amostra => pesagensDaAmostra(amostra).some(pesagemConcluida));
+  !!projeto && (
+    [projeto.nomeProjeto, projeto.numeroNF, projeto.kgPrevisto, projeto.kgAplicado, projeto.informacoesGerais]
+      .some(temTexto) ||
+    !!projeto.clienteSelecionado ||
+    !!projeto.caminhaoSelecionado ||
+    (projeto.equipeSelecionada || []).length > 0 ||
+    (projeto.amostras || []).some(amostra => pesagensDaAmostra(amostra).some(pesagemConcluida))
+  );
 
 export const contarPesagensDoProjeto = (projeto) =>
   (projeto?.amostras || []).reduce(
@@ -17,21 +31,37 @@ export const contarPesagensDoProjeto = (projeto) =>
     0
   );
 
-export const descartarProjetoEmAndamento = () => AsyncStorage.removeItem(STORAGE_KEY);
+export const descartarProjetoEmAndamento = (companyId, uid) =>
+  AsyncStorage.removeItem(chaveProjetoEmAndamento(companyId, uid));
 
-export async function buscarProjetoEmAndamento(companyIdAtual, uidAtual) {
-  if (!companyIdAtual || !uidAtual) return null;
-  const projetoSalvo = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!projetoSalvo) return null;
+export const definirProjetoEmAndamento = (projeto, companyId, uid) =>
+  AsyncStorage.setItem(chaveProjetoEmAndamento(companyId, uid), JSON.stringify({ ...projeto, uidSessao: uid }));
 
-  const projeto = JSON.parse(projetoSalvo);
-  const pertenceAoContextoAtual = projeto.companyId === companyIdAtual && projeto.uidUsuario === uidAtual;
-  return pertenceAoContextoAtual ? projeto : null;
+async function migrarChaveLegada(companyId, uid) {
+  const legado = await AsyncStorage.getItem(CHAVE_LEGADA);
+  if (!legado) return null;
+
+  const projeto = JSON.parse(legado);
+  if (projeto.companyId !== companyId || projeto.uidUsuario !== uid) return null;
+
+  await definirProjetoEmAndamento(projeto, companyId, uid);
+  await AsyncStorage.removeItem(CHAVE_LEGADA);
+  return { ...projeto, uidSessao: uid };
+}
+
+export async function buscarProjetoEmAndamento(companyId, uid) {
+  if (!companyId || !uid) return null;
+  const salvo = await AsyncStorage.getItem(chaveProjetoEmAndamento(companyId, uid));
+  return salvo ? JSON.parse(salvo) : migrarChaveLegada(companyId, uid);
 }
 
 export function ProjetoFormProvider({ children }) {
-  const inicializado = useRef(false);
+  const { companyId: companyIdSessao, uid: uidSessao } = useAppAuth();
+  const temporizadorEnvio = useRef(null);
 
+  const [carregado, setCarregado] = useState(false);
+  const [idProjeto, setIdProjeto] = useState(gerarIdRascunho);
+  const [dataCriacao, setDataCriacao] = useState(null);
   const [nomeProjeto, setNomeProjeto] = useState('');
   const [quantidadeAmostras, setQuantidadeAmostras] = useState(1);
   const [amostras, setAmostras] = useState(() => [criarAmostraVazia()]);
@@ -50,12 +80,32 @@ export function ProjetoFormProvider({ children }) {
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [informacoesGerais, setInformacoesGerais] = useState('');
 
+  const agendarEnvioDoRascunho = (projeto) => {
+    clearTimeout(temporizadorEnvio.current);
+    if (!projetoTemDados(projeto)) return;
+
+    temporizadorEnvio.current = setTimeout(async () => {
+      try {
+        // Se o projeto foi concluído, apagado ou virou rascunho nesse meio-tempo, não pode ser reenviado
+        const atual = await buscarProjetoEmAndamento(companyIdSessao, uidSessao);
+        if (atual?.id !== projeto.id) return;
+        await enviarRascunho(prepararRascunho(atual), { companyId: companyIdSessao, uid: uidSessao });
+      } catch (error) {
+        console.error('Erro ao enviar rascunho:', error);
+      }
+    }, ATRASO_ENVIO_RASCUNHO_MS);
+  };
+
   const salvarEstadoDoProjeto = async () => {
-    if (!companyId || !uidUsuario) return;
+    if (!carregado || !companyIdSessao || !uidSessao) return;
 
     const projeto = {
-      companyId,
-      uidUsuario,
+      id: idProjeto,
+      dataCriacao,
+      dataAtualizacao: new Date().toISOString(),
+      companyId: companyId || companyIdSessao,
+      uidUsuario: uidUsuario || uidSessao,
+      calibragem: ultimaCalibragem ? calibragemParaArmazenar(ultimaCalibragem) : null,
       nomeProjeto, quantidadeAmostras, amostras,
       amostraAtual, pesagemAtual, peso,
       numeroNF, kgPrevisto, kgAplicado,
@@ -64,20 +114,33 @@ export function ProjetoFormProvider({ children }) {
       informacoesGerais,
     };
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(projeto));
+      await definirProjetoEmAndamento(projeto, companyIdSessao, uidSessao);
+      agendarEnvioDoRascunho(projeto);
     } catch (error) {
       console.error("Erro ao salvar estado do projeto:", error);
     }
   };
 
   useEffect(() => {
-    if (!inicializado.current) {
-      inicializado.current = true;
-      return;
+    const projetoAtual = {
+      nomeProjeto, amostras, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
+      clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
+    };
+    if (!dataCriacao && projetoTemDados(projetoAtual)) {
+      setDataCriacao(new Date().toISOString());
     }
+  }, [
+    nomeProjeto, amostras, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
+    clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
+  ]);
+
+  useEffect(() => {
     salvarEstadoDoProjeto();
   }, [
+    carregado,
+    idProjeto, dataCriacao,
     companyId, uidUsuario,
+    ultimaCalibragem,
     nomeProjeto, quantidadeAmostras, amostras,
     amostraAtual, pesagemAtual, peso,
     numeroNF, kgPrevisto, kgAplicado,
@@ -88,13 +151,20 @@ export function ProjetoFormProvider({ children }) {
 
   const limparEstadoDoProjeto = async () => {
     try {
-      await descartarProjetoEmAndamento();
+      await descartarProjetoEmAndamento(companyIdSessao, uidSessao);
     } catch (error) {
       console.error("Erro ao limpar estado do projeto:", error);
     }
   };
 
+  const cancelarEnvioDoRascunho = () => clearTimeout(temporizadorEnvio.current);
+
   const resetarFormulario = () => {
+    cancelarEnvioDoRascunho();
+    setIdProjeto(gerarIdRascunho());
+    setDataCriacao(null);
+    setCompanyId(companyIdSessao);
+    setUidUsuario(uidSessao);
     setNomeProjeto('');
     setQuantidadeAmostras(1);
     setAmostras([criarAmostraVazia()]);
@@ -110,18 +180,20 @@ export function ProjetoFormProvider({ children }) {
     setInformacoesGerais('');
   };
 
-  const restaurarDoStorage = async (companyIdAtual, uidAtual) => {
+  const restaurarDoStorage = async () => {
     try {
-      if (!companyIdAtual || !uidAtual) return false;
-      const projeto = await buscarProjetoEmAndamento(companyIdAtual, uidAtual);
+      const projeto = await buscarProjetoEmAndamento(companyIdSessao, uidSessao);
 
       if (!projeto) {
-        await limparEstadoDoProjeto();
-        return false;
+        setCompanyId(companyIdSessao);
+        setUidUsuario(uidSessao);
+        return null;
       }
 
+      if (projeto.id) setIdProjeto(projeto.id);
+      setDataCriacao(projeto.dataCriacao || null);
       setCompanyId(projeto.companyId);
-      if (projeto.uidUsuario) setUidUsuario(projeto.uidUsuario);
+      setUidUsuario(projeto.uidUsuario || uidSessao);
       setNomeProjeto(projeto.nomeProjeto || '');
       setQuantidadeAmostras(projeto.quantidadeAmostras || 1);
       setAmostraAtual(projeto.amostraAtual || 0);
@@ -162,15 +234,18 @@ export function ProjetoFormProvider({ children }) {
       });
 
       setAmostras(novasAmostras);
-      return true;
+      return projeto;
     } catch (error) {
       console.error("Erro ao restaurar projeto:", error);
-      return false;
+      return null;
+    } finally {
+      setCarregado(true);
     }
   };
 
   return (
     <ProjetoFormContext.Provider value={{
+      idProjeto, dataCriacao,
       nomeProjeto, setNomeProjeto,
       quantidadeAmostras, setQuantidadeAmostras,
       amostras, setAmostras,
@@ -188,6 +263,7 @@ export function ProjetoFormProvider({ children }) {
       clienteSelecionado, setClienteSelecionado,
       informacoesGerais, setInformacoesGerais,
       salvarEstadoDoProjeto,
+      cancelarEnvioDoRascunho,
       limparEstadoDoProjeto,
       resetarFormulario,
       restaurarDoStorage,

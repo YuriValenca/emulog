@@ -4,32 +4,37 @@ import {
   ScrollView, Modal, Alert, StatusBar,
 } from 'react-native';
 import { db } from '../firebaseConfig';
-import { collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc, where, writeBatch } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { collection, query, orderBy, limit, getDocs, doc, where, writeBatch } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import ScrollToTopButton from './ScrollToTopButton';
-import NetInfo from "@react-native-community/netinfo";
 import { saveProjectOffline, checkConnectionAndSync } from '../db';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBle } from '../context/context';
-import { ProjetoFormProvider, useProjetoForm } from '../context/form';
+import { ProjetoFormProvider, useProjetoForm, contarPesagensDoProjeto } from '../context/form';
+import { excluirRascunho } from '../rascunhos';
+import { estaOnline, comTempoLimite, estourouTempoLimite } from '../helpers/rede';
 import StepPesagens from './StepPesagens';
 import InformacoesOperacao from './InformacoesOperacao';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraDecimal } from '../helpers/numeros';
-import { normalizarCalibragem, serializarCalibragem, calibragemDoProjeto } from '../helpers/calibragem';
+import {
+  normalizarCalibragem, serializarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
+} from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaAvancar } from '../helpers/pendencias';
 import {
   PESAGENS_POR_AMOSTRA, criarAmostraVazia, pesagemConcluida, contarPesagensConcluidas, formatarHoraPesagem,
 } from '../helpers/pesagem';
 
+const TEMPO_LIMITE_SALVAR_ONLINE_MS = 15000;
+const TEMPO_LIMITE_CALIBRAGEM_MS = 8000;
+
 function NovaAmostraScreenInner() {
-  const { companyId } = useAppAuth();
+  const { companyId, uid } = useAppAuth();
   const { syncReferenceData } = useReferenceData();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -58,6 +63,7 @@ function NovaAmostraScreenInner() {
   const { bleStatus, weight, readingStatus, resumeMonitor } = useBle();
 
   const {
+    idProjeto, dataCriacao,
     nomeProjeto,
     quantidadeAmostras, setQuantidadeAmostras,
     amostras, setAmostras,
@@ -65,13 +71,14 @@ function NovaAmostraScreenInner() {
     pesagemAtual, setPesagemAtual,
     peso, setPeso,
     ultimaCalibragem, setUltimaCalibragem,
-    uidUsuario, setUidUsuario,
-    companyId: companyIdContexto, setCompanyId,
+    uidUsuario,
+    companyId: companyIdDoProjeto,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
     clienteSelecionado,
     informacoesGerais,
     salvarEstadoDoProjeto,
+    cancelarEnvioDoRascunho,
     limparEstadoDoProjeto,
     resetarFormulario,
     restaurarDoStorage,
@@ -80,10 +87,6 @@ function NovaAmostraScreenInner() {
   const todasPesagensConcluidas = amostras.every(
     a => a && contarPesagensConcluidas(a) === PESAGENS_POR_AMOSTRA
   );
-
-  useEffect(() => {
-    if (companyId) setCompanyId(companyId);
-  }, [companyId]);
 
   useEffect(() => {
     if (companyId) syncReferenceData(companyId);
@@ -116,57 +119,58 @@ function NovaAmostraScreenInner() {
   };
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUidUsuario(user.uid);
-        await AsyncStorage.setItem('uidUsuario', user.uid);
-      } else {
-        const storedUid = await AsyncStorage.getItem('uidUsuario');
-        if (storedUid) setUidUsuario(storedUid);
-      }
-    });
     checkConnectionAndSync();
-    return () => unsubscribe();
   }, []);
 
+  const buscarCalibragemOnline = async () => {
+    if (!companyId || !(await estaOnline())) return null;
+    try {
+      const q = query(
+        collection(db, "calibragens"),
+        where('companyId', '==', companyId),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
+      const querySnapshot = await comTempoLimite(getDocs(q), TEMPO_LIMITE_CALIBRAGEM_MS);
+      if (querySnapshot.empty) return null;
+
+      const calibragemNormalizada = normalizarCalibragem(querySnapshot.docs[0].data());
+      await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
+      return calibragemNormalizada;
+    } catch (error) {
+      console.warn('Calibragem online indisponível, usando a do aparelho:', error.message);
+      return null;
+    }
+  };
+
+  const buscarCalibragemDoAparelho = async () => {
+    const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
+    return calibragemOffline ? normalizarCalibragem(JSON.parse(calibragemOffline)) : null;
+  };
+
+  const buscarUltimaCalibragem = async () => {
+    try {
+      const calibragem = (await buscarCalibragemOnline()) ?? (await buscarCalibragemDoAparelho());
+      if (calibragem) setUltimaCalibragem(calibragem);
+    } catch (error) {
+      console.error("Erro ao buscar calibragem:", error);
+    }
+  };
+
   useEffect(() => {
-    const buscarUltimaCalibragem = async () => {
-      try {
-        const connectionState = await NetInfo.fetch();
-
-        if (connectionState.isConnected && companyId) {
-          const q = query(
-            collection(db, "calibragens"),
-            where('companyId', '==', companyId),
-            orderBy("timestamp", "desc"),
-            limit(1)
-          );
-          const querySnapshot = await getDocs(q);
-
-          if (!querySnapshot.empty) {
-            const calibragemNormalizada = normalizarCalibragem(querySnapshot.docs[0].data());
-            setUltimaCalibragem(calibragemNormalizada);
-            await AsyncStorage.setItem('ultimaCalibragem', serializarCalibragem(calibragemNormalizada));
-            return;
-          }
-        }
-
-        const calibragemOffline = await AsyncStorage.getItem('ultimaCalibragem');
-        if (calibragemOffline) {
-          setUltimaCalibragem(normalizarCalibragem(JSON.parse(calibragemOffline)));
-        }
-      } catch (error) {
-        console.error("Erro ao buscar calibragem:", error);
+    if (!companyId || !uid) return;
+    const iniciarProjeto = async () => {
+      const projeto = await restaurarDoStorage();
+      // Projeto com pesagens mantém a calibragem com que foi pesado, mesmo que exista uma mais nova
+      const calibragemCongelada = projeto?.calibragem && contarPesagensDoProjeto(projeto) > 0;
+      if (calibragemCongelada) {
+        setUltimaCalibragem(restaurarCalibragemCongelada(projeto.calibragem));
+        return;
       }
+      await buscarUltimaCalibragem();
     };
-
-    buscarUltimaCalibragem();
-  }, [companyId]);
-
-  useEffect(() => {
-    if (companyId && uidUsuario) restaurarDoStorage(companyId, uidUsuario);
-  }, [companyId, uidUsuario]);
+    iniciarProjeto();
+  }, [companyId, uid]);
 
   const calcularDensidade = (pesoVal) => {
     if (!ultimaCalibragem) {
@@ -285,13 +289,14 @@ function NovaAmostraScreenInner() {
     }));
     return {
       nomeProjeto: nomeProjeto.trim(),
-      dataCriacao: new Date(),
+      dataCriacao: dataCriacao ? new Date(dataCriacao) : new Date(),
+      dataConclusao: new Date(),
       uidUsuario,
       cliente: clienteSelecionado,
       calibragem: calibragemDoProjeto(ultimaCalibragem),
       quantidadeAmostras,
       amostras: amostrasPlanificadas,
-      companyId,
+      companyId: companyIdDoProjeto || companyId,
       informacoesOperacao: {
         numeroNF,
         // TODO: gravar kg como número quando o informacoesOperacaoSchema do portal aceitar
@@ -304,6 +309,44 @@ function NovaAmostraScreenInner() {
     };
   };
 
+  const descartarRascunhoConcluido = () => {
+    excluirRascunho(idProjeto, { companyId, uid }).catch(error =>
+      console.error('Erro ao descartar rascunho concluído:', error)
+    );
+  };
+
+  const salvarNoFirestore = (dadosDoProjeto) => {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'projetos', idProjeto), dadosDoProjeto);
+    batch.set(doc(db, 'projetos_meta', idProjeto), {
+      nomeProjeto: dadosDoProjeto.nomeProjeto,
+      dataCriacao: dadosDoProjeto.dataCriacao,
+      uidUsuario: dadosDoProjeto.uidUsuario,
+      companyId: dadosDoProjeto.companyId,
+    });
+    return comTempoLimite(batch.commit(), TEMPO_LIMITE_SALVAR_ONLINE_MS);
+  };
+
+  const encerrarProjetoSalvo = (titulo, mensagem) => {
+    descartarRascunhoConcluido();
+    Alert.alert(titulo, mensagem);
+    resetarFormulario();
+    limparEstadoDoProjeto();
+    navigation.replace('Home');
+  };
+
+  const salvarNoAparelho = async (dadosDoProjeto) => {
+    try {
+      await saveProjectOffline({ ...dadosDoProjeto, id: idProjeto });
+      encerrarProjetoSalvo(
+        "App Offline",
+        "Os dados foram salvos no dispositivo!\n\nConecte o App no Wi-Fi ou dados para salvar as informações no banco de dados."
+      );
+    } catch {
+      Alert.alert("Erro", "Não foi possível salvar o projeto offline. Tente novamente.");
+    }
+  };
+
   const salvarProjeto = async () => {
     const dadosDoProjeto = prepararDadosDoProjetoParaSalvar();
     if (!uidUsuario) {
@@ -314,41 +357,23 @@ function NovaAmostraScreenInner() {
       Alert.alert("Erro", "Empresa não identificada. Feche e abra o app novamente antes de salvar.");
       return;
     }
+    cancelarEnvioDoRascunho();
+
+    if (!(await estaOnline())) {
+      await salvarNoAparelho(dadosDoProjeto);
+      return;
+    }
+
     try {
-      const connectionState = await NetInfo.fetch();
-      if (connectionState.isConnected) {
-        try {
-          const projetoRef = doc(collection(db, 'projetos'));
-          const metaRef = doc(db, 'projetos_meta', projetoRef.id);
-          const batch = writeBatch(db);
-          batch.set(projetoRef, dadosDoProjeto);
-          batch.set(metaRef, {
-            nomeProjeto: dadosDoProjeto.nomeProjeto,
-            dataCriacao: dadosDoProjeto.dataCriacao,
-            uidUsuario: dadosDoProjeto.uidUsuario,
-            companyId: dadosDoProjeto.companyId,
-          });
-          await batch.commit();
-          Alert.alert("Sucesso", "Projeto salvo com sucesso!");
-          resetarFormulario();
-          limparEstadoDoProjeto();
-          navigation.replace('Home');
-        } catch {
-          Alert.alert("Erro", "Não foi possível salvar o projeto. Tente novamente.");
-        }
-      } else {
-        try {
-          await saveProjectOffline(dadosDoProjeto);
-          Alert.alert("App Offline", "Os dados foram salvos no dispositivo!\n\nConecte o App no Wi-Fi ou dados para salvar as informações no banco de dados.");
-          resetarFormulario();
-          limparEstadoDoProjeto();
-          navigation.replace('Home');
-        } catch {
-          Alert.alert("Erro", "Não foi possível salvar o projeto offline. Tente novamente.");
-        }
+      await salvarNoFirestore(dadosDoProjeto);
+      encerrarProjetoSalvo("Sucesso", "Projeto salvo com sucesso!");
+    } catch (error) {
+      if (!estourouTempoLimite(error)) {
+        Alert.alert("Erro", "Não foi possível salvar o projeto. Tente novamente.");
+        return;
       }
-    } catch {
-      Alert.alert("Erro", "Não foi possível salvar o projeto. Tente novamente.");
+      // Rede caiu no meio: a fila regrava o mesmo id, então não duplica se a escrita original ainda chegar
+      await salvarNoAparelho(dadosDoProjeto);
     }
   };
 
