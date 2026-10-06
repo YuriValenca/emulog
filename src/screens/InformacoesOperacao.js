@@ -11,6 +11,8 @@ import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
+import { pendenciasParaSalvar } from '../helpers/pendencias';
+import AvisoPendencias from './AvisoPendencias';
 
 export default function InformacoesOperacao({
   modoModal = false,
@@ -53,6 +55,7 @@ export default function InformacoesOperacao({
   const salvarEstado    = modoModal ? () => {}           : form.salvarEstadoDoProjeto;
   const informacoesGerais    = modoModal ? infoGeraisLocal : form.informacoesGerais;
   const setInformacoesGerais = modoModal ? setInfoGeraisLocal : form.setInformacoesGerais;
+  const pendencias = modoModal ? [] : pendenciasParaSalvar(form);
 
   const [modalCaminhaoVisivel, setModalCaminhaoVisivel] = useState(false);
   const [modalEquipeVisivel, setModalEquipeVisivel] = useState(false);
@@ -275,8 +278,10 @@ export default function InformacoesOperacao({
         onBlur={() => { salvarEstado(); limparFoco(); }}
       />
 
+      <AvisoPendencias pendencias={pendencias} />
+
       <TouchableOpacity
-        style={[styles.salvarBtn, salvando && styles.salvarBtnDisabled]}
+        style={[styles.salvarBtn, pendencias.length > 0 && styles.salvarBtnPendente, salvando && styles.salvarBtnDisabled]}
         onPress={modoModal ? salvarModal : onSalvar}
         disabled={salvando}
         activeOpacity={0.8}
@@ -461,6 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12, gap: 8,
   },
   salvarBtnDisabled: { backgroundColor: '#8FB8AC' },
+  salvarBtnPendente: { backgroundColor: '#ccc' },
   salvarBtnTexto: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', marginBottom: 48 },
   modalCard: {

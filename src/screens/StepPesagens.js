@@ -12,6 +12,8 @@ import { useBle } from '../context/context';
 import { useReferenceData } from '../context/referenceData';
 import { formatCNPJ, unmaskCNPJ } from '../helpers/formatCNPJ';
 import { contarPesagensConcluidas } from '../helpers/pesagem';
+import { pendenciasParaAvancar } from '../helpers/pendencias';
+import AvisoPendencias from './AvisoPendencias';
 
 export default function StepPesagens({
   ultimaCalibragem,
@@ -55,6 +57,8 @@ export default function StepPesagens({
   const proximaPesagem = pesagensFeitas + 1;
 
   const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
+
+  const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras });
 
   const clientesAtivos = clientes.filter(c => c.ativo !== false);
 
@@ -242,8 +246,10 @@ export default function StepPesagens({
       />
       <View style={styles.historicoContainer}>{historicoFiltrado}</View>
 
+      <AvisoPendencias pendencias={pendencias} />
+
       <TouchableOpacity
-        style={[styles.avancarBtn, (!nomeProjeto.trim() || !clienteSelecionado) && styles.avancarBtnDisabled]}
+        style={[styles.avancarBtn, pendencias.length > 0 && styles.avancarBtnDisabled]}
         onPress={onAvancar}
         activeOpacity={0.8}
       >
@@ -471,7 +477,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     marginTop: 24, marginBottom: 12, gap: 8,
   },
-  avancarBtnDisabled: { backgroundColor: '#ccc' },
+  avancarBtnDisabled: { backgroundColor: '#ccc', marginTop: 12 },
   avancarBtnTexto: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 22 },
   modalView: {

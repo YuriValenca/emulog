@@ -1,4 +1,5 @@
 export const PESAGENS_POR_AMOSTRA = 5;
+export const PESAGENS_OBRIGATORIAS = 4;
 
 export const criarPesagemVazia = () => ({ peso: null, densidade: null, timestamp: null });
 

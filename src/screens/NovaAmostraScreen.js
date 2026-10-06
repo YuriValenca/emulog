@@ -23,6 +23,7 @@ import { useReferenceData } from '../context/referenceData';
 import { paraDecimal } from '../helpers/numeros';
 import { normalizarCalibragem, serializarCalibragem, calibragemDoProjeto } from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
+import { pendenciasParaAvancar } from '../helpers/pendencias';
 import {
   PESAGENS_POR_AMOSTRA, criarAmostraVazia, pesagemConcluida, contarPesagensConcluidas, formatarHoraPesagem,
 } from '../helpers/pesagem';
@@ -403,13 +404,9 @@ function NovaAmostraScreenInner() {
   };
 
   const handleAvancarStep = () => {
-    if (!nomeProjeto.trim()) {
-      setMensagemAviso("O nome do projeto não pode estar vazio.");
-      setModalAvisoVisivel(true);
-      return;
-    }
-    if (!clienteSelecionado) {
-      setMensagemAviso("Selecione um cliente antes de continuar.");
+    const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras });
+    if (pendencias.length > 0) {
+      setMensagemAviso(pendencias.join(''));
       setModalAvisoVisivel(true);
       return;
     }
