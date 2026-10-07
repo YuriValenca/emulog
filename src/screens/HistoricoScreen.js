@@ -13,7 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useAppAuth } from '../context/auth';
 import { db } from '../firebaseConfig';
 import {
-  buscarProjetoEmAndamento, definirProjetoEmAndamento, descartarProjetoEmAndamento,
+  buscarProjetoEmAndamento, definirProjetoEmAndamento,
   projetoTemDados, contarPesagensDoProjeto,
 } from '../context/form';
 import {
@@ -169,9 +169,7 @@ export default function HistoricoScreen() {
   const carregarRascunhos = useCallback(async () => {
     try {
       const emAndamento = await buscarProjetoEmAndamento(companyId, uid);
-      const salvos = await listarRascunhosDoHistorico(sessao, role, emAndamento?.id);
-      const aberto = projetoTemDados(emAndamento) ? [{ ...emAndamento, emAndamento: true }] : [];
-      setRascunhos([...aberto, ...salvos]);
+      setRascunhos(await listarRascunhosDoHistorico(sessao, role, emAndamento?.id));
     } catch (e) {
       logErro(`Erro ao carregar rascunhos: ${e.message}`);
     }
@@ -205,10 +203,6 @@ export default function HistoricoScreen() {
   };
 
   const abrirRascunho = async (rascunho) => {
-    if (rascunho.emAndamento) {
-      navigation.navigate('NovaAmostra');
-      return;
-    }
     const emAndamento = await buscarProjetoEmAndamento(companyId, uid);
     if (!projetoTemDados(emAndamento)) {
       trocarParaRascunho(rascunho, null);
@@ -235,8 +229,7 @@ export default function HistoricoScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              if (rascunho.emAndamento) await descartarProjetoEmAndamento(companyId, uid);
-              if (rascunho.id) await excluirRascunho(rascunho.id, sessao);
+              await excluirRascunho(rascunho.id, sessao);
               setRascunhos(atuais => atuais.filter(r => r.id !== rascunho.id));
             } catch (e) {
               console.error('Erro ao excluir rascunho:', e);
@@ -252,7 +245,7 @@ export default function HistoricoScreen() {
     <View style={[styles.projetoCard, styles.rascunhoCard]}>
       <View style={styles.projetoInfo}>
         <View style={styles.seloRascunho}>
-          <Text style={styles.seloRascunhoTexto}>{rascunho.emAndamento ? 'EM ANDAMENTO' : 'RASCUNHO'}</Text>
+          <Text style={styles.seloRascunhoTexto}>RASCUNHO</Text>
         </View>
         <Text style={styles.projetoNome}>{nomeDoRascunho(rascunho)}</Text>
         {rascunho.clienteSelecionado?.nome ? (
