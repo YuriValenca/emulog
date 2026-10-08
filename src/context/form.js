@@ -4,6 +4,7 @@ import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia, pesagemConc
 import { calibragemParaArmazenar } from '../helpers/calibragem';
 import { kgParaTexto } from '../helpers/numeros';
 import { gerarIdRascunho, prepararRascunho, enviarRascunho } from '../rascunhos';
+import { furosTemDados, furosParaFormulario } from '../helpers/furos';
 import { useAppAuth } from './auth';
 
 const ProjetoFormContext = createContext(null);
@@ -23,6 +24,7 @@ export const projetoTemDados = (projeto) =>
     !!projeto.clienteSelecionado ||
     !!projeto.caminhaoSelecionado ||
     (projeto.equipeSelecionada || []).length > 0 ||
+    furosTemDados(projeto.furos) ||
     (projeto.amostras || []).some(amostra => pesagensDaAmostra(amostra).some(pesagemConcluida))
   );
 
@@ -69,6 +71,7 @@ export function ProjetoFormProvider({ children }) {
   const [amostraAtual, setAmostraAtual] = useState(0);
   const [pesagemAtual, setPesagemAtual] = useState(1);
   const [peso, setPeso] = useState('');
+  const [furos, setFuros] = useState([]);
   const [ultimaCalibragem, setUltimaCalibragem] = useState(null);
   const [uidUsuario, setUidUsuario] = useState(null);
   const [companyId, setCompanyId] = useState(null);
@@ -109,6 +112,7 @@ export function ProjetoFormProvider({ children }) {
       calibragem: ultimaCalibragem ? calibragemParaArmazenar(ultimaCalibragem) : null,
       nomeProjeto, quantidadeAmostras, amostras,
       amostraAtual, pesagemAtual, peso,
+      furos,
       numeroNF, kgPrevisto, kgAplicado,
       caminhaoSelecionado, equipeSelecionada,
       clienteSelecionado,
@@ -124,14 +128,14 @@ export function ProjetoFormProvider({ children }) {
 
   useEffect(() => {
     const projetoAtual = {
-      nomeProjeto, amostras, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
+      nomeProjeto, amostras, furos, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
       clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
     };
     if (!dataCriacao && projetoTemDados(projetoAtual)) {
       setDataCriacao(new Date().toISOString());
     }
   }, [
-    nomeProjeto, amostras, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
+    nomeProjeto, amostras, furos, numeroNF, kgPrevisto, kgAplicado, informacoesGerais,
     clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
   ]);
 
@@ -144,6 +148,7 @@ export function ProjetoFormProvider({ children }) {
     ultimaCalibragem,
     nomeProjeto, quantidadeAmostras, amostras,
     amostraAtual, pesagemAtual, peso,
+    furos,
     numeroNF, kgPrevisto, kgAplicado,
     caminhaoSelecionado, equipeSelecionada,
     clienteSelecionado,
@@ -172,6 +177,7 @@ export function ProjetoFormProvider({ children }) {
     setAmostraAtual(0);
     setPesagemAtual(1);
     setPeso('');
+    setFuros([]);
     setNumeroNF('');
     setKgPrevisto('');
     setKgAplicado('');
@@ -200,6 +206,7 @@ export function ProjetoFormProvider({ children }) {
       setAmostraAtual(projeto.amostraAtual || 0);
       setPesagemAtual(projeto.pesagemAtual || 1);
       setPeso(projeto.peso || '');
+      setFuros(furosParaFormulario(projeto.furos));
       setNumeroNF(projeto.numeroNF || '');
       setKgPrevisto(kgParaTexto(projeto.kgPrevisto));
       setKgAplicado(kgParaTexto(projeto.kgAplicado));
@@ -253,6 +260,7 @@ export function ProjetoFormProvider({ children }) {
       amostraAtual, setAmostraAtual,
       pesagemAtual, setPesagemAtual,
       peso, setPeso,
+      furos, setFuros,
       ultimaCalibragem, setUltimaCalibragem,
       uidUsuario, setUidUsuario,
       companyId, setCompanyId,

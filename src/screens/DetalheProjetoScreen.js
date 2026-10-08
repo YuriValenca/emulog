@@ -17,6 +17,15 @@ import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
 import { paraData, mesmoDia } from '../helpers/datas';
 import { calibragemVencidaNoProjeto } from '../helpers/calibragem';
 import { kgPreenchido, formatarKg } from '../helpers/numeros';
+import { somarFuros } from '../helpers/furos';
+
+const FUROS_POR_LINHA_NO_PDF = 4;
+
+const resumoDosFuros = (furos) =>
+  `${furos.length} furo${furos.length !== 1 ? 's' : ''} · total ${formatarKg(somarFuros(furos))} kg`;
+
+const dividirEmLinhas = (itens, tamanho) =>
+  Array.from({ length: Math.ceil(itens.length / tamanho) }, (_, i) => itens.slice(i * tamanho, (i + 1) * tamanho));
 
 const db = getFirestore();
 
@@ -171,6 +180,8 @@ export default function DetalheProjetoScreen() {
           .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
           .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
           .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
+          .furos-tabela td { width: 12.5%; }
+          .furos-tabela .furo-numero { background-color: #f2f2f2; font-weight: bold; }
           .section-title {
             font-size: 13px;
             font-weight: bold;
@@ -226,6 +237,8 @@ export default function DetalheProjetoScreen() {
 
         <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
         ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
+
+        ${projeto.furos?.length ? gerarConteudoFurosPDF(projeto.furos) : ''}
       </body>
     </html>`;
 
@@ -250,6 +263,35 @@ export default function DetalheProjetoScreen() {
         ${index % 2 === 1 || index === amostras.length - 1 ? '</div>' : ''}`;
     }).join('');
   };
+
+  const gerarConteudoFurosPDF = (furos) => {
+    const linhas = dividirEmLinhas(furos.map((furo, i) => ({ numero: i + 1, kg: furo.kg })), FUROS_POR_LINHA_NO_PDF);
+    return `
+      <p class="section-title">Pesos por furo — ${resumoDosFuros(furos)}</p>
+      <table class="furos-tabela">
+        <tbody>
+          ${linhas.map(linha => `
+            <tr>
+              ${linha.map(({ numero, kg }) => `<td class="furo-numero">Furo ${numero}</td><td>${formatarKg(kg)} kg</td>`).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  };
+
+  const renderizarFuros = (furos) => (
+    <View style={styles.furosBox}>
+      <Text style={styles.infoAdicionalTitulo}>Pesos por furo</Text>
+      {furos.map((furo, i) => (
+        <View key={i} style={styles.furoRow}>
+          <Text style={styles.furoLabel}>Furo {i + 1}</Text>
+          <Text style={styles.furoValor}>{formatarKg(furo.kg)} kg</Text>
+        </View>
+      ))}
+      <View style={[styles.furoRow, styles.furoTotalRow]}>
+        <Text style={styles.furoTotal}>{resumoDosFuros(furos)}</Text>
+      </View>
+    </View>
+  );
 
   const renderizarAmostras = (amostras) => {
     if (!amostras || amostras.length === 0) return <Text style={styles.vazioTexto}>Nenhuma amostra encontrada</Text>;
@@ -422,6 +464,8 @@ export default function DetalheProjetoScreen() {
       <Text style={styles.label}>Amostras</Text>
       {renderizarAmostras(historicoFiltrado)}
 
+      {projeto.furos?.length ? renderizarFuros(projeto.furos) : null}
+
       <TouchableOpacity style={styles.pdfButton} onPress={gerarPDF} activeOpacity={0.8}>
         <Ionicons name="document-text-outline" size={20} color="#FFF" />
         <Text style={styles.pdfButtonText}>Gerar PDF</Text>
@@ -486,6 +530,16 @@ const styles = StyleSheet.create({
   pesagemText: { fontSize: 13, color: '#333' },
   pesagemHeader: { fontSize: 13, fontWeight: 'bold', color: '#333' },
   vazioTexto: { color: '#aaa', fontStyle: 'italic' },
+  furosBox: { marginTop: 16, borderWidth: 1, borderColor: '#e2e2e2', borderRadius: 8, overflow: 'hidden' },
+  furoRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  furoLabel: { fontSize: 14, color: '#555' },
+  furoValor: { fontSize: 14, fontWeight: '600', color: '#333' },
+  furoTotalRow: { justifyContent: 'flex-end', backgroundColor: '#E3F0EC', borderBottomWidth: 0 },
+  furoTotal: { fontSize: 14, fontWeight: '700', color: '#1F6452' },
   pdfButton: {
     backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

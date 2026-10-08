@@ -26,6 +26,7 @@ import {
 } from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaAvancar } from '../helpers/pendencias';
+import { furosParaSalvar } from '../helpers/furos';
 import {
   PESAGENS_POR_AMOSTRA, criarAmostraVazia, pesagemConcluida, contarPesagensConcluidas, formatarHoraPesagem,
 } from '../helpers/pesagem';
@@ -70,6 +71,7 @@ function NovaAmostraScreenInner() {
     amostraAtual, setAmostraAtual,
     pesagemAtual, setPesagemAtual,
     peso, setPeso,
+    furos,
     ultimaCalibragem, setUltimaCalibragem,
     uidUsuario,
     companyId: companyIdDoProjeto,
@@ -291,6 +293,7 @@ function NovaAmostraScreenInner() {
       calibragem: calibragemDoProjeto(ultimaCalibragem),
       quantidadeAmostras,
       amostras: amostrasPlanificadas,
+      furos: furosParaSalvar(furos),
       companyId: companyIdDoProjeto || companyId,
       informacoesOperacao: {
         numeroNF,
@@ -417,7 +420,7 @@ function NovaAmostraScreenInner() {
   };
 
   const handleAvancarStep = () => {
-    const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras });
+    const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras, furos });
     if (pendencias.length > 0) {
       setMensagemAviso(pendencias.join(''));
       setModalAvisoVisivel(true);

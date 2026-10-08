@@ -6,6 +6,7 @@ import { estaOnline, comTempoLimite } from './helpers/rede';
 import { pesagemConcluida } from './helpers/pesagem';
 import { paraRefCaminhao, paraRefsEquipe } from './helpers/referencias';
 import { paraKg, kgParaTexto } from './helpers/numeros';
+import { furosParaSalvar } from './helpers/furos';
 
 const COLECAO = 'projetos_rascunho';
 const TEMPO_LIMITE_FIRESTORE_MS = 10000;
@@ -52,6 +53,7 @@ function paraFirestore(rascunho) {
       amostraId: indice,
       pesagens: pesagensDaAmostra(amostra).filter(pesagemConcluida),
     })),
+    furos: furosParaSalvar(dados.furos),
     dataCriacao: Timestamp.fromDate(paraData(dados.dataCriacao)),
     dataAtualizacao: Timestamp.fromDate(paraData(dados.dataAtualizacao)),
     calibragem: dados.calibragem

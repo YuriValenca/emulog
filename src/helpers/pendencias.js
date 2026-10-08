@@ -1,4 +1,5 @@
 import { PESAGENS_OBRIGATORIAS, contarPesagensConcluidas } from './pesagem';
+import { listarFurosVazios } from './furos';
 
 const pluralizarPesagens = (quantidade) => (quantidade === 1 ? '1 pesagem' : `${quantidade} pesagens`);
 
@@ -18,13 +19,22 @@ const pendenciasDeIdentificacao = ({ nomeProjeto, clienteSelecionado }) => [
   !clienteSelecionado && 'Selecione um cliente da lista.',
 ];
 
+const pendenciaDeFurosVazios = (furos) => {
+  const vazios = listarFurosVazios(furos);
+  if (vazios.length === 0) return null;
+  if (vazios.length === 1) return `Preencha ou apague o Furo ${vazios[0]}.`;
+  return `Preencha ou apague os furos ${vazios.join(', ')}.`;
+};
+
 export const pendenciasParaAvancar = (projeto) => [
   ...pendenciasDeIdentificacao(projeto),
   !algumaAmostraCompleta(projeto.amostras) && `Conclua as ${PESAGENS_OBRIGATORIAS} pesagens de pelo menos uma amostra.`,
+  pendenciaDeFurosVazios(projeto.furos),
 ].filter(Boolean);
 
 export const pendenciasParaSalvar = (projeto) => [
   ...pendenciasDeIdentificacao(projeto),
+  pendenciaDeFurosVazios(projeto.furos),
   ...listarAmostrasIncompletas(projeto.amostras).map(
     ({ numero, faltam }) => `Amostra ${numero}: ${faltam === 1 ? 'falta' : 'faltam'} ${pluralizarPesagens(faltam)}.`
   ),
