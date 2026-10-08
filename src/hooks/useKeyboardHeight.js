@@ -11,17 +11,14 @@ export default function useKeyboardHeight() {
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       const height = e.endCoordinates?.height ?? 0;
-      console.log('🔼 keyboard show', height);
       if (height > 0) {
         lastKnownHeight.current = height;
         setKeyboardHeight(height);
       } else if (lastKnownHeight.current > 0) {
-        console.log('⚠️ altura 0 ignorada, usando fallback:', lastKnownHeight.current);
         setKeyboardHeight(lastKnownHeight.current);
       }
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      console.log('🔽 keyboard hide')
       setKeyboardHeight(0);
     });
 
