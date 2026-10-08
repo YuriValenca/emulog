@@ -324,12 +324,22 @@ function NovaAmostraScreenInner() {
     return comTempoLimite(batch.commit(), TEMPO_LIMITE_SALVAR_ONLINE_MS);
   };
 
+  // Quem abriu o rascunho pelo Histórico volta pra ele, com a lista de concluídos recarregada
+  const voltarDepoisDeSalvar = () => {
+    const veioDoHistorico = navigation.getState().routes.some(rota => rota.name === 'Historico');
+    if (veioDoHistorico) {
+      navigation.navigate({ name: 'Historico', params: { projetoSalvoEm: Date.now() }, merge: true });
+      return;
+    }
+    navigation.popToTop();
+  };
+
   const encerrarProjetoSalvo = (titulo, mensagem) => {
     descartarRascunhoConcluido();
     Alert.alert(titulo, mensagem);
     resetarFormulario();
     limparEstadoDoProjeto();
-    navigation.replace('Home');
+    voltarDepoisDeSalvar();
   };
 
   const salvarNoAparelho = async (dadosDoProjeto) => {

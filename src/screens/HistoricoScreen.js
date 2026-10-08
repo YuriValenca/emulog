@@ -6,7 +6,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import NetInfo from '@react-native-community/netinfo';
@@ -59,6 +59,7 @@ export default function HistoricoScreen() {
   const debounceRef = useRef(null);
 
   const navigation = useNavigation();
+  const projetoSalvoEm = useRoute().params?.projetoSalvoEm;
   const { uid, role, companyId } = useAppAuth();
   const sessao = { companyId, uid };
 
@@ -165,6 +166,13 @@ export default function HistoricoScreen() {
   useEffect(() => {
     buscarMetadados();
   }, [buscarMetadados]);
+
+  useEffect(() => {
+    if (!projetoSalvoEm) return;
+    setAbaAtiva(ABA_CONCLUIDOS);
+    setPaginaAtual(1);
+    buscarMetadados();
+  }, [projetoSalvoEm]);
 
   const carregarRascunhos = useCallback(async () => {
     try {
