@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, setDoc, deleteDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { paraData } from './helpers/datas';
@@ -7,6 +6,8 @@ import { pesagemConcluida } from './helpers/pesagem';
 import { paraRefCaminhao, paraRefsEquipe } from './helpers/referencias';
 import { paraKg, kgParaTexto } from './helpers/numeros';
 import { furosParaSalvar } from './helpers/furos';
+import { lerJson, gravarJson } from './helpers/armazenamento';
+import { excluirMidiasDoProjeto } from './midias';
 
 const COLECAO = 'projetos_rascunho';
 const TEMPO_LIMITE_FIRESTORE_MS = 10000;
@@ -18,13 +19,6 @@ const sessaoValida = (sessao) => !!sessao?.companyId && !!sessao?.uid;
 // O id já nasce como id de documento do Firestore (gerado no aparelho, funciona offline),
 // pra ser o mesmo no rascunho local, no remoto e no projeto concluído
 export const gerarIdRascunho = () => doc(collection(db, COLECAO)).id;
-
-async function lerJson(chave, padrao) {
-  const salvo = await AsyncStorage.getItem(chave);
-  return salvo ? JSON.parse(salvo) : padrao;
-}
-
-const gravarJson = (chave, valor) => AsyncStorage.setItem(chave, JSON.stringify(valor));
 
 const pesagensDaAmostra = (amostra) => (Array.isArray(amostra) ? amostra : amostra?.pesagens || []);
 
@@ -167,6 +161,12 @@ export async function excluirRascunho(id, sessao) {
   await removerRascunhoLocal(id, sessao);
   await enfileirar(id, { acao: 'excluir' }, sessao);
   sincronizarRascunhos(sessao);
+}
+
+// Só pra descarte feito pelo usuário: ao concluir, o rascunho some mas as fotos passam a ser do projeto
+export async function excluirRascunhoEFotos(rascunho, sessao) {
+  await excluirRascunho(rascunho.id, sessao);
+  await excluirMidiasDoProjeto(rascunho.id, rascunho.companyId || sessao.companyId, sessao);
 }
 
 function consultaDeRascunhos({ companyId, uid }, role) {

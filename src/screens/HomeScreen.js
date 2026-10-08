@@ -9,7 +9,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { useFocusEffect } from '@react-navigation/native';
 import { buscarProjetoEmAndamento, projetoTemDados, descartarProjetoEmAndamento } from '../context/form';
 import ModalProjetoEmAndamento from './ModalProjetoEmAndamento';
-import { salvarComoRascunho, excluirRascunho, sincronizarRascunhos } from '../rascunhos';
+import { salvarComoRascunho, excluirRascunhoEFotos, sincronizarRascunhos } from '../rascunhos';
+import { sincronizarMidias } from '../midias';
 import { lerCalibragemDoAparelho } from '../calibragemLocal';
 
 export default function HomeScreen({ navigation }) {
@@ -23,6 +24,7 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       sincronizarRascunhos({ companyId, uid });
+      sincronizarMidias({ companyId, uid });
     }, [companyId, uid])
   );
 
@@ -125,7 +127,7 @@ export default function HomeScreen({ navigation }) {
     setModalProjetoVisivel(false);
     try {
       await descartarProjetoEmAndamento(companyId, uid);
-      if (projetoEmAndamento.id) await excluirRascunho(projetoEmAndamento.id, sessao);
+      if (projetoEmAndamento.id) await excluirRascunhoEFotos(projetoEmAndamento, sessao);
     } catch (e) {
       console.error('Erro ao descartar projeto em andamento:', e);
       Alert.alert('Erro', 'Não foi possível apagar o projeto. Tente novamente.');

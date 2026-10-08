@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity,
+  ActivityIndicator, TouchableOpacity, Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
+import FotosDaOperacao from './FotosDaOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
@@ -18,6 +19,7 @@ import { paraData, mesmoDia } from '../helpers/datas';
 import { calibragemVencidaNoProjeto } from '../helpers/calibragem';
 import { kgPreenchido, formatarKg } from '../helpers/numeros';
 import { somarFuros } from '../helpers/furos';
+import { listarMidias, lerMidiaComoDataUri } from '../midias';
 
 const FUROS_POR_LINHA_NO_PDF = 4;
 
@@ -35,11 +37,13 @@ export default function DetalheProjetoScreen() {
   const [amostraPesquisa, setAmostraPesquisa] = useState('');
   const [modalInfoVisivel, setModalInfoVisivel] = useState(false);
   const [companyData, setCompanyData] = useState(null);
+  const [midias, setMidias] = useState(null);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   const route = useRoute();
   const navigation = useNavigation();
   const { projetoId } = route.params;
-  const { companyId, role } = useAppAuth();
+  const { companyId, uid, role } = useAppAuth();
 
   const buscarProjeto = async () => {
     try {
@@ -129,10 +133,29 @@ export default function DetalheProjetoScreen() {
     }
   };
 
-  const gerarPDF = async () => {
-    console.log(projeto);
-    if (!projeto) return;
+  const buscarFotosParaPDF = async () => {
+    const lista = midias ?? (await listarMidias(
+      { projetoId, companyIdDoProjeto: projeto.companyId || companyId },
+      { companyId, uid }
+    )).midias;
+    const fotos = await Promise.all(lista.map(midia => lerMidiaComoDataUri(midia).catch(() => null)));
+    return fotos.filter(Boolean);
+  };
 
+  const gerarPDF = async () => {
+    if (!projeto || gerandoPdf) return;
+    setGerandoPdf(true);
+    try {
+      await montarECompartilharPDF();
+    } catch (e) {
+      console.error('Erro ao gerar PDF:', e);
+      Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
+
+  const montarECompartilharPDF = async () => {
     const info = projeto.informacoesOperacao;
     const informacoesGerais = info?.informacoesGerais;
     const isFoundingCompany = companyData?.founding === true;
@@ -143,6 +166,8 @@ export default function DetalheProjetoScreen() {
       const b64 = await fetchImageAsBase64(companyData.logo);
       if (b64) companyLogoSrc = b64;
     }
+
+    const fotos = await buscarFotosParaPDF();
 
     const htmlContent = `
     <html>
@@ -182,6 +207,10 @@ export default function DetalheProjetoScreen() {
           .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
           .furos-tabela td { width: 12.5%; }
           .furos-tabela .furo-numero { background-color: #f2f2f2; font-weight: bold; }
+          .fotos-grade { display: flex; flex-wrap: wrap; justify-content: space-between; }
+          .foto { width: 48%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
+          .foto img { width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; }
+          .foto p { margin: 4px 0 0 0; text-align: center; color: #555; }
           .section-title {
             font-size: 13px;
             font-weight: bold;
@@ -239,6 +268,8 @@ export default function DetalheProjetoScreen() {
         ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
 
         ${projeto.furos?.length ? gerarConteudoFurosPDF(projeto.furos) : ''}
+
+        ${fotos.length ? gerarConteudoFotosPDF(fotos) : ''}
       </body>
     </html>`;
 
@@ -277,6 +308,12 @@ export default function DetalheProjetoScreen() {
         </tbody>
       </table>`;
   };
+
+  const gerarConteudoFotosPDF = (fotos) => `
+    <p class="section-title">Registro fotográfico — ${fotos.length} foto${fotos.length !== 1 ? 's' : ''}</p>
+    <div class="fotos-grade">
+      ${fotos.map((foto, i) => `<div class="foto"><img src="${foto}" /><p>Foto ${i + 1}</p></div>`).join('')}
+    </div>`;
 
   const renderizarFuros = (furos) => (
     <View style={styles.furosBox}>
@@ -453,6 +490,14 @@ export default function DetalheProjetoScreen() {
         <Text style={styles.valor}>{projeto.informacoesOperacao?.informacoesGerais || 'Sem observações'}</Text>
       </View>
 
+      <View style={styles.fotosWrapper}>
+        <FotosDaOperacao
+          projetoId={projetoId}
+          companyIdDoProjeto={projeto.companyId}
+          aoAlterar={setMidias}
+        />
+      </View>
+
       <TextInput
         style={styles.input}
         placeholder="Buscar Amostra"
@@ -466,9 +511,16 @@ export default function DetalheProjetoScreen() {
 
       {projeto.furos?.length ? renderizarFuros(projeto.furos) : null}
 
-      <TouchableOpacity style={styles.pdfButton} onPress={gerarPDF} activeOpacity={0.8}>
-        <Ionicons name="document-text-outline" size={20} color="#FFF" />
-        <Text style={styles.pdfButtonText}>Gerar PDF</Text>
+      <TouchableOpacity
+        style={[styles.pdfButton, gerandoPdf && styles.pdfButtonDesabilitado]}
+        onPress={gerarPDF}
+        disabled={gerandoPdf}
+        activeOpacity={0.8}
+      >
+        {gerandoPdf
+          ? <ActivityIndicator size="small" color="#FFF" />
+          : <Ionicons name="document-text-outline" size={20} color="#FFF" />}
+        <Text style={styles.pdfButtonText}>{gerandoPdf ? 'Preparando PDF...' : 'Gerar PDF'}</Text>
       </TouchableOpacity>
 
       <InformacoesOperacao
@@ -545,5 +597,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     gap: 8, marginTop: 24, marginBottom: 24,
   },
+  pdfButtonDesabilitado: { backgroundColor: '#8BC3B3' },
+  fotosWrapper: { marginTop: 16 },
   pdfButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

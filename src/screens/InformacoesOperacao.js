@@ -14,6 +14,7 @@ import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaSalvar } from '../helpers/pendencias';
 import { paraKg, kgParaTexto, limparKgDigitado } from '../helpers/numeros';
 import AvisoPendencias from './AvisoPendencias';
+import FotosDaOperacao from './FotosDaOperacao';
 
 export default function InformacoesOperacao({
   modoModal = false,
@@ -266,6 +267,8 @@ export default function InformacoesOperacao({
           )}
         </TouchableOpacity>
       )}
+
+      {!modoModal && <FotosDaOperacao projetoId={form.idProjeto} companyIdDoProjeto={form.companyId} />}
 
       <Text style={styles.label}>Informações gerais</Text>
       <TextInput

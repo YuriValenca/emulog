@@ -4,6 +4,7 @@ import { db } from './firebaseConfig';
 import { collection, doc, Timestamp, writeBatch } from 'firebase/firestore';
 import { Alert } from 'react-native';
 import { sincronizarRascunhosDaUltimaSessao } from './rascunhos';
+import { sincronizarMidiasDaUltimaSessao } from './midias';
 
 export const saveProjectOffline = async (project) => {
   try {
@@ -120,6 +121,7 @@ export const checkConnectionAndSync = () => {
       console.log('Dispositivo reconectou, sincronizando...');
       await syncProjects();
       await sincronizarRascunhosDaUltimaSessao();
+      await sincronizarMidiasDaUltimaSessao();
     }
     estavaOnline = estaOnlineAgora;
   });

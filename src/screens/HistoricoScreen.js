@@ -17,7 +17,7 @@ import {
   projetoTemDados, contarPesagensDoProjeto,
 } from '../context/form';
 import {
-  listarRascunhosDoHistorico, salvarComoRascunho, removerRascunhoLocal, excluirRascunho,
+  listarRascunhosDoHistorico, salvarComoRascunho, removerRascunhoLocal, excluirRascunhoEFotos,
 } from '../rascunhos';
 import { paraData, formatarDataHora, mesmoDia } from '../helpers/datas';
 import { textoAmostras, textoPesagens } from '../helpers/pesagem';
@@ -229,7 +229,7 @@ export default function HistoricoScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await excluirRascunho(rascunho.id, sessao);
+              await excluirRascunhoEFotos(rascunho, sessao);
               setRascunhos(atuais => atuais.filter(r => r.id !== rascunho.id));
             } catch (e) {
               console.error('Erro ao excluir rascunho:', e);
