@@ -3,6 +3,9 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { contarPesagensDoProjeto } from '../context/form';
 import { textoAmostras, textoPesagens } from '../helpers/pesagem';
+import { textoFuros } from '../helpers/furos';
+
+const juntarComE = (partes) => `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 
 function BotaoModal({ icone, texto, subtexto, cor, onPress, centralizado = false }) {
   return (
@@ -28,6 +31,10 @@ export default function ModalProjetoEmAndamento({
   const nome = projeto?.nomeProjeto?.trim() || 'Sem nome';
   const amostras = projeto?.amostras?.length || 0;
   const pesagens = contarPesagensDoProjeto(projeto);
+  const furos = projeto?.furos?.itens?.length ?? null;
+  const conteudoDoProjeto = [
+    textoAmostras(amostras), textoPesagens(pesagens), furos !== null && textoFuros(furos),
+  ].filter(Boolean);
 
   const fechar = () => {
     setEtapa('escolha');
@@ -49,7 +56,10 @@ export default function ModalProjetoEmAndamento({
       <>
         <Text style={styles.titulo}>Projeto em andamento</Text>
         <Text style={styles.nome}>"{nome}"</Text>
-        <Text style={styles.detalhe}>{textoAmostras(amostras)} - {textoPesagens(pesagens)}</Text>
+        <View style={styles.detalhes}>
+          <Text style={styles.detalhe}>{textoAmostras(amostras)} - {textoPesagens(pesagens)}</Text>
+          {furos !== null && <Text style={styles.detalhe}>{textoFuros(furos)}</Text>}
+        </View>
         <BotaoModal icone="play-circle" texto="Continuar" cor="#1F6452" onPress={executarESair(onContinuar)} />
         <BotaoModal icone="refresh-circle" texto="Iniciar novo" cor="#787878" onPress={() => setEtapa('perguntarRascunho')} />
       </>
@@ -74,7 +84,7 @@ export default function ModalProjetoEmAndamento({
         <Ionicons name="warning-outline" size={44} color="#D32F2F" />
         <Text style={styles.titulo}>Apagar o projeto atual?</Text>
         <Text style={styles.texto}>
-          "{nome}" tem {textoAmostras(amostras)} e {textoPesagens(pesagens)}. Esses dados serão perdidos.
+          "{nome}" tem {juntarComE(conteudoDoProjeto)}. Esses dados serão perdidos.
         </Text>
         <BotaoModal
           icone="trash" texto="Apagar" cor="#D32F2F" centralizado
@@ -117,7 +127,8 @@ const styles = StyleSheet.create({
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginTop: 8 },
   texto: { fontSize: 18, color: '#333', textAlign: 'center', marginTop: 10, marginBottom: 12 },
   nome: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginTop: 12 },
-  detalhe: { fontSize: 18, color: '#555', textAlign: 'center', marginTop: 4, marginBottom: 12 },
+  detalhes: { marginTop: 4, marginBottom: 12, gap: 2 },
+  detalhe: { fontSize: 18, color: '#555', textAlign: 'center' },
   botao: {
     width: '100%', minHeight: 60, borderRadius: 8, marginTop: 12, paddingVertical: 10, paddingHorizontal: 16,
     flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', gap: 10,

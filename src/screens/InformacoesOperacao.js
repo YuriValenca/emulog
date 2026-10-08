@@ -58,6 +58,7 @@ export default function InformacoesOperacao({
   const informacoesGerais    = modoModal ? infoGeraisLocal : form.informacoesGerais;
   const setInformacoesGerais = modoModal ? setInfoGeraisLocal : form.setInformacoesGerais;
   const pendencias = modoModal ? [] : pendenciasParaSalvar(form);
+  const kgAplicadoDosFuros = !modoModal && !!form.furos;
 
   const [modalCaminhaoVisivel, setModalCaminhaoVisivel] = useState(false);
   const [modalEquipeVisivel, setModalEquipeVisivel] = useState(false);
@@ -210,15 +211,17 @@ export default function InformacoesOperacao({
 
       <Text style={styles.label}>Kg Aplicado</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, kgAplicadoDosFuros && styles.inputTravado]}
         placeholder="Ex: 1480"
         placeholderTextColor="#888888"
         keyboardType="numeric"
         value={kgAplicado}
+        editable={!kgAplicadoDosFuros}
         onChangeText={(texto) => setKgAplicado(limparKgDigitado(texto))}
         onFocus={registrarFoco}
         onBlur={() => { salvarEstado(); limparFoco(); }}
       />
+      {kgAplicadoDosFuros && <Text style={styles.dicaCampo}>Soma das cargas dos furos.</Text>}
 
       <Text style={styles.label}>Unidade de Bombeamento</Text>
       {caminhoes.length === 0 ? (
@@ -448,6 +451,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#eee',
   },
   avisoTexto: { fontSize: 13, color: '#aaa', flex: 1 },
+  inputTravado: { backgroundColor: '#f2f2f2', color: '#555' },
+  dicaCampo: { fontSize: 13, color: '#888', marginTop: -10, marginBottom: 15 },
   selectBtn: {
     backgroundColor: '#FFF', borderColor: '#CCC', borderWidth: 1,
     borderRadius: 8, padding: 12, marginBottom: 18,

@@ -14,7 +14,7 @@ import { formatCNPJ, unmaskCNPJ } from '../helpers/formatCNPJ';
 import { contarPesagensConcluidas } from '../helpers/pesagem';
 import { pendenciasParaAvancar } from '../helpers/pendencias';
 import AvisoPendencias from './AvisoPendencias';
-import PesosPorFuro from './PesosPorFuro';
+import AlternarFuros from './AlternarFuros';
 
 export default function StepPesagens({
   ultimaCalibragem,
@@ -44,7 +44,6 @@ export default function StepPesagens({
     setPesagemAtual,
     peso, setPeso,
     clienteSelecionado, setClienteSelecionado,
-    furos,
     salvarEstadoDoProjeto,
   } = useProjetoForm();
 
@@ -60,7 +59,7 @@ export default function StepPesagens({
 
   const confirmarDesabilitado = temporizador || todasPesagensConcluidas || !calibragemCarregada;
 
-  const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras, furos });
+  const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras });
 
   const clientesAtivos = clientes.filter(c => c.ativo !== false);
 
@@ -248,7 +247,7 @@ export default function StepPesagens({
       />
       <View style={styles.historicoContainer}>{historicoFiltrado}</View>
 
-      <PesosPorFuro />
+      <AlternarFuros />
 
       <AvisoPendencias pendencias={pendencias} />
 

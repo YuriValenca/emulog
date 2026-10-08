@@ -1,5 +1,8 @@
 import { PESAGENS_OBRIGATORIAS, contarPesagensConcluidas } from './pesagem';
-import { listarFurosVazios } from './furos';
+import { listarFurosIncompletos } from './furos';
+import { kgPreenchido as valorPreenchido } from './numeros';
+
+const MAXIMO_DE_FUROS_LISTADOS = 10;
 
 const pluralizarPesagens = (quantidade) => (quantidade === 1 ? '1 pesagem' : `${quantidade} pesagens`);
 
@@ -19,22 +22,37 @@ const pendenciasDeIdentificacao = ({ nomeProjeto, clienteSelecionado }) => [
   !clienteSelecionado && 'Selecione um cliente da lista.',
 ];
 
-const pendenciaDeFurosVazios = (furos) => {
-  const vazios = listarFurosVazios(furos);
-  if (vazios.length === 0) return null;
-  if (vazios.length === 1) return `Preencha ou apague o Furo ${vazios[0]}.`;
-  return `Preencha ou apague os furos ${vazios.join(', ')}.`;
-};
+function listarNumerosDeFuros(numeros) {
+  const listados = numeros.slice(0, MAXIMO_DE_FUROS_LISTADOS).join(', ');
+  const restantes = numeros.length - MAXIMO_DE_FUROS_LISTADOS;
+  return restantes > 0 ? `${listados} e mais ${restantes}` : listados;
+}
+
+function pendenciaDeFurosIncompletos(itens) {
+  const incompletos = listarFurosIncompletos(itens);
+  if (incompletos.length === 0) return null;
+  if (incompletos.length === 1) return `Preencha a profundidade e a carga do Furo ${incompletos[0]}.`;
+  return `Preencha a profundidade e a carga dos furos ${listarNumerosDeFuros(incompletos)}.`;
+}
+
+export const pendenciasDosFuros = (furos) =>
+  furos
+    ? [
+      !valorPreenchido(furos.profundidadePrevista) && 'Informe a profundidade prevista dos furos.',
+      !valorPreenchido(furos.cargaPrevista) && 'Informe a carga prevista dos furos.',
+      furos.itens.length === 0 && 'Adicione pelo menos um furo.',
+      pendenciaDeFurosIncompletos(furos.itens),
+    ].filter(Boolean)
+    : [];
 
 export const pendenciasParaAvancar = (projeto) => [
   ...pendenciasDeIdentificacao(projeto),
   !algumaAmostraCompleta(projeto.amostras) && `Conclua as ${PESAGENS_OBRIGATORIAS} pesagens de pelo menos uma amostra.`,
-  pendenciaDeFurosVazios(projeto.furos),
 ].filter(Boolean);
 
 export const pendenciasParaSalvar = (projeto) => [
   ...pendenciasDeIdentificacao(projeto),
-  pendenciaDeFurosVazios(projeto.furos),
+  ...pendenciasDosFuros(projeto.furos),
   ...listarAmostrasIncompletas(projeto.amostras).map(
     ({ numero, faltam }) => `Amostra ${numero}: ${faltam === 1 ? 'falta' : 'faltam'} ${pluralizarPesagens(faltam)}.`
   ),

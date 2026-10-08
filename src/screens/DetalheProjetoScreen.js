@@ -13,22 +13,16 @@ import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
 import FotosDaOperacao from './FotosDaOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
-import { LOGO_EMULOG } from '../assets/logoEmulog';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
-import { paraData, mesmoDia, formatarDataHora } from '../helpers/datas';
+import { paraData, mesmoDia } from '../helpers/datas';
 import { calibragemVencidaNoProjeto } from '../helpers/calibragem';
 import { kgPreenchido, formatarKg } from '../helpers/numeros';
-import { somarFuros } from '../helpers/furos';
+import { somarCargasReais } from '../helpers/furos';
+import { montarRelatorioDoFogo, montarRelatorioDeFuros, temInformacoesDaOperacao } from '../relatorios';
 import { listarMidias, lerMidiaComoDataUri } from '../midias';
 
-const FUROS_POR_LINHA_NO_PDF = 4;
-
-const resumoDosFuros = (furos) =>
-  `${furos.length} furo${furos.length !== 1 ? 's' : ''} · total ${formatarKg(somarFuros(furos))} kg`;
-
-const dividirEmLinhas = (itens, tamanho) =>
-  Array.from({ length: Math.ceil(itens.length / tamanho) }, (_, i) => itens.slice(i * tamanho, (i + 1) * tamanho));
+const RELATORIO = { FOGO: 'fogo', FUROS: 'furos' };
 
 const db = getFirestore();
 
@@ -39,7 +33,7 @@ export default function DetalheProjetoScreen() {
   const [modalInfoVisivel, setModalInfoVisivel] = useState(false);
   const [companyData, setCompanyData] = useState(null);
   const [midias, setMidias] = useState(null);
-  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [relatorioEmPreparo, setRelatorioEmPreparo] = useState(null);
 
   const route = useRoute();
   const navigation = useNavigation();
@@ -95,25 +89,13 @@ export default function DetalheProjetoScreen() {
     setProjeto(prev => ({ ...prev, informacoesOperacao: novaInfo }));
   };
 
-  const hasAdditionalInfo = (info) => {
-    if (!info) return false;
-    return !!(
-      info.numeroNF?.trim() ||
-      kgPreenchido(info.kgPrevisto) ||
-      kgPreenchido(info.kgAplicado) ||
-      info.caminhao ||
-      (info.equipe && info.equipe.length > 0) ||
-      info.informacoesGerais?.trim()
-    );
-  };
-
-  const gerarNomeArquivoPDF = () => {
+  const gerarNomeArquivoPDF = (sufixo) => {
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
     const nomeSafe = projeto.nomeProjeto.replace(/[\/\\:*?"<>|]/g, '-');
-    return `${nomeSafe} - ${d}-${m}-${y}`;
+    return `${nomeSafe}${sufixo ? ` - ${sufixo}` : ''} - ${d}-${m}-${y}`;
   };
 
   const fetchImageAsBase64 = async (url) => {
@@ -143,215 +125,84 @@ export default function DetalheProjetoScreen() {
     return fotos.filter(Boolean);
   };
 
-  const gerarPDF = async () => {
-    if (!projeto || gerandoPdf) return;
-    setGerandoPdf(true);
-    try {
-      await montarECompartilharPDF();
-    } catch (e) {
-      console.error('Erro ao gerar PDF:', e);
-      Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
-    } finally {
-      setGerandoPdf(false);
-    }
+  const buscarLogoDaEmpresa = async () => {
+    if (!companyData?.logo) return LOGO_BASE_64;
+    return (await fetchImageAsBase64(companyData.logo)) || LOGO_BASE_64;
   };
 
-  const montarECompartilharPDF = async () => {
-    const info = projeto.informacoesOperacao;
-    const informacoesGerais = info?.informacoesGerais;
-    const isFoundingCompany = companyData?.founding === true;
-    const primaryColor = companyData?.primaryColor || '#1F6452';
+  const montarHtml = async (tipo) => {
+    const base = {
+      projeto,
+      logoEmpresa: await buscarLogoDaEmpresa(),
+      cor: companyData?.primaryColor || '#1F6452',
+    };
+    if (tipo === RELATORIO.FUROS) return montarRelatorioDeFuros(base);
+    return montarRelatorioDoFogo({
+      ...base,
+      fotos: await buscarFotosParaPDF(),
+      mostrarObservacaoTecnica: companyId === 'explog-founding',
+    });
+  };
 
-    let companyLogoSrc = LOGO_BASE_64;
-    if (companyData?.logo) {
-      const b64 = await fetchImageAsBase64(companyData.logo);
-      if (b64) companyLogoSrc = b64;
-    }
-
-    const fotos = await buscarFotosParaPDF();
-
-    const htmlContent = `
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          @page { margin: 13mm; }
-          body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
-          table.pagina { width: 100%; border-collapse: collapse; margin: 0; }
-          table.pagina > tbody > tr > td, table.pagina > tfoot > tr > td { border: none; padding: 0; }
-          .espaco-rodape { height: 28px; }
-          .rodape {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            border-top: 3px solid ${primaryColor}; padding-top: 4px; background: #fff;
-            display: flex; justify-content: space-between; align-items: center;
-            font-size: 8px; color: #888;
-          }
-          .rodape-marca { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #555; }
-          .rodape-marca img { height: 12px; }
-          h1 { color: #333; }
-          .header-container {
-            display: flex;
-            align-items: flex-start;
-            border-bottom: 3px solid ${primaryColor};
-            padding-bottom: 16px;
-            margin-bottom: 20px;
-          }
-          .logo { height: 48px; width: auto; max-width: 180px; object-fit: contain; margin-bottom: 0; }
-          .project-details { margin-left: 20px; flex: 1; }
-          .project-details h1 { font-size: 16px; margin: 0 0 6px 0; color: #222; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
-          th { background-color: #f2f2f2; }
-          .amostra-container { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .amostra-box { width: 48%; border: 1px solid #ccc; padding: 10px; }
-          .amostra-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; margin-bottom: 10px; }
-          .pesagem-row { margin-bottom: 5px; }
-          .content-box {
-            border: 2px solid ${primaryColor};
-            padding: 10px;
-            border-radius: 5px;
-            color: black;
-            margin-top: 20px;
-          }
-          .content-box h2 { color: ${primaryColor}; margin: 0 0 6px 0; font-size: 12px; }
-          .informacoesGerais-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-          .informacoesGerais-header { background-color: #f2f2f2; padding: 5px; font-weight: bold; }
-          .info-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-          .info-header { background-color: ${primaryColor}; color: #fff; padding: 6px 10px; font-weight: bold; }
-          .furos-tabela td { width: 12.5%; }
-          .furos-tabela .furo-numero { background-color: #f2f2f2; font-weight: bold; }
-          .fotos-grade { display: flex; flex-wrap: wrap; justify-content: space-between; }
-          .foto { width: 48%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
-          .foto img { box-sizing: border-box; width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; }
-          .foto p { margin: 4px 0 0 0; text-align: center; color: #555; }
-          .section-title {
-            font-size: 13px;
-            font-weight: bold;
-            color: ${primaryColor};
-            margin: 20px 0 8px 0;
-            border-left: 4px solid ${primaryColor};
-            padding-left: 8px;
-            page-break-after: avoid;
-            break-after: avoid;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="rodape">
-          <span class="rodape-marca"><img src="${LOGO_EMULOG}" /> Emulog</span>
-          <span>Gerado em ${formatarDataHora(new Date())}</span>
-        </div>
-        <!-- O rodapé é fixo e se repete em toda página; o tfoot da tabela também se repete e reserva o espaço dele -->
-        <table class="pagina"><tbody><tr><td>
-        <div class="header-container">
-          <img src="${companyLogoSrc}" class="logo" alt="Logo" />
-          <div class="project-details">
-            <h1>Projeto: ${projeto.nomeProjeto}</h1>
-            ${projeto.cliente ? `<p style="margin: 0; color: #555;"><strong>Cliente:</strong> ${projeto.cliente.nome}</p>` : ''}
-            <p style="margin: 4px 0 0 0; color: #555;"><strong>Data de Criação:</strong> ${projeto.dataCriacao}</p>
-            ${projeto.dataConclusao ? `<p style="margin: 4px 0 0 0; color: #555;"><strong>Data de Conclusão:</strong> ${projeto.dataConclusao}</p>` : ''}
-            <p style="margin: 4px 0 0 0; color: #555;">
-              <strong>Calibragem:</strong>
-              Tara ${projeto.calibragem?.tara || '—'} ·
-              Peso Cheio ${projeto.calibragem?.pesoCheio || '—'} ·
-              ${projeto.calibragemVencida ? '<span style="color:#D32F2F">Necessita recalibrar</span>' : '<span style="color:#4CAF50">OK</span>'}
-            </p>
-          </div>
-        </div>
-
-        ${hasAdditionalInfo(info) ? `
-        <div class="info-box">
-          <div class="info-header">Informações da Operação</div>
-          <table>
-            <tbody>
-              ${info.numeroNF ? `<tr><td><strong>Nota Fiscal</strong></td><td>${info.numeroNF}</td></tr>` : ''}
-              ${kgPreenchido(info.kgPrevisto) ? `<tr><td><strong>Kg Previsto</strong></td><td>${formatarKg(info.kgPrevisto)} kg</td></tr>` : ''}
-              ${kgPreenchido(info.kgAplicado) ? `<tr><td><strong>Kg Aplicado</strong></td><td>${formatarKg(info.kgAplicado)} kg</td></tr>` : ''}
-              ${info.caminhao ? `<tr><td><strong>Unidade de Bombeamento</strong></td><td>${info.caminhao.placa || ''}</td></tr>` : ''}
-              ${info.equipe && info.equipe.length > 0 ? `<tr><td><strong>Equipe</strong></td><td>${info.equipe.map(m => m.nome).join(', ')}</td></tr>` : ''}
-            </tbody>
-          </table>
-        </div>` : ''}
-
-        ${companyId === 'explog-founding' ? 
-          `<div class="content-box">
-            <h2>Observação Técnica:</h2>
-            <p>A 4ª pesagem de cada amostra deve estar com densidade na faixa de trabalho que vai de 1.00 a 1.10 g/cm³. Amostras fora da faixa devem ser informadas ao setor técnico da empresa.</p>
-          </div>` : ''
-        }
-
-        ${informacoesGerais ? `<div class="informacoesGerais-box">
-          <div class="informacoesGerais-header">Observação sobre o projeto</div>
-          <p>${informacoesGerais}</p>
-        </div>` : ''}
-
-        <p class="section-title">Amostras — quantidade: ${projeto.quantidadeAmostras}</p>
-        ${projeto.amostras && Array.isArray(projeto.amostras) ? gerarConteudoAmostrasPDF(projeto.amostras) : '<p>Nenhuma amostra disponível</p>'}
-
-        ${projeto.furos?.length ? gerarConteudoFurosPDF(projeto.furos) : ''}
-
-        ${fotos.length ? gerarConteudoFotosPDF(fotos) : ''}
-        </td></tr></tbody>
-        <tfoot><tr><td><div class="espaco-rodape"></div></td></tr></tfoot></table>
-      </body>
-    </html>`;
-
-    const { uri } = await printToFileAsync({ html: htmlContent, base64: false });
-    const destUri = `${FileSystem.documentDirectory}${gerarNomeArquivoPDF()}.pdf`;
+  const compartilharPDF = async (html, nomeDoArquivo) => {
+    const { uri } = await printToFileAsync({ html, base64: false });
+    const destUri = `${FileSystem.documentDirectory}${nomeDoArquivo}.pdf`;
     await FileSystem.moveAsync({ from: uri, to: destUri });
     await Sharing.shareAsync(destUri);
   };
 
-  const gerarConteudoAmostrasPDF = (amostras) => {
-    return amostras.map((amostra, index) => {
-      const pesagensValidas = (amostra.pesagens || []).filter(pesagemConcluida);
-      return `
-        ${index % 2 === 0 ? '<div class="amostra-container">' : ''}
-        <div class="amostra-box">
-          <div class="amostra-header">Amostra ${amostra.amostraId + 1}</div>
-          ${pesagensValidas.map((p, i) => `
-            <div class="pesagem-row">
-              <strong>Pesagem ${i + 1}</strong>: ${p.peso} g, ${p.densidade} g/cm³, ${formatarHoraPesagem(p.timestamp)}
-            </div>`).join('')}
-        </div>
-        ${index % 2 === 1 || index === amostras.length - 1 ? '</div>' : ''}`;
-    }).join('');
+  const gerarRelatorio = async (tipo) => {
+    if (!projeto || relatorioEmPreparo) return;
+    setRelatorioEmPreparo(tipo);
+    try {
+      const sufixo = tipo === RELATORIO.FUROS ? 'Furos' : '';
+      await compartilharPDF(await montarHtml(tipo), gerarNomeArquivoPDF(sufixo));
+    } catch (e) {
+      console.error('Erro ao gerar PDF:', e);
+      Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setRelatorioEmPreparo(null);
+    }
   };
 
-  const gerarConteudoFurosPDF = (furos) => {
-    const linhas = dividirEmLinhas(furos.map((furo, i) => ({ numero: i + 1, kg: furo.kg })), FUROS_POR_LINHA_NO_PDF);
-    return `
-      <p class="section-title">Pesos por furo — ${resumoDosFuros(furos)}</p>
-      <table class="furos-tabela">
-        <tbody>
-          ${linhas.map(linha => `
-            <tr>
-              ${linha.map(({ numero, kg }) => `<td class="furo-numero">Furo ${numero}</td><td>${formatarKg(kg)} kg</td>`).join('')}
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  };
-
-  const gerarConteudoFotosPDF = (fotos) => `
-    <p class="section-title">Registro fotográfico — ${fotos.length} foto${fotos.length !== 1 ? 's' : ''}</p>
-    <div class="fotos-grade">
-      ${fotos.map((foto, i) => `<div class="foto"><img src="${foto}" /><p>Foto ${i + 1}</p></div>`).join('')}
-    </div>`;
-
-  const renderizarFuros = (furos) => (
+  const renderizarResumoDosFuros = (furos) => (
     <View style={styles.furosBox}>
-      <Text style={styles.infoAdicionalTitulo}>Pesos por furo</Text>
-      {furos.map((furo, i) => (
-        <View key={i} style={styles.furoRow}>
-          <Text style={styles.furoLabel}>Furo {i + 1}</Text>
-          <Text style={styles.furoValor}>{formatarKg(furo.kg)} kg</Text>
-        </View>
-      ))}
+      <Text style={styles.infoAdicionalTitulo}>Furos</Text>
+      <View style={styles.furoRow}>
+        <Text style={styles.furoLabel}>Quantidade de furos</Text>
+        <Text style={styles.furoValor}>{furos.itens.length}</Text>
+      </View>
+      <View style={styles.furoRow}>
+        <Text style={styles.furoLabel}>Profundidade prevista</Text>
+        <Text style={styles.furoValor}>{formatarKg(furos.profundidadePrevista)} m</Text>
+      </View>
+      <View style={styles.furoRow}>
+        <Text style={styles.furoLabel}>Carga prevista por furo</Text>
+        <Text style={styles.furoValor}>{formatarKg(furos.cargaPrevista)} kg</Text>
+      </View>
       <View style={[styles.furoRow, styles.furoTotalRow]}>
-        <Text style={styles.furoTotal}>{resumoDosFuros(furos)}</Text>
+        <Text style={styles.furoTotal}>Total aplicado: {formatarKg(somarCargasReais(furos.itens))} kg</Text>
       </View>
     </View>
   );
+
+  const renderizarBotaoDeRelatorio = (tipo, rotulo) => {
+    const preparando = relatorioEmPreparo === tipo;
+    return (
+      <TouchableOpacity
+        key={tipo}
+        style={[styles.pdfButton, relatorioEmPreparo && styles.pdfButtonDesabilitado]}
+        onPress={() => gerarRelatorio(tipo)}
+        disabled={!!relatorioEmPreparo}
+        activeOpacity={0.8}
+      >
+        {preparando
+          ? <ActivityIndicator size="small" color="#FFF" />
+          : <Ionicons name="document-text-outline" size={20} color="#FFF" />}
+        <Text style={styles.pdfButtonText}>{preparando ? 'Preparando PDF...' : rotulo}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderizarAmostras = (amostras) => {
     if (!amostras || amostras.length === 0) return <Text style={styles.vazioTexto}>Nenhuma amostra encontrada</Text>;
@@ -449,6 +300,7 @@ export default function DetalheProjetoScreen() {
   }
 
   const infoAtual = projeto.informacoesOperacao;
+  const temFuros = projeto.furos?.itens?.length > 0;
   const historicoFiltrado = projeto.amostras?.filter((amostra) => {
     if (!amostraPesquisa) return true;
     return amostra.amostraId?.toString() === amostraPesquisa;
@@ -494,7 +346,7 @@ export default function DetalheProjetoScreen() {
         </View>
       </View>
 
-      {hasAdditionalInfo(infoAtual)
+      {temInformacoesDaOperacao(infoAtual)
         ? renderizarInformacoesAdicionais(infoAtual)
         : (
           <TouchableOpacity
@@ -532,19 +384,16 @@ export default function DetalheProjetoScreen() {
       <Text style={styles.label}>Amostras</Text>
       {renderizarAmostras(historicoFiltrado)}
 
-      {projeto.furos?.length ? renderizarFuros(projeto.furos) : null}
+      {temFuros ? renderizarResumoDosFuros(projeto.furos) : null}
 
-      <TouchableOpacity
-        style={[styles.pdfButton, gerandoPdf && styles.pdfButtonDesabilitado]}
-        onPress={gerarPDF}
-        disabled={gerandoPdf}
-        activeOpacity={0.8}
-      >
-        {gerandoPdf
-          ? <ActivityIndicator size="small" color="#FFF" />
-          : <Ionicons name="document-text-outline" size={20} color="#FFF" />}
-        <Text style={styles.pdfButtonText}>{gerandoPdf ? 'Preparando PDF...' : 'Gerar PDF'}</Text>
-      </TouchableOpacity>
+      <View style={styles.relatorios}>
+        {temFuros
+          ? [
+            renderizarBotaoDeRelatorio(RELATORIO.FOGO, 'Relatório do fogo'),
+            renderizarBotaoDeRelatorio(RELATORIO.FUROS, 'Relatório de furos'),
+          ]
+          : renderizarBotaoDeRelatorio(RELATORIO.FOGO, 'Gerar PDF')}
+      </View>
 
       <InformacoesOperacao
         modoModal
@@ -618,9 +467,10 @@ const styles = StyleSheet.create({
   pdfButton: {
     backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    gap: 8, marginTop: 24, marginBottom: 24,
+    gap: 8,
   },
   pdfButtonDesabilitado: { backgroundColor: '#8BC3B3' },
+  relatorios: { marginTop: 24, marginBottom: 24, gap: 12 },
   fotosWrapper: { marginTop: 16 },
   pdfButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

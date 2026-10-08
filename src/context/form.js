@@ -4,7 +4,7 @@ import { PESAGENS_POR_AMOSTRA, criarAmostraVazia, criarPesagemVazia, pesagemConc
 import { calibragemParaArmazenar } from '../helpers/calibragem';
 import { kgParaTexto } from '../helpers/numeros';
 import { gerarIdRascunho, prepararRascunho, enviarRascunho } from '../rascunhos';
-import { furosTemDados, furosParaFormulario } from '../helpers/furos';
+import { furosTemDados, furosParaFormulario, somarCargasReais } from '../helpers/furos';
 import { useAppAuth } from './auth';
 
 const ProjetoFormContext = createContext(null);
@@ -71,7 +71,7 @@ export function ProjetoFormProvider({ children }) {
   const [amostraAtual, setAmostraAtual] = useState(0);
   const [pesagemAtual, setPesagemAtual] = useState(1);
   const [peso, setPeso] = useState('');
-  const [furos, setFuros] = useState([]);
+  const [furos, setFuros] = useState(null);
   const [ultimaCalibragem, setUltimaCalibragem] = useState(null);
   const [uidUsuario, setUidUsuario] = useState(null);
   const [companyId, setCompanyId] = useState(null);
@@ -139,6 +139,13 @@ export function ProjetoFormProvider({ children }) {
     clienteSelecionado, caminhaoSelecionado, equipeSelecionada,
   ]);
 
+  // Com furos, o kg aplicado é a soma das cargas reais e não pode divergir do que foi lançado furo a furo
+  useEffect(() => {
+    if (!furos) return;
+    const soma = somarCargasReais(furos.itens);
+    setKgAplicado(soma > 0 ? kgParaTexto(soma) : '');
+  }, [furos]);
+
   useEffect(() => {
     salvarEstadoDoProjeto();
   }, [
@@ -177,7 +184,7 @@ export function ProjetoFormProvider({ children }) {
     setAmostraAtual(0);
     setPesagemAtual(1);
     setPeso('');
-    setFuros([]);
+    setFuros(null);
     setNumeroNF('');
     setKgPrevisto('');
     setKgAplicado('');

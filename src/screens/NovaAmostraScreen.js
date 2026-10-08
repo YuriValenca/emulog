@@ -17,6 +17,7 @@ import { excluirRascunho } from '../rascunhos';
 import { lerCalibragemDoAparelho, guardarCalibragemNoAparelho } from '../calibragemLocal';
 import { estaOnline, comTempoLimite, estourouTempoLimite } from '../helpers/rede';
 import StepPesagens from './StepPesagens';
+import EtapaFuros from './EtapaFuros';
 import InformacoesOperacao from './InformacoesOperacao';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
@@ -25,7 +26,7 @@ import {
   normalizarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
 } from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
-import { pendenciasParaAvancar } from '../helpers/pendencias';
+import { pendenciasParaAvancar, pendenciasDosFuros } from '../helpers/pendencias';
 import { furosParaSalvar } from '../helpers/furos';
 import {
   PESAGENS_POR_AMOSTRA, criarAmostraVazia, pesagemConcluida, contarPesagensConcluidas, formatarHoraPesagem,
@@ -34,11 +35,17 @@ import {
 const TEMPO_LIMITE_SALVAR_ONLINE_MS = 15000;
 const TEMPO_LIMITE_CALIBRAGEM_MS = 8000;
 
+const ETAPA = { PESAGENS: 'pesagens', FUROS: 'furos', INFORMACOES: 'informacoes' };
+const ROTULO_DA_ETAPA = { pesagens: 'Pesagens', furos: 'Furos', informacoes: 'Informações' };
+
+const avisarPendencias = (pendencias) =>
+  Alert.alert('Para continuar:', pendencias.map(pendencia => `• ${pendencia}`).join('\n'));
+
 function NovaAmostraScreenInner() {
   const { companyId, uid } = useAppAuth();
   const { syncReferenceData } = useReferenceData();
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [etapaAtual, setEtapaAtual] = useState(ETAPA.PESAGENS);
   const [modalVisivel, setModalVisivel] = useState(false);
   const [modalMensagem, setModalMensagem] = useState('');
   const [modalDensidade, setModalDensidade] = useState('');
@@ -324,7 +331,7 @@ function NovaAmostraScreenInner() {
     return comTempoLimite(batch.commit(), TEMPO_LIMITE_SALVAR_ONLINE_MS);
   };
 
-  // Quem abriu o rascunho pelo Histórico volta pra ele, com a lista de concluídos recarregada
+  // O Histórico continua montado por baixo com a lista antiga; o projetoSalvoEm é o que força ele a recarregar
   const voltarDepoisDeSalvar = () => {
     const veioDoHistorico = navigation.getState().routes.some(rota => rota.name === 'Historico');
     if (veioDoHistorico) {
@@ -401,6 +408,12 @@ function NovaAmostraScreenInner() {
       setModalAmostrasIncompletasVisivel(true);
       return;
     }
+    const pendenciasDeFuros = pendenciasDosFuros(furos);
+    if (pendenciasDeFuros.length > 0) {
+      setEtapaAtual(ETAPA.FUROS);
+      avisarPendencias(pendenciasDeFuros);
+      return;
+    }
     const pesagensIncompletas = verificarPesagensIncompletas();
     if (pesagensIncompletas) {
       setMensagemAmostrasIncompletas(
@@ -429,20 +442,53 @@ function NovaAmostraScreenInner() {
     if (scrollViewRef.current) scrollViewRef.current.scrollTo({ y: 0, animated: true });
   };
 
+  const etapas = furos
+    ? [ETAPA.PESAGENS, ETAPA.FUROS, ETAPA.INFORMACOES]
+    : [ETAPA.PESAGENS, ETAPA.INFORMACOES];
+  const indiceDaEtapaAtual = etapas.indexOf(etapaAtual);
+
+  const pendenciasDaEtapa = (etapa) => {
+    if (etapa === ETAPA.PESAGENS) return pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras });
+    if (etapa === ETAPA.FUROS) return pendenciasDosFuros(furos);
+    return [];
+  };
+
+  const mudarDeEtapa = (etapa) => {
+    scrollToTop();
+    setEtapaAtual(etapa);
+  };
+
+  const irParaEtapa = (destino) => {
+    const indiceDestino = etapas.indexOf(destino);
+    if (indiceDestino > indiceDaEtapaAtual) {
+      const pendencias = etapas.slice(0, indiceDestino).flatMap(pendenciasDaEtapa);
+      if (pendencias.length > 0) return avisarPendencias(pendencias);
+    }
+    mudarDeEtapa(destino);
+  };
+
+  const voltarUmaEtapa = () => mudarDeEtapa(etapas[Math.max(indiceDaEtapaAtual - 1, 0)]);
+
   const handleAvancarStep = () => {
-    const pendencias = pendenciasParaAvancar({ nomeProjeto, clienteSelecionado, amostras, furos });
+    const pendencias = pendenciasDaEtapa(ETAPA.PESAGENS);
     if (pendencias.length > 0) {
-      setMensagemAviso(pendencias.join(''));
+      setMensagemAviso(pendencias.join('\n'));
       setModalAvisoVisivel(true);
       return;
     }
+    if (furos) return mudarDeEtapa(ETAPA.FUROS);
+    setModalInformacoesAdicionaisVisivel(true);
+  };
+
+  const continuarDosFuros = () => {
+    const pendencias = pendenciasDaEtapa(ETAPA.FUROS);
+    if (pendencias.length > 0) return avisarPendencias(pendencias);
     setModalInformacoesAdicionaisVisivel(true);
   };
 
   const confirmarIrParaStep2 = () => {
     setModalInformacoesAdicionaisVisivel(false);
-    scrollToTop();
-    setCurrentStep(2);
+    mudarDeEtapa(ETAPA.INFORMACOES);
   };
 
   const recusarStep2EFinalizar = () => {
@@ -452,8 +498,7 @@ function NovaAmostraScreenInner() {
 
   const voltarParaPesagemDoAviso = () => {
     setModalAmostrasIncompletasVisivel(false);
-    scrollToTop();
-    setCurrentStep(1);
+    mudarDeEtapa(ETAPA.PESAGENS);
   };
 
   const fecharAvisoAmostrasIncompletas = () => {
@@ -512,69 +557,48 @@ function NovaAmostraScreenInner() {
   const renderStepIndicator = () => (
     <View style={styles.stepIndicatorContainer}>
       <View style={styles.stepIndicatorRow}>
-        <View style={[styles.stepCircle, currentStep >= 1 && styles.stepCircleActive]}>
-          <Text style={[styles.stepCircleText, currentStep >= 1 && styles.stepCircleTextActive]}>1</Text>
-        </View>
-        <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
-        <View style={[styles.stepCircle, currentStep >= 2 && styles.stepCircleActive]}>
-          <Text style={[styles.stepCircleText, currentStep >= 2 && styles.stepCircleTextActive]}>2</Text>
-        </View>
+        {etapas.map((etapa, indice) => (
+          <React.Fragment key={etapa}>
+            {indice > 0 && <View style={[styles.stepLine, indice <= indiceDaEtapaAtual && styles.stepLineActive]} />}
+            <TouchableOpacity
+              style={[styles.stepCircle, indice <= indiceDaEtapaAtual && styles.stepCircleActive]}
+              onPress={() => irParaEtapa(etapa)}
+              hitSlop={12}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.stepCircleText, indice <= indiceDaEtapaAtual && styles.stepCircleTextActive]}>
+                {indice + 1}
+              </Text>
+            </TouchableOpacity>
+          </React.Fragment>
+        ))}
       </View>
       <View style={styles.stepLabelsRow}>
-        <Text style={[styles.stepLabel, currentStep === 1 && styles.stepLabelActive]}>Pesagens</Text>
-        <Text style={[styles.stepLabel, currentStep === 2 && styles.stepLabelActive]}>Informações</Text>
+        {etapas.map(etapa => (
+          <Text
+            key={etapa}
+            style={[styles.stepLabel, etapa === etapaAtual && styles.stepLabelActive]}
+            onPress={() => irParaEtapa(etapa)}
+          >
+            {ROTULO_DA_ETAPA[etapa]}
+          </Text>
+        ))}
       </View>
     </View>
   );
 
-  return (
-    <ScrollView
-      contentContainerStyle={[styles.container, { paddingTop: bleBarHeight + 24 }]}
-      ref={scrollViewRef}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-    >
+  const cabecalho = (
+    <>
       <BackButton onPress={() => navigation.goBack()} />
       <Text style={styles.titulo}>Iniciar Novo Projeto</Text>
-
       {renderStepIndicator()}
+    </>
+  );
 
-      {currentStep === 1 ? (
-        <StepPesagens
-          ultimaCalibragem={ultimaCalibragem}
-          calibragemCarregada={ultimaCalibragem !== null}
-          modalAvisoVisivel={modalAvisoVisivel}
-          setModalAvisoVisivel={setModalAvisoVisivel}
-          mensagemAviso={mensagemAviso}
-          setMensagemAviso={setMensagemAviso}
-          modalVisivel={modalVisivel}
-          setModalVisivel={setModalVisivel}
-          modalMensagem={modalMensagem}
-          modalDensidade={modalDensidade}
-          modalAdicionarAmostra={modalAdicionarAmostra}
-          setModalAdicionarAmostra={setModalAdicionarAmostra}
-          onConfirmarPesagem={confirmarPesagem}
-          onAdicionarAmostra={adicionarAmostra}
-          onAvancar={handleAvancarStep}
-          todasPesagensConcluidas={todasPesagensConcluidas}
-          temporizador={temporizador}
-          amostraPesquisa={amostraPesquisa}
-          setAmostraPesquisa={setAmostraPesquisa}
-          historicoFiltrado={historicoFiltrado}
-          scrollExternoRef={scrollViewRef}
-          offsetExternoRef={scrollOffsetRef}
-        />
-      ) : (
-        <InformacoesOperacao
-          onVoltar={() => { scrollToTop(); setCurrentStep(1); }}
-          onSalvar={finalizarOuSalvar}
-          scrollExternoRef={scrollViewRef}
-          offsetExternoRef={scrollOffsetRef}
-        />
-      )}
+  const estiloDoConteudo = [styles.container, { paddingTop: bleBarHeight + 24 }];
 
-      {showScrollButton && <ScrollToTopButton onPress={scrollToTop} />}
-
+  const modais = (
+    <>
       <Modal
         animationType="fade"
         transparent
@@ -712,6 +736,69 @@ function NovaAmostraScreenInner() {
           </View>
         </View>
       </Modal>
+    </>
+  );
+
+  if (etapaAtual === ETAPA.FUROS) {
+    return (
+      <View style={styles.telaInteira}>
+        <EtapaFuros
+          cabecalho={cabecalho}
+          estiloConteudo={estiloDoConteudo}
+          onVoltar={voltarUmaEtapa}
+          onContinuar={continuarDosFuros}
+        />
+        {modais}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={estiloDoConteudo}
+      ref={scrollViewRef}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+    >
+      {cabecalho}
+
+      {etapaAtual === ETAPA.PESAGENS ? (
+        <StepPesagens
+          ultimaCalibragem={ultimaCalibragem}
+          calibragemCarregada={ultimaCalibragem !== null}
+          modalAvisoVisivel={modalAvisoVisivel}
+          setModalAvisoVisivel={setModalAvisoVisivel}
+          mensagemAviso={mensagemAviso}
+          setMensagemAviso={setMensagemAviso}
+          modalVisivel={modalVisivel}
+          setModalVisivel={setModalVisivel}
+          modalMensagem={modalMensagem}
+          modalDensidade={modalDensidade}
+          modalAdicionarAmostra={modalAdicionarAmostra}
+          setModalAdicionarAmostra={setModalAdicionarAmostra}
+          onConfirmarPesagem={confirmarPesagem}
+          onAdicionarAmostra={adicionarAmostra}
+          onAvancar={handleAvancarStep}
+          todasPesagensConcluidas={todasPesagensConcluidas}
+          temporizador={temporizador}
+          amostraPesquisa={amostraPesquisa}
+          setAmostraPesquisa={setAmostraPesquisa}
+          historicoFiltrado={historicoFiltrado}
+          scrollExternoRef={scrollViewRef}
+          offsetExternoRef={scrollOffsetRef}
+        />
+      ) : (
+        <InformacoesOperacao
+          onVoltar={voltarUmaEtapa}
+          onSalvar={finalizarOuSalvar}
+          scrollExternoRef={scrollViewRef}
+          offsetExternoRef={scrollOffsetRef}
+        />
+      )}
+
+      {showScrollButton && <ScrollToTopButton onPress={scrollToTop} />}
+
+      {modais}
     </ScrollView>
   );
 }
@@ -726,6 +813,7 @@ export default function NovaAmostraScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, backgroundColor: '#FFFFFF' },
+  telaInteira: { flex: 1, backgroundColor: '#FFFFFF' },
   titulo: { fontSize: 22, fontWeight: 'bold', color: '#1F6452', marginBottom: 16 },
 
   stepIndicatorContainer: { marginBottom: 24, marginTop: 8 },
