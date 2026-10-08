@@ -4,7 +4,7 @@ import {
   ActivityIndicator, TouchableOpacity, Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { printToFileAsync } from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -13,9 +13,10 @@ import BackButton from './BackButton';
 import InformacoesOperacao from './InformacoesOperacao';
 import FotosDaOperacao from './FotosDaOperacao';
 import { LOGO_BASE_64 } from '../assets/base64Logo';
+import { LOGO_EMULOG } from '../assets/logoEmulog';
 import { useAppAuth } from '../context/auth';
 import { pesagemConcluida, formatarHoraPesagem } from '../helpers/pesagem';
-import { paraData, mesmoDia } from '../helpers/datas';
+import { paraData, mesmoDia, formatarDataHora } from '../helpers/datas';
 import { calibragemVencidaNoProjeto } from '../helpers/calibragem';
 import { kgPreenchido, formatarKg } from '../helpers/numeros';
 import { somarFuros } from '../helpers/furos';
@@ -174,7 +175,19 @@ export default function DetalheProjetoScreen() {
       <head>
         <meta charset="UTF-8">
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; font-size: 10px; margin: 30px; }
+          @page { margin: 13mm; }
+          body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+          table.pagina { width: 100%; border-collapse: collapse; margin: 0; }
+          table.pagina > tbody > tr > td, table.pagina > tfoot > tr > td { border: none; padding: 0; }
+          .espaco-rodape { height: 28px; }
+          .rodape {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            border-top: 3px solid ${primaryColor}; padding-top: 4px; background: #fff;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 8px; color: #888;
+          }
+          .rodape-marca { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #555; }
+          .rodape-marca img { height: 12px; }
           h1 { color: #333; }
           .header-container {
             display: flex;
@@ -209,7 +222,7 @@ export default function DetalheProjetoScreen() {
           .furos-tabela .furo-numero { background-color: #f2f2f2; font-weight: bold; }
           .fotos-grade { display: flex; flex-wrap: wrap; justify-content: space-between; }
           .foto { width: 48%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
-          .foto img { width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; }
+          .foto img { box-sizing: border-box; width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; }
           .foto p { margin: 4px 0 0 0; text-align: center; color: #555; }
           .section-title {
             font-size: 13px;
@@ -218,10 +231,18 @@ export default function DetalheProjetoScreen() {
             margin: 20px 0 8px 0;
             border-left: 4px solid ${primaryColor};
             padding-left: 8px;
+            page-break-after: avoid;
+            break-after: avoid;
           }
         </style>
       </head>
       <body>
+        <div class="rodape">
+          <span class="rodape-marca"><img src="${LOGO_EMULOG}" /> Emulog</span>
+          <span>Gerado em ${formatarDataHora(new Date())}</span>
+        </div>
+        <!-- O rodapé é fixo e se repete em toda página; o tfoot da tabela também se repete e reserva o espaço dele -->
+        <table class="pagina"><tbody><tr><td>
         <div class="header-container">
           <img src="${companyLogoSrc}" class="logo" alt="Logo" />
           <div class="project-details">
@@ -270,6 +291,8 @@ export default function DetalheProjetoScreen() {
         ${projeto.furos?.length ? gerarConteudoFurosPDF(projeto.furos) : ''}
 
         ${fotos.length ? gerarConteudoFotosPDF(fotos) : ''}
+        </td></tr></tbody>
+        <tfoot><tr><td><div class="espaco-rodape"></div></td></tr></tfoot></table>
       </body>
     </html>`;
 
