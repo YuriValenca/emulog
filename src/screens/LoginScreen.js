@@ -19,11 +19,31 @@ const ERROS_LOGIN = {
   'auth/too-many-requests':      'Muitas tentativas. Aguarde alguns minutos.',
 };
 
+const LARGURA_MAXIMA_LOGO = 300;
+const ALTURA_MAXIMA_LOGO = 225;
+
+const tamanhoDaLogo = (proporcao) => {
+  const largura = Math.min(LARGURA_MAXIMA_LOGO, ALTURA_MAXIMA_LOGO * proporcao);
+  return { width: largura, height: largura / proporcao };
+};
+
+const useProporcaoDaImagem = (uri) => {
+  const [proporcao, setProporcao] = useState(1);
+
+  useEffect(() => {
+    if (!uri) return;
+    Image.getSize(uri, (largura, altura) => setProporcao(largura / altura), () => setProporcao(1));
+  }, [uri]);
+
+  return proporcao;
+};
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [cachedLogo, setCachedLogo] = useState(null);
+  const proporcaoDaLogo = useProporcaoDaImagem(cachedLogo);
 
   const podeTentar = email.trim().length > 0 && senha.trim().length > 0;
 
@@ -52,12 +72,12 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.conteudo}>
-        <Image
-          source={cachedLogo ? { uri: cachedLogo } : require('../assets/adaptive-icon-foreground.png')}
-          resizeMode="contain"
-          style={styles.logo}
-        />
-        <Text style={styles.title}>Login</Text>
+        {cachedLogo ? (
+          <Image source={{ uri: cachedLogo }} resizeMode="contain" style={[tamanhoDaLogo(proporcaoDaLogo), styles.logoEmpresa]} />
+        ) : (
+          <Image source={require('../assets/adaptive-icon-foreground.png')} resizeMode="contain" style={styles.logoPadrao} />
+        )}
+        <Text style={[styles.title, !cachedLogo && styles.titleColadoNaLogoPadrao]}>Login</Text>
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -96,8 +116,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FCFCFC', marginTop: -64 },
   conteudo: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  logo: { width: 225, height: 225 },
-  title: { fontSize: 24, marginBottom: 20, color: '#000000', marginTop: -20 },
+  logoPadrao: { width: ALTURA_MAXIMA_LOGO, height: ALTURA_MAXIMA_LOGO },
+  logoEmpresa: { marginBottom: 20 },
+  title: { fontSize: 24, marginBottom: 20, color: '#000000' },
+  titleColadoNaLogoPadrao: { marginTop: -20 },
   input: {
     width: '100%',
     color: '#000000',
