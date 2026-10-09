@@ -15,6 +15,21 @@ import {
 
 const db = getFirestore();
 
+const HEX_COMPLETO = /^#[0-9A-F]{6}$/i;
+
+const normalizarHexDigitado = (texto) =>
+  `#${texto.replace(/[^0-9a-f]/gi, '').toUpperCase().slice(0, 6)}`;
+
+const completarHexComZeros = (hex) => hex.padEnd(7, '0');
+
+const canaisRgb =(hex) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+
+const coresQuaseIguais = (a, b) => {
+  if (!HEX_COMPLETO.test(a) || !HEX_COMPLETO.test(b)) return false;
+  const canaisB = canaisRgb(b);
+  return canaisRgb(a).every((canal, i) => Math.abs(canal - canaisB[i]) <= 2);
+};
+
 function SectionHeader({ title, count, expanded, onToggle }) {
   return (
     <TouchableOpacity style={styles.sectionHeader} onPress={onToggle} activeOpacity={0.8}>
@@ -39,6 +54,8 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
   const [usuarios, setUsuarios] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [textoCor, setTextoCor] = useState(form.primaryColor);
+  const [previaDaCor, setPreviaDaCor] = useState(form.primaryColor);
 
   const [novaCaminhaoPlaca, setNovaCaminhaoPlaca] = useState('');
   const [novoOperadorNome, setNovoOperadorNome] = useState('');
@@ -93,13 +110,36 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
     }
   };
 
+  const voltarParaCorSalva = () => {
+    setTextoCor(form.primaryColor);
+    setPreviaDaCor(form.primaryColor);
+  };
+
+  useEffect(voltarParaCorSalva, [form.primaryColor]);
+
+  const definirCor = (cor) => setForm(p => ({ ...p, primaryColor: cor }));
+
+  // Ao receber uma cor nova pela prop, a roda converte pra HSV e devolve o valor arredondado nesse callback;
+  // sem esse filtro, a cor digitada seria trocada por uma vizinha
+  const handleCorDaRoda = (cor) => {
+    if (coresQuaseIguais(cor, previaDaCor)) return;
+    definirCor(cor.toUpperCase());
+  };
+
+  const handleCorDigitada = (texto) => {
+    const hex = normalizarHexDigitado(texto);
+    setTextoCor(hex);
+    setPreviaDaCor(hex === '#' ? form.primaryColor : completarHexComZeros(hex));
+    if (HEX_COMPLETO.test(hex)) definirCor(hex);
+  };
+
   const handleCnpjChange = (text) => {
     setForm(p => ({ ...p, cnpj: unmaskCNPJ(text).slice(0, 14) }));
   };
 
   const pickAndUploadLogo = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
+      mediaTypes: ['images'],
       quality: 1,
     });
 
@@ -252,8 +292,8 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
             <Text style={styles.formLabel}>Cor Principal</Text>
             <View style={styles.pickerWrapper}>
               <ColorPicker
-                color={form.primaryColor}
-                onColorChangeComplete={v => setForm(p => ({ ...p, primaryColor: v }))}
+                color={previaDaCor}
+                onColorChangeComplete={handleCorDaRoda}
                 thumbSize={24}
                 sliderSize={20}
                 noSnap
@@ -261,8 +301,18 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
               />
             </View>
             <View style={styles.colorPreviewRow}>
-              <View style={[styles.colorSwatch, { backgroundColor: form.primaryColor }]} />
-              <Text style={styles.colorHex}>{form.primaryColor}</Text>
+              <View style={[styles.colorSwatch, { backgroundColor: previaDaCor }]} />
+              <TextInput
+                style={styles.colorHexInput}
+                value={textoCor}
+                onChangeText={handleCorDigitada}
+                onBlur={voltarParaCorSalva}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={7}
+                placeholder="#1F6452"
+                placeholderTextColor="#888888"
+              />
             </View>
 
             <View style={styles.switchRow}>
@@ -489,7 +539,10 @@ const styles = StyleSheet.create({
   pickerWrapper: { height: 200, marginBottom: 12, paddingHorizontal: 8 },
   colorPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
   colorSwatch: { width: 28, height: 28, borderRadius: 6, borderWidth: 1, borderColor: '#e0e0e0' },
-  colorHex: { fontSize: 13, color: '#555', fontWeight: '600', fontFamily: 'monospace' },
+  colorHexInput: {
+    width: 110, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+    fontSize: 14, color: '#000000', fontWeight: '600', fontFamily: 'monospace', backgroundColor: '#fafafa',
+  },
 
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1F6452', borderRadius: 10, padding: 14, marginTop: 8 },
