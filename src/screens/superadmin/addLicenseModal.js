@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import useKeyboardHeight from '../../hooks/useKeyboardHeight';
 
 export default function ModalGerarLicencas({ visible, onClose, onSave, onRenew, saving, companyName, licenseToRenew }) {
   const [qtd, setQtd] = useState('1');
   const [validade, setValidade] = useState(12);
+  const alturaDoTeclado = useKeyboardHeight();
 
   const isRenewMode = !!licenseToRenew;
 
@@ -42,7 +44,7 @@ export default function ModalGerarLicencas({ visible, onClose, onSave, onRenew, 
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, alturaDoTeclado > 0 && { marginBottom: alturaDoTeclado }]}>
         <View style={styles.content}>
 
           <View style={styles.header}>

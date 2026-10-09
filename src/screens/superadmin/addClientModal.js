@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity,
-  TextInput, ScrollView, KeyboardAvoidingView, Platform,
+  TextInput, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import useKeyboardHeight from '../../hooks/useKeyboardHeight';
 import { formatCNPJ, unmaskCNPJ, isValidCNPJ } from '../../helpers/formatCNPJ';
 
 export default function ModalCliente({ visible, onClose, onSave, saving, companyName, clientToEdit }) {
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [endereco, setEndereco] = useState('');
+  const alturaDoTeclado = useKeyboardHeight();
 
   const isEditing = !!clientToEdit;
 
@@ -39,13 +41,10 @@ export default function ModalCliente({ visible, onClose, onSave, saving, company
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, alturaDoTeclado > 0 && { marginBottom: alturaDoTeclado }]}>
         <TouchableOpacity style={styles.flexDismiss} activeOpacity={1} onPress={onClose} disabled={saving} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.sheet}
-        >
+        <View style={styles.sheet}>
           <View style={styles.indicator} />
 
           <View style={styles.header}>
@@ -112,7 +111,7 @@ export default function ModalCliente({ visible, onClose, onSave, saving, company
               </Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
