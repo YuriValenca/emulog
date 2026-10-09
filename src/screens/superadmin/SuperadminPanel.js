@@ -29,6 +29,8 @@ function formatDate(value) {
   return date.toLocaleDateString('pt-BR');
 }
 
+const usaOApp = (empresa) => empresa.founding || (empresa.modules?.mobile ?? true);
+
 function generateXplogKey() {
   const code = 'XXXXX-XXXXX-XXXXX-XXXXX'.replace(/X/g, () =>
     Math.random().toString(36).substring(2, 3).toUpperCase()
@@ -67,7 +69,7 @@ export default function SuperadminPanel() {
       ]);
 
       const companiesData = snapC.docs.map(d => ({ id: d.id, ...d.data() }));
-      setCompanies(companiesData.filter(c => c.modules?.mobile || c.founding));
+      setCompanies(companiesData.filter(usaOApp));
       setUsers(snapU.docs.map(d => ({ id: d.id, ...d.data() })));
       setClients(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
 
