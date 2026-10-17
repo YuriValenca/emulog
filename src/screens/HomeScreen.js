@@ -12,6 +12,7 @@ import ModalProjetoEmAndamento from './ModalProjetoEmAndamento';
 import { salvarComoRascunho, excluirRascunhoEFotos, sincronizarRascunhos } from '../rascunhos';
 import { sincronizarMidias } from '../midias';
 import { lerCalibragemDoAparelho } from '../calibragemLocal';
+import { sincronizarCalibragensPendentes } from '../calibragensPendentes';
 
 export default function HomeScreen({ navigation }) {
   const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin } = useAppAuth();
@@ -25,6 +26,7 @@ export default function HomeScreen({ navigation }) {
     useCallback(() => {
       sincronizarRascunhos({ companyId, uid });
       sincronizarMidias({ companyId, uid });
+      sincronizarCalibragensPendentes();
     }, [companyId, uid])
   );
 

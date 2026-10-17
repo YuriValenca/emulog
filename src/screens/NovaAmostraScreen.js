@@ -14,7 +14,7 @@ import { saveProjectOffline, checkConnectionAndSync } from '../db';
 import { useBle } from '../context/context';
 import { ProjetoFormProvider, useProjetoForm, contarPesagensDoProjeto } from '../context/form';
 import { excluirRascunho } from '../rascunhos';
-import { lerCalibragemDoAparelho, guardarCalibragemNoAparelho } from '../calibragemLocal';
+import { lerCalibragemDoAparelho, adotarCalibragemDoBanco } from '../calibragemLocal';
 import { estaOnline, comTempoLimite, estourouTempoLimite } from '../helpers/rede';
 import StepPesagens from './StepPesagens';
 import EtapaFuros from './EtapaFuros';
@@ -143,9 +143,7 @@ function NovaAmostraScreenInner() {
       const querySnapshot = await comTempoLimite(getDocs(q), TEMPO_LIMITE_CALIBRAGEM_MS);
       if (querySnapshot.empty) return null;
 
-      const calibragemNormalizada = normalizarCalibragem(querySnapshot.docs[0].data());
-      await guardarCalibragemNoAparelho(companyId, calibragemNormalizada);
-      return calibragemNormalizada;
+      return adotarCalibragemDoBanco(companyId, normalizarCalibragem(querySnapshot.docs[0].data()));
     } catch (error) {
       console.warn('Calibragem online indisponível, usando a do aparelho:', error.message);
       return null;

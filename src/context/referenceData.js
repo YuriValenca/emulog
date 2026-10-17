@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getFirestore, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { normalizarCalibragem } from '../helpers/calibragem';
-import { lerCalibragemDoAparelho, guardarCalibragemNoAparelho } from '../calibragemLocal';
+import { lerCalibragemDoAparelho, adotarCalibragemDoBanco } from '../calibragemLocal';
 
 const ReferenceDataContext = createContext(null);
 
@@ -86,9 +86,8 @@ export function ReferenceDataProvider({ children }) {
       ];
 
       if (!snapCal.empty) {
-        const calibragemNormalizada = normalizarCalibragem(snapCal.docs[0].data());
-        setUltimaCalibragem(calibragemNormalizada);
-        storagePromises.push(guardarCalibragemNoAparelho(companyId, calibragemNormalizada));
+        const calibragemEmUso = await adotarCalibragemDoBanco(companyId, normalizarCalibragem(snapCal.docs[0].data()));
+        setUltimaCalibragem(calibragemEmUso);
       }
 
       setLastSyncedAt(new Date());

@@ -27,6 +27,11 @@ export function normalizarCalibragem(bruta) {
   };
 }
 
+export function calibragemMaisRecente(a, b) {
+  if (!a || !b) return a ?? b ?? null;
+  return b.timestamp.getTime() > a.timestamp.getTime() ? b : a;
+}
+
 export const calibragemParaArmazenar = (calibragem) => ({ ...calibragem, timestamp: calibragem.timestamp.toISOString() });
 
 export function serializarCalibragem(calibragem) {
