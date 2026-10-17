@@ -124,6 +124,7 @@ export function AuthProvider({ children }) {
   const [name, setName]               = useState(null);
   const [deviceId, setDeviceId]       = useState(null);
   const [companyLogo, setCompanyLogo] = useState(null);
+  const [balancaBtHabilitada, setBalancaBtHabilitada] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -138,6 +139,7 @@ export function AuthProvider({ children }) {
         if (!user) {
           setAuthUser(null);
           setCompanyId(null);
+          setBalancaBtHabilitada(false);
           setUid(null);
           setRole(null);
           setName(null);
@@ -188,6 +190,7 @@ export function AuthProvider({ children }) {
         setDebugError(null);
         setAuthStatus('authenticated');
         setCompanyLogo(companyData?.logo ?? null);
+        setBalancaBtHabilitada(!!companyData?.bluetoothScaleEnabled);
       } catch (e) {
         console.error('[Auth] Bootstrap error:', e.message);
         setDebugError(e.message);
@@ -203,6 +206,7 @@ export function AuthProvider({ children }) {
             setDebugError(null);
             setAuthStatus('authenticated');
             setCompanyLogo(cached.companyData?.logo ?? null);
+            setBalancaBtHabilitada(!!cached.companyData?.bluetoothScaleEnabled);
             return;
           }
         }
@@ -235,6 +239,7 @@ export function AuthProvider({ children }) {
       name,
       deviceId,
       companyLogo,
+      balancaBtHabilitada,
       isSuperadmin: role === 'superadmin',
       isCompanyAdmin: role === 'company_admin',
     }}>
