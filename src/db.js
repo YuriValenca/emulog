@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
-import { db } from './firebaseConfig';
-import { collection, doc, Timestamp, writeBatch } from 'firebase/firestore';
+import { db, auth } from './firebaseConfig';
+import { collection, doc, getDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { Alert } from 'react-native';
+import { estaOnline, comTempoLimite } from './helpers/rede';
 import { sincronizarRascunhosDaUltimaSessao } from './rascunhos';
 import { sincronizarMidiasDaUltimaSessao } from './midias';
 import { sincronizarCalibragensPendentes } from './calibragensPendentes';
+import { sincronizarInformacoesPendentes } from './informacoesPendentes';
+
+const TEMPO_LIMITE_FIRESTORE_MS = 15000;
 
 export const saveProjectOffline = async (project) => {
   try {
@@ -50,55 +54,72 @@ const removeOfflineProject = async (localId) => {
 
 const paraTimestamp = (valor) => (valor ? Timestamp.fromDate(new Date(valor)) : valor);
 
-async function salvarProjetoSincronizado({ id, ...projeto }, meta) {
-  // Projetos salvos offline antes dos rascunhos não têm id
-  const idDoProjeto = id || doc(collection(db, 'projetos')).id;
+async function salvarProjetoSincronizado(id, projeto, meta) {
   const batch = writeBatch(db);
-  batch.set(doc(db, 'projetos', idDoProjeto), projeto);
-  batch.set(doc(db, 'projetos_meta', idDoProjeto), meta);
-  await batch.commit();
+  batch.set(doc(db, 'projetos', id), projeto);
+  batch.set(doc(db, 'projetos_meta', id), meta);
+  await comTempoLimite(batch.commit(), TEMPO_LIMITE_FIRESTORE_MS);
+}
+
+// O projetos_meta não pode ser regravado: se o SDK já entregou a escrita que estourou o tempo, o reenvio volta negado
+async function jaEstaNoBanco(id) {
+  const snap = await comTempoLimite(getDoc(doc(db, 'projetos', id)), TEMPO_LIMITE_FIRESTORE_MS);
+  return snap.exists();
+}
+
+function paraSincronizar({ _localId, id, ...projeto }) {
+  const dataCriacao = paraTimestamp(projeto.dataCriacao);
+  return {
+    // Projetos salvos offline antes dos rascunhos não têm id
+    id: id || doc(collection(db, 'projetos')).id,
+    projeto: {
+      ...projeto,
+      dataCriacao,
+      ...(projeto.dataConclusao && { dataConclusao: paraTimestamp(projeto.dataConclusao) }),
+      calibragem: projeto.calibragem
+        ? { ...projeto.calibragem, timestamp: paraTimestamp(projeto.calibragem.timestamp) }
+        : projeto.calibragem,
+    },
+    meta: {
+      nomeProjeto: projeto.nomeProjeto,
+      dataCriacao,
+      uidUsuario: projeto.uidUsuario,
+      companyId: projeto.companyId,
+    },
+  };
+}
+
+async function sincronizarProjeto(projetoOffline) {
+  const { id, projeto, meta } = paraSincronizar(projetoOffline);
+  try {
+    await salvarProjetoSincronizado(id, projeto, meta);
+  } catch (erro) {
+    if (erro?.code !== 'permission-denied' || !(await jaEstaNoBanco(id))) throw erro;
+  }
+  await removeOfflineProject(projetoOffline._localId);
 }
 
 let isSyncing = false;
 
 export const syncProjects = async () => {
-  if (isSyncing) return;
+  if (isSyncing || !auth.currentUser || !(await estaOnline())) return;
   isSyncing = true;
 
   try {
     const offlineProjects = await getOfflineProjects();
-    if (!offlineProjects.length) {
-      console.log('Nenhum projeto offline para sincronizar.');
-      return;
-    }
+    let sincronizados = 0;
 
     for (const project of offlineProjects) {
-      console.log('[sync] companyId on project being synced:', project.companyId);
-
-      const { _localId, ...projectSemLocalId } = project;
-
-      const dataCriacaoTimestamp = paraTimestamp(projectSemLocalId.dataCriacao);
-      const projectParaSalvar = {
-        ...projectSemLocalId,
-        dataCriacao: dataCriacaoTimestamp,
-        ...(projectSemLocalId.dataConclusao && { dataConclusao: paraTimestamp(projectSemLocalId.dataConclusao) }),
-        calibragem: projectSemLocalId.calibragem
-          ? { ...projectSemLocalId.calibragem, timestamp: paraTimestamp(projectSemLocalId.calibragem.timestamp) }
-          : projectSemLocalId.calibragem,
-      };
-      const meta = {
-        nomeProjeto: projectSemLocalId.nomeProjeto,
-        dataCriacao: dataCriacaoTimestamp,
-        uidUsuario: projectSemLocalId.uidUsuario,
-        companyId: projectSemLocalId.companyId,
-      };
-
-      await salvarProjetoSincronizado(projectParaSalvar, meta);
-      await removeOfflineProject(_localId);
-      console.log('Projeto sincronizado com Firestore:', projectSemLocalId);
+      try {
+        await sincronizarProjeto(project);
+        sincronizados += 1;
+      } catch (error) {
+        // Fica na fila (sem rede, projeto de outro usuário etc.) e tenta de novo depois, sem travar os outros
+        console.warn(`Projeto offline ${project.nomeProjeto} pendente:`, error.message);
+      }
     }
 
-    Alert.alert("Sincronização", "Projetos salvos na nuvem com sucesso!");
+    if (sincronizados > 0) Alert.alert("Sincronização", "Projetos salvos na nuvem com sucesso!");
   } catch (error) {
     console.error('Erro ao sincronizar projetos:', error);
   } finally {
@@ -122,6 +143,7 @@ export const checkConnectionAndSync = () => {
       console.log('Dispositivo reconectou, sincronizando...');
       await sincronizarCalibragensPendentes();
       await syncProjects();
+      await sincronizarInformacoesPendentes();
       await sincronizarRascunhosDaUltimaSessao();
       await sincronizarMidiasDaUltimaSessao();
     }

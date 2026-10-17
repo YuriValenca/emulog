@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
-import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useAppAuth } from '../context/auth';
 import NetInfo from '@react-native-community/netinfo';
@@ -13,11 +13,12 @@ import { salvarComoRascunho, excluirRascunhoEFotos, sincronizarRascunhos } from 
 import { sincronizarMidias } from '../midias';
 import { lerCalibragemDoAparelho } from '../calibragemLocal';
 import { sincronizarCalibragensPendentes } from '../calibragensPendentes';
+import { sincronizarInformacoesPendentes } from '../informacoesPendentes';
+import { syncProjects, checkConnectionAndSync } from '../db';
 
 export default function HomeScreen({ navigation }) {
-  const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin } = useAppAuth();
+  const { name, role, companyId, uid, isSuperadmin, isCompanyAdmin, balancaBtHabilitada } = useAppAuth();
   const [calibragemValida, setCalibragemValida] = useState(false);
-  const [balancaBtHabilitada, setBalancaBtHabilitada] = useState(false);
   const [projetoEmAndamento, setProjetoEmAndamento] = useState(null);
   const [modalProjetoVisivel, setModalProjetoVisivel] = useState(false);
   const sessao = { companyId, uid };
@@ -27,8 +28,13 @@ export default function HomeScreen({ navigation }) {
       sincronizarRascunhos({ companyId, uid });
       sincronizarMidias({ companyId, uid });
       sincronizarCalibragensPendentes();
+      syncProjects().then(sincronizarInformacoesPendentes);
     }, [companyId, uid])
   );
+
+  useEffect(() => {
+    checkConnectionAndSync();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,25 +49,6 @@ export default function HomeScreen({ navigation }) {
       verificarProjetoEmAndamento();
     }, [companyId, uid])
   );
-
-  useEffect(() => {
-    const verificarModuloBalanca = async () => {
-      if (isSuperadmin) {
-        setBalancaBtHabilitada(true);
-        return;
-      }
-      if (!companyId) return;
-      try {
-        const companySnap = await getDoc(doc(db, 'companies', companyId));
-        if (companySnap.exists()) {
-          setBalancaBtHabilitada(!!companySnap.data().bluetoothScaleEnabled);
-        }
-      } catch (e) {
-        console.error('Erro ao verificar módulo de balança Bluetooth:', e);
-      }
-    };
-    verificarModuloBalanca();
-  }, [companyId, isSuperadmin]);
 
   useEffect(() => {
     const verificarCalibragem = async () => {
