@@ -210,7 +210,7 @@ export default function HomeScreen({ navigation }) {
         onFechar={() => setModalProjetoVisivel(false)}
       />
 
-      <Text style={styles.versionText}>Versão: 2.2.0</Text>
+      <Text style={styles.versionText}>Versão: 2.2.1</Text>
     </View>
   );
 }
