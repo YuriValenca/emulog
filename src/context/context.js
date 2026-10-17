@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
-import { BleManager } from 'react-native-ble-plx';
+import { BleManager, BleErrorCode, State } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 
 // ─── PERFIS DE BALANÇAS CONHECIDAS ───────────────────────────────────────────
@@ -40,6 +40,7 @@ const KNOWN_SCALE_NAMES = ['my_scale', 'my scale', 'swan'];
 const DISCOVERY_MODE = false;
 const WEIGHT_CLEAR_THRESHOLD = 10; // gramas
 const WEIGHT_STABILITY_TOLERANCE = 2; // gramas
+const TEMPO_ESPERANDO_BLUETOOTH_MS = 8000;
 
 // ─── FÓRMULAS CANDIDATAS (modo descoberta) ────────────────────────────────────
 const CANDIDATE_DECODERS = [
@@ -60,6 +61,31 @@ const CANDIDATE_DECODERS = [
 ];
 
 const bleManager = new BleManager();
+
+// Bluetooth recém-ligado (ex.: no modo avião) leva alguns segundos até o scan funcionar
+const esperarBluetoothLigado = () => new Promise((resolve) => {
+  let terminou = false;
+  const terminar = (ligado) => {
+    if (terminou) return;
+    terminou = true;
+    clearTimeout(temporizador);
+    inscricao.remove();
+    resolve(ligado);
+  };
+  const temporizador = setTimeout(() => terminar(false), TEMPO_ESPERANDO_BLUETOOTH_MS);
+  const inscricao = bleManager.onStateChange((estado) => {
+    if (estado === State.PoweredOn) terminar(true);
+  }, true);
+});
+
+const MENSAGENS_ERRO_SCAN = {
+  [BleErrorCode.BluetoothPoweredOff]: 'Bluetooth desligado. Ligue o Bluetooth do celular e tente de novo.',
+  [BleErrorCode.BluetoothUnauthorized]: 'Permissão de Bluetooth negada.',
+  [BleErrorCode.LocationServicesDisabled]: 'Ligue a Localização do celular para encontrar a balança.',
+};
+
+const mensagemErroScan = (erro) =>
+  MENSAGENS_ERRO_SCAN[erro?.errorCode] ?? `Erro ao procurar a balança (código ${erro?.errorCode ?? '?'}).`;
 
 // ─── CONTEXT ──────────────────────────────────────────────────────────────────
 const BleContext = createContext(null);
@@ -218,11 +244,18 @@ export function BleProvider({ children }) {
       return;
     }
 
+    if (!(await esperarBluetoothLigado())) {
+      setErrorMsg(MENSAGENS_ERRO_SCAN[BleErrorCode.BluetoothPoweredOff]);
+      setBleStatus('error');
+      return;
+    }
+
     setBleStatus('scanning');
 
     bleManager.startDeviceScan(null, { allowDuplicates: false }, (scanErr, device) => {
       if (scanErr) {
-        setErrorMsg('Erro ao escanear. Verifique se o Bluetooth está ativado.');
+        console.warn('[BLE] Erro no scan:', scanErr.errorCode, scanErr.message);
+        setErrorMsg(mensagemErroScan(scanErr));
         setBleStatus('error');
         return;
       }
@@ -266,12 +299,19 @@ export function BleProvider({ children }) {
       return;
     }
 
+    if (!(await esperarBluetoothLigado())) {
+      setErrorMsg(MENSAGENS_ERRO_SCAN[BleErrorCode.BluetoothPoweredOff]);
+      setBleStatus('error');
+      return;
+    }
+
     setBleStatus('scanning');
     const foundKnown = []; // acumula localmente para checar duplicatas sem depender de state
 
     bleManager.startDeviceScan(null, { allowDuplicates: false }, (scanErr, device) => {
       if (scanErr) {
-        setErrorMsg('Erro ao escanear. Verifique se o Bluetooth está ativado.');
+        console.warn('[BLE] Erro no scan:', scanErr.errorCode, scanErr.message);
+        setErrorMsg(mensagemErroScan(scanErr));
         setBleStatus('error');
         return;
       }
