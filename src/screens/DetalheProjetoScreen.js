@@ -21,6 +21,7 @@ import { kgPreenchido, formatarKg } from '../helpers/numeros';
 import { somarCargasReais } from '../helpers/furos';
 import { montarRelatorioDoFogo, montarRelatorioDeFuros, temInformacoesDaOperacao } from '../relatorios';
 import { listarMidias, lerMidiaComoDataUri } from '../midias';
+import { lerInformacoesPendentes } from '../informacoesPendentes';
 
 const RELATORIO = { FOGO: 'fogo', FUROS: 'furos' };
 
@@ -46,6 +47,8 @@ export default function DetalheProjetoScreen() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Edição feita sem internet ainda não chegou ao banco: vale a do aparelho
+        data.informacoesOperacao = (await lerInformacoesPendentes(projetoId)) ?? data.informacoesOperacao;
         data.calibragemVencida = calibragemVencidaNoProjeto(data);
         data.dataConclusao = data.dataConclusao && !mesmoDia(data.dataCriacao, data.dataConclusao)
           ? paraData(data.dataConclusao).toLocaleDateString()

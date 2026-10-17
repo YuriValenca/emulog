@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import useKeyboardHeight from '../hooks/useKeyboardHeight';
 import { Ionicons } from '@expo/vector-icons';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useProjetoForm } from '../context/form';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
@@ -15,6 +14,7 @@ import { pendenciasParaSalvar } from '../helpers/pendencias';
 import { paraKg, kgParaTexto, limparKgDigitado } from '../helpers/numeros';
 import AvisoPendencias from './AvisoPendencias';
 import FotosDaOperacao from './FotosDaOperacao';
+import { salvarInformacoesDaOperacao } from '../informacoesPendentes';
 
 export default function InformacoesOperacao({
   modoModal = false,
@@ -63,7 +63,6 @@ export default function InformacoesOperacao({
   const [modalCaminhaoVisivel, setModalCaminhaoVisivel] = useState(false);
   const [modalEquipeVisivel, setModalEquipeVisivel] = useState(false);
 
-  const db = getFirestore();
 
   useEffect(() => {
     if (modoModal && !visivel) return;
@@ -152,7 +151,7 @@ export default function InformacoesOperacao({
         equipe: paraRefsEquipe(equipeSelecionada),
         informacoesGerais,
       };
-      await updateDoc(doc(db, 'projetos', projetoId), { informacoesOperacao });
+      await salvarInformacoesDaOperacao(projetoId, informacoesOperacao);
       onSalvo(informacoesOperacao);
       onFechar();
     } catch (e) {
