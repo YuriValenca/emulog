@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Modal } from 'react-native';
-import { getAuth } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import { collection, addDoc, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
 import BackButton from './BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,65 +10,36 @@ import { useReferenceData } from '../context/referenceData';
 import { paraDecimal } from '../helpers/numeros';
 import { calcularTara, normalizarCalibragem } from '../helpers/calibragem';
 import { guardarCalibragemNoAparelho } from '../calibragemLocal';
+import { registrarCalibragemNoBanco } from '../calibragensPendentes';
+import { useLeituraDaBalanca } from '../hooks/useLeituraDaBalanca';
+
+const ORDEM_DOS_CAMPOS = ['vazio', 'cheio'];
 
 export default function CalibragemScreen() {
   const [pesoVazio, setPesoVazio] = useState('');
   const [pesoCheio, setPesoCheio] = useState('');
   const [tara, setTara] = useState('');
-  const auth = getAuth();
+  const [salvando, setSalvando] = useState(false);
   const navigation = useNavigation();
 
-  const { companyId } = useAppAuth();
-  const { bleStatus, connectedDevice, weight, readingStatus, resumeMonitor } = useBle();
+  const { companyId, uid } = useAppAuth();
+  const { bleStatus, connectedDevice, weight } = useBle();
   const { ultimaCalibragem, setUltimaCalibragem } = useReferenceData();
 
-  
-  const [campoBleAtivo, setCampoBleAtivo] = useState(null);
-  const [modalBleVisivel, setModalBleVisivel] = useState(false);
-  const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
-  const lastBleWeightShown = useRef(null);
+  const balancaConectada = bleStatus === 'connected';
+  const { campoAtivo, pesoParaConfirmar, confirmarPeso, recusarPeso, alternarCampo, digitarNoCampo } = useLeituraDaBalanca({
+    conectada: balancaConectada,
+    peso: weight,
+    ordemDosCampos: ORDEM_DOS_CAMPOS,
+    valores: { vazio: pesoVazio, cheio: pesoCheio },
+    preencherCampo: (campo, texto) => (campo === 'vazio' ? setPesoVazio : setPesoCheio)(texto),
+  });
 
   const ultimaCalibragemInfo = ultimaCalibragem ? {
     data: ultimaCalibragem.timestamp,
     tara: ultimaCalibragem.tara,
     horasAtras: Math.floor(Math.abs(new Date() - ultimaCalibragem.timestamp) / 36e5),
   } : null;
-
-  useEffect(() => {
-    if (
-      readingStatus === 'stable' &&
-      weight !== null &&
-      weight !== lastBleWeightShown.current &&
-      campoBleAtivo !== null &&
-      !modalBleVisivel
-    ) {
-      lastBleWeightShown.current = weight;
-      setPesoBleConfirmacao(weight);
-      setModalBleVisivel(true);
-    }
-  }, [readingStatus, weight]);
-
-  const confirmarPesoBle = () => {
-    if (pesoBleConfirmacao === null) return;
-    const valorStr = pesoBleConfirmacao.toFixed(1);
-    if (campoBleAtivo === 'vazio') setPesoVazio(valorStr);
-    if (campoBleAtivo === 'cheio') setPesoCheio(valorStr);
-    setModalBleVisivel(false);
-    setCampoBleAtivo(null);
-    resumeMonitor();
-  };
-
-  const cancelarPesoBle = () => {
-    setModalBleVisivel(false);
-    lastBleWeightShown.current = null;
-    resumeMonitor();
-  };
-
-  useEffect(() => {
-    if (!auth.currentUser) {
-      console.log('Nenhum usuário autenticado encontrado');
-    }
-  }, []);
 
   useEffect(() => {
     if (!pesoVazio || !pesoCheio) {
@@ -89,12 +57,17 @@ export default function CalibragemScreen() {
   }, [pesoVazio, pesoCheio]);
 
   const registrarCalibragem = async () => {
+    if (salvando) return;
     if (!pesoVazio || !pesoCheio || !tara) {
       Alert.alert("Erro", "Por favor, preencha todos os campos corretamente.");
       return;
     }
+    if (!uid || !companyId) {
+      Alert.alert("Erro", "Usuário não identificado. Feche e abra o app novamente.");
+      return;
+    }
+    setSalvando(true);
     try {
-      if (!auth.currentUser) return;
       const calibragem = {
         pesoVazio: paraDecimal(pesoVazio),
         pesoCheio: paraDecimal(pesoCheio),
@@ -102,20 +75,20 @@ export default function CalibragemScreen() {
         timestamp: new Date(),
       };
 
-      await addDoc(collection(db, 'calibragens'), { ...calibragem, userId: auth.currentUser.uid, companyId });
-
       const calibragemNormalizada = normalizarCalibragem(calibragem);
       await guardarCalibragemNoAparelho(companyId, calibragemNormalizada);
       setUltimaCalibragem(calibragemNormalizada);
+
+      await registrarCalibragemNoBanco({ ...calibragem, userId: uid, companyId });
       Alert.alert("Sucesso", "Calibragem registrada com sucesso.");
       navigation.goBack();
     } catch (error) {
       console.error(error);
       Alert.alert("Erro", "Não foi possível salvar a calibragem.");
+    } finally {
+      setSalvando(false);
     }
   };
-
-  const labelCampo = campoBleAtivo === 'vazio' ? 'Copo vazio' : 'Copo cheio (com água)';
 
   const formatarDataCalibragem = (ts) => {
     const d = String(ts.getDate()).padStart(2, '0');
@@ -177,87 +150,49 @@ export default function CalibragemScreen() {
         />
         <Text style={[styles.bleStatusText, bleStatus !== 'connected' && { color: '#aaa' }]}>
           {bleStatus === 'connected'
-            ? `Balança: ${connectedDevice?.name ?? 'Conectada'} — toque no campo desejado`
+            ? `Balança: ${connectedDevice?.name ?? 'Conectada'}`
             : bleStatus === 'reconnecting'
               ? 'Reconectando à balança...'
               : 'Balança não conectada — toque para conectar'}
         </Text>
       </TouchableOpacity>
 
-      <Text style={styles.inputLabel}>Peso do copo vazio</Text>
+      <CampoDePeso
+        rotulo="Peso do copo vazio"
+        placeholder="Ex: 150 g"
+        valor={pesoVazio}
+        aoDigitar={setPesoVazio}
+        aoFocar={() => digitarNoCampo('vazio')}
+        balancaConectada={balancaConectada}
+        lendoBalanca={campoAtivo === 'vazio'}
+        aoAlternarBalanca={() => alternarCampo('vazio')}
+      />
+
+      <CampoDePeso
+        rotulo="Peso do copo cheio (com água)"
+        placeholder="Ex: 350 g"
+        valor={pesoCheio}
+        aoDigitar={setPesoCheio}
+        aoFocar={() => digitarNoCampo('cheio')}
+        balancaConectada={balancaConectada}
+        lendoBalanca={campoAtivo === 'cheio'}
+        aoAlternarBalanca={() => alternarCampo('cheio')}
+      />
+
       <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => bleStatus === 'connected' && setCampoBleAtivo('vazio')}
+        style={[styles.button, salvando && styles.buttonDesabilitado]}
+        onPress={registrarCalibragem}
+        disabled={salvando}
       >
-        <TextInput
-          style={[styles.input, campoBleAtivo === 'vazio' && styles.inputAtivo]}
-          placeholder="Ex: 150.0 g"
-          placeholderTextColor="#888888"
-          keyboardType="numeric"
-          value={pesoVazio}
-          onChangeText={setPesoVazio}
-          onFocus={() => bleStatus === 'connected' && setCampoBleAtivo('vazio')}
-        />
-      </TouchableOpacity>
-      {bleStatus === 'connected' && (
-        <TouchableOpacity
-          style={[styles.bleFieldBtn, campoBleAtivo === 'vazio' && styles.bleFieldBtnAtivo]}
-          onPress={() => setCampoBleAtivo(campoBleAtivo === 'vazio' ? null : 'vazio')}
-        >
-          <MaterialCommunityIcons
-            name="scale"
-            size={14}
-            color={campoBleAtivo === 'vazio' ? '#fff' : '#4CAF50'}
-          />
-          <Text style={[styles.bleFieldBtnText, campoBleAtivo === 'vazio' && { color: '#fff' }]}>
-            {campoBleAtivo === 'vazio' ? 'Aguardando balança...' : 'Usar balança para este campo'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <Text style={styles.inputLabel}>Peso do copo cheio (com água)</Text>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => bleStatus === 'connected' && setCampoBleAtivo('cheio')}
-      >
-        <TextInput
-          style={[styles.input, campoBleAtivo === 'cheio' && styles.inputAtivo]}
-          placeholder="Ex: 350.0 g"
-          placeholderTextColor="#888888"
-          keyboardType="numeric"
-          value={pesoCheio}
-          onChangeText={setPesoCheio}
-          onFocus={() => bleStatus === 'connected' && setCampoBleAtivo('cheio')}
-        />
-      </TouchableOpacity>
-      {bleStatus === 'connected' && (
-        <TouchableOpacity
-          style={[styles.bleFieldBtn, campoBleAtivo === 'cheio' && styles.bleFieldBtnAtivo]}
-          onPress={() => setCampoBleAtivo(campoBleAtivo === 'cheio' ? null : 'cheio')}
-        >
-          <MaterialCommunityIcons
-            name="scale"
-            size={14}
-            color={campoBleAtivo === 'cheio' ? '#fff' : '#4CAF50'}
-          />
-          <Text style={[styles.bleFieldBtnText, campoBleAtivo === 'cheio' && { color: '#fff' }]}>
-            {campoBleAtivo === 'cheio' ? 'Aguardando balança...' : 'Usar balança para este campo'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <Text style={styles.label}>Tara Calculada: {tara ? `${tara} g` : '---'}</Text>
-
-      <TouchableOpacity style={styles.button} onPress={registrarCalibragem}>
         <Ionicons name="checkmark-circle" size={24} color="white" style={styles.icon} />
-        <Text style={styles.buttonText}>Registrar Calibragem</Text>
+        <Text style={styles.buttonText}>{salvando ? 'Salvando...' : 'Registrar Calibragem'}</Text>
       </TouchableOpacity>
 
       <Modal
         animationType="fade"
         transparent
-        visible={modalBleVisivel}
-        onRequestClose={cancelarPesoBle}
+        visible={pesoParaConfirmar !== null}
+        onRequestClose={recusarPeso}
         statusBarTranslucent
       >
         <View style={styles.bleModalOverlay}>
@@ -267,16 +202,16 @@ export default function CalibragemScreen() {
                 <MaterialCommunityIcons name="scale" size={28} color="#fff" />
               </View>
               <Text style={styles.bleModalTitle}>Peso estabilizado</Text>
-              <Text style={styles.bleModalSubtitle}>{labelCampo}</Text>
+              <Text style={styles.bleModalSubtitle}>{campoAtivo === 'vazio' ? 'Copo vazio' : 'Copo cheio (com água)'}</Text>
             </View>
             <View style={styles.bleModalWeightRow}>
-              <Text style={styles.bleModalWeightValue}>{pesoBleConfirmacao?.toFixed(1)}</Text>
+              <Text style={styles.bleModalWeightValue}>{pesoParaConfirmar !== null && Math.round(pesoParaConfirmar)}</Text>
               <Text style={styles.bleModalWeightUnit}>g</Text>
             </View>
             <View style={styles.bleModalActions}>
               <TouchableOpacity
                 style={[styles.bleModalBtn, styles.bleModalBtnCancel]}
-                onPress={cancelarPesoBle}
+                onPress={recusarPeso}
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons name="close" size={20} color="#666" />
@@ -284,7 +219,7 @@ export default function CalibragemScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.bleModalBtn, styles.bleModalBtnConfirm]}
-                onPress={confirmarPesoBle}
+                onPress={confirmarPeso}
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons name="check" size={20} color="#fff" />
@@ -298,28 +233,62 @@ export default function CalibragemScreen() {
   );
 }
 
+function CampoDePeso({ rotulo, placeholder, valor, aoDigitar, aoFocar, balancaConectada, lendoBalanca, aoAlternarBalanca }) {
+  return (
+    <>
+      <Text style={styles.inputLabel}>{rotulo}</Text>
+      <TextInput
+        style={[styles.input, lendoBalanca && styles.inputAtivo]}
+        placeholder={lendoBalanca ? 'Coloque o copo na balança' : placeholder}
+        placeholderTextColor="#888888"
+        keyboardType="numeric"
+        value={valor}
+        onChangeText={aoDigitar}
+        onFocus={aoFocar}
+      />
+      {balancaConectada && (
+        <TouchableOpacity
+          style={[styles.bleFieldBtn, lendoBalanca && styles.bleFieldBtnAtivo]}
+          onPress={aoAlternarBalanca}
+        >
+          <MaterialCommunityIcons
+            name="scale"
+            size={14}
+            color={lendoBalanca ? '#fff' : '#4CAF50'}
+          />
+          <Text style={[styles.bleFieldBtnText, lendoBalanca && { color: '#fff' }]}>
+            {lendoBalanca ? 'Lendo balança...' : 'Usar balança para este campo'}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
     justifyContent: 'center',
     backgroundColor: '#FFF',
+    marginTop: 36,
   },
   titulo: {
     fontSize: 24,
     color: '#1F6452',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 10,
+    marginTop: 10,
   },
   linha: {
     borderBottomColor: '#1F6452',
     borderBottomWidth: 2,
-    marginVertical: 5,
+    marginVertical: 3,
     alignSelf: 'center',
     width: '90%',
   },
   instrucao: {
+    color: '#333',
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 12,
@@ -399,12 +368,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4CAF50',
   },
-  label: {
-    fontSize: 18,
-    marginBottom: 10,
-    marginTop: 4,
-    textAlign: 'center',
-  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -413,6 +376,9 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
+  },
+  buttonDesabilitado: {
+    opacity: 0.6,
   },
   buttonText: {
     color: '#FFF',
