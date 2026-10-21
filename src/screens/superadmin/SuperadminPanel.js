@@ -138,6 +138,7 @@ export default function SuperadminPanel() {
           licenseExpiryOverride: null,
           bluetoothScaleEnabled: false,
           createdAt: Timestamp.now(),
+          modules: { mobile: true, portal: false },
         });
       }
       setModalEmpresaVisivel(false);
