@@ -58,6 +58,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
   const [previaDaCor, setPreviaDaCor] = useState(form.primaryColor);
 
   const [novaCaminhaoPlaca, setNovaCaminhaoPlaca] = useState('');
+  const [novoCaminhaoModelo, setNovoCaminhaoModelo] = useState('');
   const [novoOperadorNome, setNovoOperadorNome] = useState('');
   const [novoOperadorCargo, setNovoOperadorCargo] = useState('');
 
@@ -88,6 +89,7 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
     setExpandedOperadores(false);
     setExpandedUsuarios(false);
     setNovaCaminhaoPlaca('');
+    setNovoCaminhaoModelo('');
     setNovoOperadorNome('');
     setNovoOperadorCargo('');
   }, [companyToEdit, visible]);
@@ -169,12 +171,14 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
     try {
       const novo = {
         placa: novaCaminhaoPlaca.trim().toUpperCase(),
+        modelo: novoCaminhaoModelo.trim(),
         companyId: companyToEdit.id,
         criadoEm: new Date().toISOString(),
       };
       const docRef = await addDoc(collection(db, 'caminhoes'), novo);
       setCaminhoes(prev => [...prev, { id: docRef.id, ...novo }]);
       setNovaCaminhaoPlaca('');
+      setNovoCaminhaoModelo('');
     } catch (e) {
       Alert.alert('Erro', 'Não foi possível adicionar o caminhão.');
     } finally {
@@ -349,7 +353,10 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
                         )}
                         {caminhoes.map(c => (
                           <View key={c.id} style={styles.itemRow}>
-                            <Text style={styles.itemLabel}>{c.placa}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.itemLabel}>{c.placa}</Text>
+                              {c.modelo ? <Text style={styles.itemSub}>{c.modelo}</Text> : null}
+                            </View>
                             <TouchableOpacity
                               onPress={() => removerCaminhao(c.id)}
                               style={styles.deleteBtn}
@@ -360,14 +367,24 @@ export default function ModalEmpresa({ visible, onClose, onSave, saving, company
                           </View>
                         ))}
                         <View style={styles.addRow}>
-                          <TextInput
-                            style={[styles.formInput, styles.addInput]}
-                            value={novaCaminhaoPlaca}
-                            onChangeText={setNovaCaminhaoPlaca}
-                            placeholder="Placa (ex: ABC-1234)"
-                            placeholderTextColor="#888888"
-                            autoCapitalize="characters"
-                          />
+                          <View style={{ flex: 1, gap: 8 }}>
+                            <TextInput
+                              style={[styles.formInput, { marginBottom: 0 }]}
+                              value={novaCaminhaoPlaca}
+                              onChangeText={setNovaCaminhaoPlaca}
+                              placeholder="Placa (ex: ABC-1234)"
+                              placeholderTextColor="#888888"
+                              autoCapitalize="characters"
+                            />
+                            <TextInput
+                              style={[styles.formInput, { marginBottom: 0 }]}
+                              value={novoCaminhaoModelo}
+                              onChangeText={setNovoCaminhaoModelo}
+                              placeholder="Modelo (opcional)"
+                              placeholderTextColor="#888888"
+                              maxLength={100}
+                            />
+                          </View>
                           <TouchableOpacity
                             style={[styles.addRowBtn, (addingCaminhao || !novaCaminhaoPlaca.trim()) && styles.addRowBtnDisabled]}
                             onPress={adicionarCaminhao}
@@ -562,7 +579,6 @@ const styles = StyleSheet.create({
   itemSub: { fontSize: 12, color: '#888', marginTop: 1 },
   deleteBtn: { backgroundColor: '#D32F2F', borderRadius: 6, padding: 7, alignItems: 'center', justifyContent: 'center' },
   addRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4 },
-  addInput: { flex: 1, marginBottom: 0 },
   addRowBtn: { backgroundColor: '#2E8C71', borderRadius: 8, padding: 12, alignItems: 'center', justifyContent: 'center', marginTop: 0 },
   addRowBtnDisabled: { backgroundColor: '#aaa' },
   roleBadge: { backgroundColor: '#f0f0f0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },

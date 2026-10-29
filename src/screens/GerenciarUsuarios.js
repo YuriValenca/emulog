@@ -29,6 +29,7 @@ export default function GerenciarUsuarios() {
   const [currentUserUid, setCurrentUserUid] = useState(null);
 
   const [placaCaminhao, setPlacaCaminhao] = useState('');
+  const [modeloCaminhao, setModeloCaminhao] = useState('');
   const [caminhoes, setCaminhoes] = useState([]);
   const [termoBuscaCaminhao, setTermoBuscaCaminhao] = useState('');
 
@@ -52,6 +53,7 @@ export default function GerenciarUsuarios() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editPlaca, setEditPlaca] = useState('');
+  const [editModelo, setEditModelo] = useState('');
   const [editNomeOperador, setEditNomeOperador] = useState('');
   const [editCargoOperador, setEditCargoOperador] = useState('');
   const [editNomeCliente, setEditNomeCliente] = useState('');
@@ -170,10 +172,12 @@ export default function GerenciarUsuarios() {
       await addDoc(collection(db, 'caminhoes'), {
         placa: placaCaminhao.trim().toUpperCase(),
         descricao: `Caminhão — ${placaCaminhao.trim().toUpperCase()}`,
+        modelo: modeloCaminhao.trim(),
         companyId: companyId || null,
         criadoEm: new Date().toISOString(),
       });
       setPlacaCaminhao('');
+      setModeloCaminhao('');
       await carregarCaminhoes();
       mostrarModal('Caminhão cadastrado com sucesso!');
     } catch (e) {
@@ -268,6 +272,7 @@ export default function GerenciarUsuarios() {
   const abrirEdicaoCaminhao = (c) => {
     setEditingItem({ id: c.id, colecao: 'caminhoes' });
     setEditPlaca(c.placa || '');
+    setEditModelo(c.modelo ?? '');
     setEditModalVisible(true);
   };
 
@@ -313,6 +318,7 @@ export default function GerenciarUsuarios() {
         await updateDoc(doc(db, 'caminhoes', id), {
           placa: editPlaca.trim().toUpperCase(),
           descricao: `Caminhão — ${editPlaca.trim().toUpperCase()}`,
+          modelo: editModelo.trim(),
         });
         await carregarCaminhoes();
       } else if (colecao === 'operadores') {
@@ -344,6 +350,7 @@ export default function GerenciarUsuarios() {
     setEditModalVisible(false);
     setEditingItem(null);
     setEditPlaca('');
+    setEditModelo('');
     setEditNomeOperador('');
     setEditCargoOperador('');
     setEditNomeCliente('');
@@ -466,6 +473,15 @@ export default function GerenciarUsuarios() {
               placeholderTextColor="#888888"
               autoCapitalize="characters"
             />
+            <Text style={styles.label}>Modelo (opcional)</Text>
+            <TextInput
+              value={modeloCaminhao}
+              onChangeText={setModeloCaminhao}
+              style={styles.input}
+              placeholder="Ex: Mercedes Atego 2426"
+              placeholderTextColor="#888888"
+              maxLength={100}
+            />
             <TouchableOpacity style={styles.adicionarBtn} onPress={adicionarCaminhao} activeOpacity={0.8}>
               <Ionicons name="add-circle-outline" size={20} color="white" />
               <Text style={styles.adicionarBtnTexto}>Cadastrar Caminhão</Text>
@@ -489,6 +505,7 @@ export default function GerenciarUsuarios() {
             <View key={c.id} style={styles.card}>
               <View style={styles.cardInfo}>
                 <Text style={styles.cardNome}>{c.placa}</Text>
+                {!!c.modelo && <Text style={styles.cardMeta}>{c.modelo}</Text>}
                 <Text style={styles.cardMeta}>
                   Cadastrado em: {c.criadoEm ? new Date(c.criadoEm).toLocaleDateString() : '—'}
                 </Text>
@@ -703,6 +720,16 @@ export default function GerenciarUsuarios() {
                   placeholder="Ex: ABC-1234"
                   placeholderTextColor="#888888"
                   autoCapitalize="characters"
+                  editable={!salvandoEdicao}
+                />
+                <Text style={styles.label}>Modelo (opcional)</Text>
+                <TextInput
+                  value={editModelo}
+                  onChangeText={setEditModelo}
+                  style={styles.input}
+                  placeholder="Ex: Mercedes Atego 2426"
+                  placeholderTextColor="#888888"
+                  maxLength={100}
                   editable={!salvandoEdicao}
                 />
               </>
