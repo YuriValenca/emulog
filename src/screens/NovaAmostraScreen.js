@@ -19,11 +19,13 @@ import { estaOnline, comTempoLimite, estourouTempoLimite } from '../helpers/rede
 import StepPesagens from './StepPesagens';
 import EtapaFuros from './EtapaFuros';
 import InformacoesOperacao from './InformacoesOperacao';
+import ModalNovaCalibragem from './ModalNovaCalibragem';
 import { useAppAuth } from '../context/auth';
 import { useReferenceData } from '../context/referenceData';
 import { paraDecimal, paraKg } from '../helpers/numeros';
 import {
   normalizarCalibragem, calibragemDoProjeto, restaurarCalibragemCongelada,
+  calcularDensidade as calcularDensidadeComCalibragem, recalcularDensidades, calibragemMaisNova, mesmasMedidas,
 } from '../helpers/calibragem';
 import { paraRefCaminhao, paraRefsEquipe } from '../helpers/referencias';
 import { pendenciasParaAvancar, pendenciasDosFuros } from '../helpers/pendencias';
@@ -59,6 +61,7 @@ function NovaAmostraScreenInner() {
   const [modalInformacoesAdicionaisVisivel, setModalInformacoesAdicionaisVisivel] = useState(false);
   const [modalAmostrasIncompletasVisivel, setModalAmostrasIncompletasVisivel] = useState(false);
   const [mensagemAmostrasIncompletas, setMensagemAmostrasIncompletas] = useState('');
+  const [calibragemOferecida, setCalibragemOferecida] = useState(null);
 
   const [modalBleVisivel, setModalBleVisivel] = useState(false);
   const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
@@ -150,26 +153,42 @@ function NovaAmostraScreenInner() {
     }
   };
 
-  const buscarUltimaCalibragem = async () => {
+  const buscarCalibragemMaisRecente = async () => {
     try {
-      const calibragem = (await buscarCalibragemOnline()) ?? (await lerCalibragemDoAparelho(companyId));
-      if (calibragem) setUltimaCalibragem(calibragem);
+      return (await buscarCalibragemOnline()) ?? (await lerCalibragemDoAparelho(companyId));
     } catch (error) {
       console.error("Erro ao buscar calibragem:", error);
+      return null;
     }
+  };
+
+  const usarCalibragemOferecida = () => {
+    const { nova } = calibragemOferecida;
+    setUltimaCalibragem(nova);
+    setAmostras(atuais => recalcularDensidades(atuais, nova));
+    setCalibragemOferecida(null);
+  };
+
+  // Projeto com pesagens mantém a calibragem com que foi pesado; trocar por uma mais nova é escolha do operador
+  const oferecerCalibragemMaisNova = async (congelada) => {
+    const maisRecente = await buscarCalibragemMaisRecente();
+    if (!calibragemMaisNova(maisRecente, congelada)) return;
+    if (mesmasMedidas(maisRecente, congelada)) return setUltimaCalibragem(maisRecente);
+    setCalibragemOferecida({ atual: congelada, nova: maisRecente });
   };
 
   useEffect(() => {
     if (!companyId || !uid) return;
     const iniciarProjeto = async () => {
       const projeto = await restaurarDoStorage();
-      // Projeto com pesagens mantém a calibragem com que foi pesado, mesmo que exista uma mais nova
-      const calibragemCongelada = projeto?.calibragem && contarPesagensDoProjeto(projeto) > 0;
-      if (calibragemCongelada) {
-        setUltimaCalibragem(restaurarCalibragemCongelada(projeto.calibragem));
+      if (projeto?.calibragem && contarPesagensDoProjeto(projeto) > 0) {
+        const congelada = restaurarCalibragemCongelada(projeto.calibragem);
+        setUltimaCalibragem(congelada);
+        await oferecerCalibragemMaisNova(congelada);
         return;
       }
-      await buscarUltimaCalibragem();
+      const maisRecente = await buscarCalibragemMaisRecente();
+      if (maisRecente) setUltimaCalibragem(maisRecente);
     };
     iniciarProjeto();
   }, [companyId, uid]);
@@ -181,13 +200,12 @@ function NovaAmostraScreenInner() {
       return 0;
     }
     const { tara, pesoVazio } = ultimaCalibragem;
-    const pesoMedido = paraDecimal(pesoVal);
-    if (isNaN(tara) || isNaN(pesoVazio) || isNaN(pesoMedido)) {
+    if (isNaN(tara) || isNaN(pesoVazio) || isNaN(paraDecimal(pesoVal))) {
       setMensagemAviso("Erro na calibragem ou na entrada de peso. Valores devem ser numéricos.");
       setModalAvisoVisivel(true);
       return 0;
     }
-    return Number(((pesoMedido - pesoVazio) / tara).toFixed(3));
+    return calcularDensidadeComCalibragem(pesoVal, ultimaCalibragem);
   };
 
   const confirmarPesagemComValor = (pesoStr) => {
@@ -597,6 +615,12 @@ function NovaAmostraScreenInner() {
 
   const modais = (
     <>
+      <ModalNovaCalibragem
+        oferta={calibragemOferecida}
+        onUsar={usarCalibragemOferecida}
+        onManter={() => setCalibragemOferecida(null)}
+      />
+
       <Modal
         animationType="fade"
         transparent

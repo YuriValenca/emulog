@@ -1,27 +1,12 @@
 import { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { contarPesagensDoProjeto } from '../context/form';
 import { textoAmostras, textoPesagens } from '../helpers/pesagem';
 import { textoFuros } from '../helpers/furos';
+import BotaoModal from './BotaoModal';
 
 const juntarComE = (partes) => `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
-
-function BotaoModal({ icone, texto, subtexto, cor, onPress, centralizado = false }) {
-  return (
-    <TouchableOpacity
-      style={[styles.botao, centralizado && styles.botaoCentralizado, { backgroundColor: cor }]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Ionicons name={icone} size={26} color="#FFF" />
-      <View style={styles.botaoTextos}>
-        <Text style={styles.botaoTexto}>{texto}</Text>
-        {subtexto ? <Text style={styles.botaoSubtexto}>{subtexto}</Text> : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 export default function ModalProjetoEmAndamento({
   visivel, projeto, onContinuar, onSalvarRascunho, onApagarEIniciarNovo, onIniciarNovo, onFechar,
@@ -129,12 +114,4 @@ const styles = StyleSheet.create({
   nome: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginTop: 12 },
   detalhes: { marginTop: 4, marginBottom: 12, gap: 2 },
   detalhe: { fontSize: 18, color: '#555', textAlign: 'center' },
-  botao: {
-    width: '100%', minHeight: 60, borderRadius: 8, marginTop: 12, paddingVertical: 10, paddingHorizontal: 16,
-    flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', gap: 10,
-  },
-  botaoCentralizado: { justifyContent: 'center' },
-  botaoTextos: { flexShrink: 1, alignItems: 'flex-start' },
-  botaoTexto: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  botaoSubtexto: { color: '#FFF', fontSize: 16, opacity: 0.9 },
 });
