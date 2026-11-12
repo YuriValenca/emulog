@@ -11,7 +11,7 @@ const gerarIdFuro = () => `${Date.now()}-${contadorDeFuros++}`;
 
 export const textoFuros = (quantidade) => (quantidade === 1 ? '1 furo' : `${quantidade} furos`);
 
-export const criarFuro = (profundidadeReal = '') => ({ id: gerarIdFuro(), profundidadeReal, cargaReal: '' });
+export const criarFuro = (profundidadeReal = '') => ({ id: gerarIdFuro(), profundidadeReal, cargaReal: '', observacao: '' });
 
 export const criarFurosVazios = () => ({ profundidadePrevista: '', cargaPrevista: '', itens: [criarFuro()] });
 
@@ -19,7 +19,8 @@ const valorNumerico = (valor) => paraNumero(valor) !== null;
 
 export const furoCompleto = (furo) => valorNumerico(furo?.profundidadeReal) && valorNumerico(furo?.cargaReal);
 
-export const furoTemDados = (furo) => valorPreenchido(furo?.profundidadeReal) || valorPreenchido(furo?.cargaReal);
+export const furoTemDados = (furo) =>
+  valorPreenchido(furo?.profundidadeReal) || valorPreenchido(furo?.cargaReal) || !!furo?.observacao?.trim();
 
 export const furosTemDados = (furos) =>
   !!furos && (
@@ -57,6 +58,7 @@ export const furosParaSalvar = (furos) =>
       itens: (furos.itens || []).map(furo => ({
         profundidadeReal: paraNumero(furo.profundidadeReal),
         cargaReal: paraNumero(furo.cargaReal),
+        ...(furo.observacao?.trim() ? { observacao: furo.observacao.trim() } : {}),
       })),
     }
     : null;
@@ -72,5 +74,6 @@ export const furosParaFormulario = (furos) =>
         id: furo.id ?? gerarIdFuro(),
         profundidadeReal: numeroParaTexto(furo.profundidadeReal),
         cargaReal: numeroParaTexto(furo.cargaReal),
+        observacao: furo.observacao ?? '',
       })),
     };

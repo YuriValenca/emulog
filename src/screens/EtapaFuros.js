@@ -1,21 +1,16 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Dimensions, Keyboard,
+  View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Dimensions, Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useProjetoForm } from '../context/form';
 import useKeyboardHeight from '../hooks/useKeyboardHeight';
-import {
-  criarFuro, furoTemDados, somarCargasReais, aplicarProfundidadePrevista,
-} from '../helpers/furos';
+import { criarFuro, somarCargasReais, aplicarProfundidadePrevista } from '../helpers/furos';
 import { limparKgDigitado as limparNumeroDigitado, formatarKg, kgPreenchido as valorPreenchido } from '../helpers/numeros';
 import { pendenciasDosFuros } from '../helpers/pendencias';
+import MenuDoFuro from './MenuDoFuro';
 
 const ATRASO_PARA_FOCAR_MS = 150;
-
-// Furo só com a profundidade herdada da prevista não tem nada que o operador perderia ao apagar
-const furoDigitado = (furo, profundidadePrevista) =>
-  furoTemDados(furo) && (!!furo.cargaReal || furo.profundidadeReal !== profundidadePrevista);
 
 // Altura fixa: se o aviso aparecesse e sumisse a cada furo digitado, o fim da lista mudaria de tamanho
 // e a rolagem pularia junto com o teclado
@@ -36,45 +31,52 @@ function StatusDosFuros({ pendencias }) {
 }
 
 const LinhaFuro = memo(function LinhaFuro({
-  furo, indice, aoAlterar, aoAvancar, aoFocarCarga, aoRemover, registrarInput,
+  furo, indice, aoAlterar, aoAvancar, aoFocarCarga, aoAbrirMenu, registrarInput,
 }) {
   return (
-    <View style={styles.linha}>
-      <Text style={styles.rotuloFuro}>Furo {indice + 1}</Text>
-      <View style={styles.campo}>
-        <TextInput
-          ref={input => registrarInput(furo.id, 'profundidade', input)}
-          style={styles.input}
-          placeholder="Prof."
-          placeholderTextColor="#888888"
-          keyboardType="numeric"
-          value={furo.profundidadeReal}
-          onChangeText={texto => aoAlterar(furo.id, 'profundidadeReal', texto)}
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={() => aoAvancar(indice, 'profundidade')}
-        />
-        <Text style={styles.unidade}>m</Text>
+    <View>
+      <View style={styles.linha}>
+        <Text style={styles.rotuloFuro}>Furo {indice + 1}</Text>
+        <View style={styles.campo}>
+          <TextInput
+            ref={input => registrarInput(furo.id, 'profundidade', input)}
+            style={styles.input}
+            placeholder="Prof."
+            placeholderTextColor="#888888"
+            keyboardType="numeric"
+            value={furo.profundidadeReal}
+            onChangeText={texto => aoAlterar(furo.id, 'profundidadeReal', texto)}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => aoAvancar(indice, 'profundidade')}
+          />
+          <Text style={styles.unidade}>m</Text>
+        </View>
+        <View style={styles.campo}>
+          <TextInput
+            ref={input => registrarInput(furo.id, 'carga', input)}
+            style={styles.input}
+            placeholder="Carga"
+            placeholderTextColor="#888888"
+            keyboardType="numeric"
+            value={furo.cargaReal}
+            onChangeText={texto => aoAlterar(furo.id, 'cargaReal', texto)}
+            onFocus={() => aoFocarCarga(furo.id)}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={evento => aoAvancar(indice, 'carga', evento.nativeEvent.text)}
+          />
+          <Text style={styles.unidade}>kg</Text>
+        </View>
+        <TouchableOpacity style={styles.menuBtn} onPress={() => aoAbrirMenu(furo.id, indice + 1)} hitSlop={8}>
+          <Ionicons name="add-circle-outline" size={30} color="#1F6452" />
+        </TouchableOpacity>
       </View>
-      <View style={styles.campo}>
-        <TextInput
-          ref={input => registrarInput(furo.id, 'carga', input)}
-          style={styles.input}
-          placeholder="Carga"
-          placeholderTextColor="#888888"
-          keyboardType="numeric"
-          value={furo.cargaReal}
-          onChangeText={texto => aoAlterar(furo.id, 'cargaReal', texto)}
-          onFocus={() => aoFocarCarga(furo.id)}
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={evento => aoAvancar(indice, 'carga', evento.nativeEvent.text)}
-        />
-        <Text style={styles.unidade}>kg</Text>
-      </View>
-      <TouchableOpacity style={styles.apagarBtn} onPress={() => aoRemover(furo, indice + 1)} hitSlop={8}>
-        <Ionicons name="trash-outline" size={24} color="#D32F2F" />
-      </TouchableOpacity>
+      {furo.observacao?.trim() ? (
+        <TouchableOpacity onPress={() => aoAbrirMenu(furo.id, indice + 1, { editando: true })} activeOpacity={0.7}>
+          <Text style={styles.observacao} numberOfLines={2}>Obs.: {furo.observacao}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 });
@@ -108,10 +110,12 @@ export default function EtapaFuros({ cabecalho, estiloConteudo, onVoltar, onCont
   const furosRef = useRef(furos);
   const idParaFocar = useRef(null);
   const ultimoEnter = useRef(null);
+  const [menu, setMenu] = useState(null);
   furosRef.current = furos;
   alturaDoTecladoRef.current = alturaDoTeclado;
 
   const itens = furos?.itens || [];
+  const furoDoMenu = menu ? itens.find(furo => furo.id === menu.id) : null;
   const pendencias = pendenciasDosFuros(furos);
   const quantidadeTexto = `${itens.length} furo${itens.length !== 1 ? 's' : ''}`;
 
@@ -205,14 +209,23 @@ export default function EtapaFuros({ cabecalho, estiloConteudo, onVoltar, onCont
     inputs.current.get(`${furo.id}:carga`)?.blur();
   }, []);
 
-  const aoRemover = useCallback((furo, numero) => {
-    const remover = () => setFuros(atuais => ({ ...atuais, itens: atuais.itens.filter(f => f.id !== furo.id) }));
-    if (!furoDigitado(furo, furosRef.current.profundidadePrevista)) return remover();
-    Alert.alert(`Apagar o Furo ${numero}?`, 'Os dados digitados serão perdidos.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Apagar', style: 'destructive', onPress: remover },
-    ]);
+  const abrirMenu = useCallback((id, numero, { editando = false } = {}) => {
+    Keyboard.dismiss();
+    setMenu({ id, numero, editando });
   }, []);
+
+  const fecharMenu = () => setMenu(null);
+
+  const excluirFuro = (id) => {
+    setFuros(atuais => ({ ...atuais, itens: atuais.itens.filter(furo => furo.id !== id) }));
+    fecharMenu();
+  };
+
+  const salvarObservacao = (id, observacao) =>
+    setFuros(atuais => ({
+      ...atuais,
+      itens: atuais.itens.map(furo => (furo.id === id ? { ...furo, observacao } : furo)),
+    }));
 
   const alterarProfundidadePrevista = (texto) => setFuros(atuais => aplicarProfundidadePrevista(atuais, texto));
   const alterarCargaPrevista = (texto) => setFuros(atuais => ({ ...atuais, cargaPrevista: texto }));
@@ -256,7 +269,7 @@ export default function EtapaFuros({ cabecalho, estiloConteudo, onVoltar, onCont
       <View style={styles.nota}>
         <Ionicons name="information-circle-outline" size={20} color="#1F6452" />
         <Text style={styles.notaTexto}>
-          Você pode ir na próxima etapa anotar alguma observação do furo e retornar aqui para continuar a operação!
+          Toque no + do furo para anotar uma observação ou excluir o furo.
         </Text>
       </View>
 
@@ -280,33 +293,46 @@ export default function EtapaFuros({ cabecalho, estiloConteudo, onVoltar, onCont
   );
 
   return (
-    <FlatList
-      ref={listaRef}
-      data={itens}
-      keyExtractor={furo => furo.id}
-      renderItem={({ item, index }) => (
-        <LinhaFuro
-          furo={item}
-          indice={index}
-          aoAlterar={aoAlterar}
-          aoAvancar={aoAvancar}
-          aoFocarCarga={aoFocarCarga}
-          aoRemover={aoRemover}
-          registrarInput={registrarInput}
+    <>
+      <FlatList
+        ref={listaRef}
+        data={itens}
+        keyExtractor={furo => furo.id}
+        renderItem={({ item, index }) => (
+          <LinhaFuro
+            furo={item}
+            indice={index}
+            aoAlterar={aoAlterar}
+            aoAvancar={aoAvancar}
+            aoFocarCarga={aoFocarCarga}
+            aoAbrirMenu={abrirMenu}
+            registrarInput={registrarInput}
+          />
+        )}
+        ListHeaderComponent={topo}
+        ListFooterComponent={rodape}
+        contentContainerStyle={[estiloConteudo, alturaDoTeclado > 0 && { paddingBottom: alturaDoTeclado }]}
+        onScroll={evento => { deslocamentoDaLista.current = evento.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        // Recortar linhas fora da tela tira o foco do input e fecha o teclado no meio da digitação
+        removeClippedSubviews={false}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        onScrollToIndexFailed={rolarQuandoFalharIndice}
+      />
+      {furoDoMenu && (
+        <MenuDoFuro
+          key={furoDoMenu.id}
+          furo={furoDoMenu}
+          numero={menu.numero}
+          editandoDeInicio={menu.editando}
+          aoSalvarObservacao={salvarObservacao}
+          aoExcluir={excluirFuro}
+          aoFechar={fecharMenu}
         />
       )}
-      ListHeaderComponent={topo}
-      ListFooterComponent={rodape}
-      contentContainerStyle={[estiloConteudo, alturaDoTeclado > 0 && { paddingBottom: alturaDoTeclado }]}
-      onScroll={evento => { deslocamentoDaLista.current = evento.nativeEvent.contentOffset.y; }}
-      scrollEventThrottle={16}
-      keyboardShouldPersistTaps="handled"
-      // Recortar linhas fora da tela tira o foco do input e fecha o teclado no meio da digitação
-      removeClippedSubviews={false}
-      initialNumToRender={20}
-      maxToRenderPerBatch={20}
-      onScrollToIndexFailed={rolarQuandoFalharIndice}
-    />
+    </>
   );
 }
 
@@ -329,7 +355,8 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, padding: 10, fontSize: 18, color: '#000000' },
   unidade: { paddingRight: 8, fontSize: 15, color: '#888' },
-  apagarBtn: { padding: 2 },
+  menuBtn: { padding: 2 },
+  observacao: { marginTop: 4, marginLeft: 70, fontSize: 14, color: '#555', fontStyle: 'italic' },
   adicionarBtn: {
     backgroundColor: '#fff', borderWidth: 2, borderColor: '#1F6452',
     padding: 10, borderRadius: 5, marginTop: 16,
