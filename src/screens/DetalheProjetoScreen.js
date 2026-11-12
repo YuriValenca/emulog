@@ -124,7 +124,10 @@ export default function DetalheProjetoScreen() {
       { projetoId, companyIdDoProjeto: projeto.companyId || companyId },
       { companyId, uid }
     )).midias;
-    const fotos = await Promise.all(lista.map(midia => lerMidiaComoDataUri(midia).catch(() => null)));
+    const fotos = await Promise.all(lista.map(async midia => {
+      const src = await lerMidiaComoDataUri(midia).catch(() => null);
+      return src && { src, legenda: midia.legenda };
+    }));
     return fotos.filter(Boolean);
   };
 

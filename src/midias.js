@@ -1,12 +1,13 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { collection, doc, setDoc, deleteDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { estaOnline, comTempoLimite } from './helpers/rede';
 import { paraData } from './helpers/datas';
 import { lerJson, gravarJson } from './helpers/armazenamento';
 
 export const LIMITE_MIDIAS_POR_PROJETO = 10;
+export const LIMITE_LEGENDA = 200;
 
 const LADO_MAIOR_PX = 1280;
 const QUALIDADE_JPEG = 0.6;
@@ -18,6 +19,7 @@ const ESTADO = { PENDENTE: 'pendente', ENVIADA: 'enviada', EXCLUIR: 'excluir' };
 
 const chaveIndice = ({ companyId, uid }) => `midias:${companyId}:${uid}`;
 const chaveProjetosExcluidos = ({ companyId, uid }) => `midiasProjetosExcluidos:${companyId}:${uid}`;
+const chaveLegendasPendentes = ({ companyId, uid }) => `midiasLegendasPendentes:${companyId}:${uid}`;
 const sessaoValida = (sessao) => !!sessao?.companyId && !!sessao?.uid;
 
 const caminhoLocal = (id) => `${PASTA_LOCAL}${id}.jpg`;
@@ -41,6 +43,14 @@ const alterarIndice = (sessao, alterar) => alterarJsonEmFila(chaveIndice(sessao)
 
 const lerIndice = (sessao) => lerJson(chaveIndice(sessao), {});
 
+const alterarLegendasPendentes = (sessao, alterar) => alterarJsonEmFila(chaveLegendasPendentes(sessao), alterar);
+
+const descartarLegendasPendentes = (sessao, deveDescartar) =>
+  alterarLegendasPendentes(sessao, pendentes => {
+    Object.entries(pendentes).forEach(([id, pendente]) => { if (deveDescartar(id, pendente)) delete pendentes[id]; });
+    return pendentes;
+  });
+
 const apagarArquivoLocal = (id) => FileSystem.deleteAsync(caminhoLocal(id), { idempotent: true });
 
 function redimensionamento({ width, height }) {
@@ -60,14 +70,30 @@ async function comprimirParaPastaLocal(foto, id) {
   await FileSystem.moveAsync({ from: comprimida.uri, to: caminhoLocal(id) });
 }
 
-export async function adicionarMidia(foto, { projetoId, companyIdDoProjeto }, sessao) {
+export async function adicionarMidia(foto, legenda, { projetoId, companyIdDoProjeto }, sessao) {
   const id = gerarIdMidia();
   await comprimirParaPastaLocal(foto, id);
 
-  const midia = { id, projetoId, companyIdDoProjeto, criadoEm: new Date().toISOString(), estado: ESTADO.PENDENTE };
+  const midia = {
+    id, projetoId, companyIdDoProjeto,
+    criadoEm: new Date().toISOString(),
+    legenda: legenda.trim(),
+    estado: ESTADO.PENDENTE,
+  };
   await alterarIndice(sessao, indice => ({ ...indice, [id]: midia }));
   sincronizarMidias(sessao);
-  return { id, criadoEm: midia.criadoEm, uri: caminhoLocal(id) };
+  return { id, criadoEm: midia.criadoEm, legenda: midia.legenda, uri: caminhoLocal(id) };
+}
+
+// Sempre entra na fila, mesmo com a foto ainda por subir: o envio pode já ter lido a legenda antiga
+export async function alterarLegenda({ id }, legenda, { projetoId }, sessao) {
+  const texto = legenda.trim();
+  await alterarIndice(sessao, indice => {
+    if (indice[id]) indice[id] = { ...indice[id], legenda: texto };
+    return indice;
+  });
+  await alterarLegendasPendentes(sessao, pendentes => ({ ...pendentes, [id]: { projetoId, legenda: texto } }));
+  sincronizarMidias(sessao);
 }
 
 export async function excluirMidia({ id }, { projetoId, companyIdDoProjeto }, sessao) {
@@ -76,6 +102,7 @@ export async function excluirMidia({ id }, { projetoId, companyIdDoProjeto }, se
     ...indice,
     [id]: { id, projetoId, companyIdDoProjeto, criadoEm: indice[id]?.criadoEm, estado: ESTADO.EXCLUIR },
   }));
+  await descartarLegendasPendentes(sessao, idPendente => idPendente === id);
   sincronizarMidias(sessao);
 }
 
@@ -90,6 +117,7 @@ export async function excluirMidiasDoProjeto(projetoId, companyIdDoProjeto, sess
     return atual;
   });
   await alterarJsonEmFila(chaveProjetosExcluidos(sessao), atuais => ({ ...atuais, [projetoId]: companyIdDoProjeto }));
+  await descartarLegendasPendentes(sessao, (_id, pendente) => pendente.projetoId === projetoId);
   sincronizarMidias(sessao);
 }
 
@@ -107,8 +135,32 @@ async function enviarMidia(midia, sessao) {
     enviadoPor: sessao.uid,
     criadoEm: Timestamp.fromDate(paraData(midia.criadoEm)),
     imagem: `data:image/jpeg;base64,${base64}`,
+    // Sem legenda o campo nem vai: foto sem legenda continua passando nas rules antigas
+    ...(midia.legenda ? { legenda: midia.legenda } : {}),
   };
   await comTempoLimite(setDoc(doc(colecaoRemota(midia.projetoId), midia.id), documento), TEMPO_LIMITE_FIRESTORE_MS);
+}
+
+async function enviarLegenda(id, { projetoId, legenda }, sessao) {
+  try {
+    await comTempoLimite(updateDoc(doc(colecaoRemota(projetoId), id), { legenda }), TEMPO_LIMITE_FIRESTORE_MS);
+  } catch (error) {
+    // Foto apagada no banco (por outro aparelho ou pelo portal): não há mais onde gravar a legenda
+    if (error?.code !== 'not-found') throw error;
+  }
+  await alterarLegendasPendentes(sessao, pendentes => {
+    if (pendentes[id]?.legenda === legenda) delete pendentes[id];
+    return pendentes;
+  });
+}
+
+async function sincronizarLegendas(sessao) {
+  const [pendentes, indice] = await Promise.all([lerJson(chaveLegendasPendentes(sessao), {}), lerIndice(sessao)]);
+  for (const [id, pendente] of Object.entries(pendentes)) {
+    // A foto ainda não subiu: o update daria not-found, e o envio dela já leva a legenda do índice
+    if (indice[id]?.estado === ESTADO.PENDENTE) continue;
+    await executarComAviso(`Legenda ${id}`, () => enviarLegenda(id, pendente, sessao));
+  }
 }
 
 const marcarComoEnviada = (id, sessao) =>
@@ -192,6 +244,7 @@ export async function sincronizarMidias(sessao) {
     for (const midia of Object.values(await lerIndice(sessao))) {
       await executarComAviso(`Foto ${midia.id}`, () => processarMidia(midia, sessao));
     }
+    await sincronizarLegendas(sessao);
     const projetosExcluidos = await lerJson(chaveProjetosExcluidos(sessao), {});
     for (const [projetoId, companyIdDoProjeto] of Object.entries(projetosExcluidos)) {
       await executarComAviso(`Fotos do projeto ${projetoId}`, () => excluirProjetoRemoto(projetoId, companyIdDoProjeto, sessao));
@@ -217,6 +270,7 @@ async function buscarMidiasRemotas(projetoId, companyIdDoProjeto, { lancarErro =
     return snap.docs.map(documento => ({
       id: documento.id,
       criadoEm: paraData(documento.data().criadoEm).toISOString(),
+      legenda: documento.data().legenda ?? '',
       uri: documento.data().imagem,
     }));
   } catch (error) {
@@ -227,20 +281,31 @@ async function buscarMidiasRemotas(projetoId, companyIdDoProjeto, { lancarErro =
 }
 
 export async function listarMidias({ projetoId, companyIdDoProjeto }, sessao) {
-  const [indice, remotas] = await Promise.all([
+  const [indice, legendasPendentes, remotas] = await Promise.all([
     sessaoValida(sessao) ? lerIndice(sessao) : {},
+    sessaoValida(sessao) ? lerJson(chaveLegendasPendentes(sessao), {}) : {},
     buscarMidiasRemotas(projetoId, companyIdDoProjeto),
   ]);
   const locais = Object.values(indice).filter(midia => midia.projetoId === projetoId);
   const excluidas = new Set(locais.filter(midia => midia.estado === ESTADO.EXCLUIR).map(midia => midia.id));
 
   const porId = new Map((remotas || []).filter(midia => !excluidas.has(midia.id)).map(midia => [midia.id, midia]));
+  // A legenda do banco vale mais que a do índice, que pode ter ficado velha se outro aparelho editou
   locais
     .filter(midia => midia.estado !== ESTADO.EXCLUIR)
-    .forEach(midia => porId.set(midia.id, { id: midia.id, criadoEm: midia.criadoEm, uri: caminhoLocal(midia.id) }));
+    .forEach(midia => porId.set(midia.id, {
+      id: midia.id,
+      criadoEm: midia.criadoEm,
+      legenda: porId.get(midia.id)?.legenda ?? midia.legenda ?? '',
+      uri: caminhoLocal(midia.id),
+    }));
 
+  const midias = [...porId.values()].map(midia => ({
+    ...midia,
+    legenda: legendasPendentes[midia.id]?.legenda ?? midia.legenda,
+  }));
   return {
-    midias: [...porId.values()].sort((a, b) => paraData(a.criadoEm) - paraData(b.criadoEm)),
+    midias: midias.sort((a, b) => paraData(a.criadoEm) - paraData(b.criadoEm)),
     remotasCarregadas: remotas !== null,
   };
 }

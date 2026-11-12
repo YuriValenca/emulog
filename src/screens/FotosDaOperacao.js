@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, Image, TouchableOpacity, Modal, Alert, ActivityIndicator, StyleSheet,
+  View, Text, Image, TouchableOpacity, Alert, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppAuth } from '../context/auth';
-import { LIMITE_MIDIAS_POR_PROJETO, adicionarMidia, excluirMidia, listarMidias } from '../midias';
+import { LIMITE_MIDIAS_POR_PROJETO, adicionarMidia, alterarLegenda, excluirMidia, listarMidias } from '../midias';
+import TelaCheiaDaFoto from './TelaCheiaDaFoto';
 
 const avisarErro = (mensagem) => Alert.alert('Erro', mensagem);
 
@@ -38,10 +39,15 @@ export default function FotosDaOperacao({ projetoId, companyIdDoProjeto, aoAlter
   const [carregando, setCarregando] = useState(true);
   const [remotasCarregadas, setRemotasCarregadas] = useState(true);
   const [adicionando, setAdicionando] = useState(false);
+  const [previa, setPrevia] = useState(null);
+  const [legendaDaPrevia, setLegendaDaPrevia] = useState('');
   const [midiaAberta, setMidiaAberta] = useState(null);
+  const [legendaEditada, setLegendaEditada] = useState('');
 
   const vagas = LIMITE_MIDIAS_POR_PROJETO - midias.length;
   const botoesDesabilitados = carregando || adicionando || vagas <= 0;
+  const fotoDaPrevia = previa?.fotos[previa.indice];
+  const legendaMudou = !!midiaAberta && legendaEditada.trim() !== (midiaAberta.legenda ?? '');
 
   useEffect(() => {
     if (!carregando) aoAlterar?.(midias);
@@ -62,20 +68,59 @@ export default function FotosDaOperacao({ projetoId, companyIdDoProjeto, aoAlter
     return () => { ativo = false; };
   }, [projetoId]);
 
-  const adicionar = async (obterFotos) => {
-    setAdicionando(true);
+  const escolherFotos = async (obterFotos) => {
     try {
       const fotos = await obterFotos();
-      for (const foto of fotos) {
-        const midia = await adicionarMidia(foto, projeto, sessao);
-        setMidias(atuais => [...atuais, midia]);
-      }
+      if (fotos.length === 0) return;
+      setLegendaDaPrevia('');
+      setPrevia({ fotos, indice: 0 });
+    } catch (error) {
+      console.error('Erro ao escolher foto:', error);
+      avisarErro('Não foi possível abrir a foto. Tente novamente.');
+    }
+  };
+
+  const avancarPrevia = () => {
+    setLegendaDaPrevia('');
+    setPrevia(atual => (atual.indice + 1 < atual.fotos.length ? { ...atual, indice: atual.indice + 1 } : null));
+  };
+
+  const salvarFotoDaPrevia = async () => {
+    setAdicionando(true);
+    try {
+      const midia = await adicionarMidia(fotoDaPrevia, legendaDaPrevia, projeto, sessao);
+      setMidias(atuais => [...atuais, midia]);
+      avancarPrevia();
     } catch (error) {
       console.error('Erro ao adicionar foto:', error);
       avisarErro('Não foi possível adicionar a foto. Tente novamente.');
     } finally {
       setAdicionando(false);
     }
+  };
+
+  const abrirMidia = (midia) => {
+    setLegendaEditada(midia.legenda ?? '');
+    setMidiaAberta(midia);
+  };
+
+  const salvarLegenda = async () => {
+    try {
+      await alterarLegenda(midiaAberta, legendaEditada, projeto, sessao);
+      const legenda = legendaEditada.trim();
+      setMidias(atuais => atuais.map(midia => (midia.id === midiaAberta.id ? { ...midia, legenda } : midia)));
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar legenda:', error);
+      avisarErro('Não foi possível salvar a legenda. Tente novamente.');
+      return false;
+    }
+  };
+
+  // Voltar pelo Android também salva: legenda digitada não pode se perder
+  const fecharMidia = async () => {
+    if (legendaMudou && !(await salvarLegenda())) return;
+    setMidiaAberta(null);
   };
 
   const confirmarExclusao = (midia) =>
@@ -104,7 +149,7 @@ export default function FotosDaOperacao({ projetoId, companyIdDoProjeto, aoAlter
       <View style={styles.botoes}>
         <TouchableOpacity
           style={[styles.botao, botoesDesabilitados && styles.botaoDesabilitado]}
-          onPress={() => adicionar(tirarFoto)}
+          onPress={() => escolherFotos(tirarFoto)}
           disabled={botoesDesabilitados}
           activeOpacity={0.8}
         >
@@ -113,7 +158,7 @@ export default function FotosDaOperacao({ projetoId, companyIdDoProjeto, aoAlter
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.botao, botoesDesabilitados && styles.botaoDesabilitado]}
-          onPress={() => adicionar(() => escolherDaGaleria(vagas))}
+          onPress={() => escolherFotos(() => escolherDaGaleria(vagas))}
           disabled={botoesDesabilitados}
           activeOpacity={0.8}
         >
@@ -129,35 +174,53 @@ export default function FotosDaOperacao({ projetoId, companyIdDoProjeto, aoAlter
 
       <View style={styles.grade}>
         {midias.map(midia => (
-          <TouchableOpacity key={midia.id} style={styles.miniatura} onPress={() => setMidiaAberta(midia)} activeOpacity={0.8}>
-            <Image source={{ uri: midia.uri }} style={styles.imagem} />
-            <TouchableOpacity style={styles.apagarBtn} onPress={() => confirmarExclusao(midia)} hitSlop={8}>
-              <Ionicons name="close" size={20} color="#FFF" />
+          <View key={midia.id} style={styles.celula}>
+            <TouchableOpacity style={styles.miniatura} onPress={() => abrirMidia(midia)} activeOpacity={0.8}>
+              <Image source={{ uri: midia.uri }} style={styles.imagem} />
+              <TouchableOpacity style={styles.apagarBtn} onPress={() => confirmarExclusao(midia)} hitSlop={8}>
+                <Ionicons name="close" size={20} color="#FFF" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
+            {midia.legenda ? <Text style={styles.legenda} numberOfLines={2}>{midia.legenda}</Text> : null}
+          </View>
         ))}
-        {(carregando || adicionando) && (
-          <View style={[styles.miniatura, styles.carregando]}>
-            <ActivityIndicator color="#1F6452" />
+        {carregando && (
+          <View style={styles.celula}>
+            <View style={[styles.miniatura, styles.carregando]}>
+              <ActivityIndicator color="#1F6452" />
+            </View>
           </View>
         )}
       </View>
 
-      <Modal visible={!!midiaAberta} transparent animationType="fade" onRequestClose={() => setMidiaAberta(null)}>
-        <View style={styles.telaCheia}>
-          {midiaAberta && <Image source={{ uri: midiaAberta.uri }} style={styles.imagemTelaCheia} resizeMode="contain" />}
-          <View style={styles.acoesTelaCheia}>
-            <TouchableOpacity style={[styles.botao, styles.botaoApagar]} onPress={() => confirmarExclusao(midiaAberta)}>
-              <Ionicons name="trash-outline" size={22} color="#FFF" />
-              <Text style={styles.botaoTexto}>Apagar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.botao} onPress={() => setMidiaAberta(null)}>
-              <Ionicons name="close" size={22} color="#FFF" />
-              <Text style={styles.botaoTexto}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {fotoDaPrevia && (
+        <TelaCheiaDaFoto
+          uri={fotoDaPrevia.uri}
+          titulo={previa.fotos.length > 1 ? `Foto ${previa.indice + 1} de ${previa.fotos.length}` : null}
+          legenda={legendaDaPrevia}
+          aoAlterarLegenda={setLegendaDaPrevia}
+          acaoSecundaria={{ rotulo: 'Descartar', icone: 'trash-outline', cor: '#787878', aoTocar: avancarPrevia }}
+          acaoPrincipal={{
+            rotulo: 'Salvar', icone: 'checkmark', cor: '#1F6452', aoTocar: salvarFotoDaPrevia, ocupado: adicionando,
+          }}
+          aoVoltar={adicionando ? () => {} : avancarPrevia}
+        />
+      )}
+
+      {midiaAberta && (
+        <TelaCheiaDaFoto
+          uri={midiaAberta.uri}
+          legenda={legendaEditada}
+          aoAlterarLegenda={setLegendaEditada}
+          acaoSecundaria={{
+            rotulo: 'Apagar', icone: 'trash-outline', cor: '#D32F2F', aoTocar: () => confirmarExclusao(midiaAberta),
+          }}
+          acaoPrincipal={legendaMudou
+            ? { rotulo: 'Salvar', icone: 'checkmark', cor: '#1F6452', aoTocar: fecharMidia }
+            : { rotulo: 'Fechar', icone: 'close', cor: '#1F6452', aoTocar: fecharMidia }}
+          aoVoltar={fecharMidia}
+        />
+      )}
     </View>
   );
 }
@@ -171,19 +234,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F6452', padding: 14, borderRadius: 8,
   },
   botaoDesabilitado: { backgroundColor: '#ccc' },
-  botaoApagar: { backgroundColor: '#D32F2F' },
   botaoTexto: { color: '#FFF', fontSize: 17, fontWeight: '700' },
   aviso: { marginTop: 8, fontSize: 14, color: '#888' },
   grade: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  miniatura: { width: '31%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#eee' },
+  celula: { width: '31%' },
+  miniatura: { width: '100%', aspectRatio: 1, borderRadius: 8, overflow: 'hidden', backgroundColor: '#eee' },
   imagem: { width: '100%', height: '100%' },
+  legenda: { marginTop: 4, fontSize: 13, color: '#555' },
   carregando: { alignItems: 'center', justifyContent: 'center' },
   apagarBtn: {
     position: 'absolute', top: 4, right: 4,
     backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 14, width: 28, height: 28,
     alignItems: 'center', justifyContent: 'center',
   },
-  telaCheia: { flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 16 },
-  imagemTelaCheia: { flex: 1, width: '100%' },
-  acoesTelaCheia: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 32 },
 });

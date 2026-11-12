@@ -4,6 +4,10 @@ import { kgPreenchido, formatarKg as formatarNumero } from './helpers/numeros';
 import { pesagemConcluida, formatarHoraPesagem } from './helpers/pesagem';
 import { somarCargasReais } from './helpers/furos';
 
+const ENTIDADES_HTML = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+
+const escaparHtml = (texto) => String(texto ?? '').replace(/[&<>"]/g, caractere => ENTIDADES_HTML[caractere]);
+
 export const temInformacoesDaOperacao = (info) =>
   !!info && !!(
     info.numeroNF?.trim()
@@ -62,6 +66,7 @@ const estilos = (cor) => `
   .tabela-furos th, .tabela-furos td { padding: 4px 6px; text-align: center; }
   .tabela-furos th { background-color: ${cor}; color: #fff; }
   .tabela-furos tr { page-break-inside: avoid; break-inside: avoid; }
+  .tabela-furos td.observacao { width: 30%; }
   .fotos-grade { display: flex; flex-wrap: wrap; justify-content: space-between; }
   .foto { width: 48%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
   .foto img { box-sizing: border-box; width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #ddd; }
@@ -156,10 +161,13 @@ const amostras = (lista) => lista.map((amostra, index) => {
     ${index % 2 === 1 || index === lista.length - 1 ? '</div>' : ''}`;
 }).join('');
 
+const legendaDaFoto = (legenda, numero) =>
+  `<p><strong>Foto ${numero}</strong>${legenda?.trim() ? ` — ${escaparHtml(legenda.trim())}` : ''}</p>`;
+
 const registroFotografico = (fotos) => `
   <p class="section-title">Registro fotográfico — ${fotos.length} foto${fotos.length !== 1 ? 's' : ''}</p>
   <div class="fotos-grade">
-    ${fotos.map((foto, i) => `<div class="foto"><img src="${foto}" /><p>Foto ${i + 1}</p></div>`).join('')}
+    ${fotos.map((foto, i) => `<div class="foto"><img src="${foto.src}" />${legendaDaFoto(foto.legenda, i + 1)}</div>`).join('')}
   </div>`;
 
 export const montarRelatorioDoFogo = ({ projeto, logoEmpresa, cor, fotos, mostrarObservacaoTecnica }) =>
@@ -201,6 +209,7 @@ const tabelaDeFuros = (furos) => `
         <th>Prof. real (m)</th>
         <th>Carga prevista (kg)</th>
         <th>Carga real (kg)</th>
+        <th>Observações</th>
       </tr>
     </thead>
     <tbody>
@@ -211,6 +220,7 @@ const tabelaDeFuros = (furos) => `
           <td>${formatarNumero(furo.profundidadeReal)}</td>
           <td>${formatarNumero(furos.cargaPrevista)}</td>
           <td>${formatarNumero(furo.cargaReal)}</td>
+          <td class="observacao">${escaparHtml(furo.observacao)}</td>
         </tr>`).join('')}
     </tbody>
   </table>`;
