@@ -65,13 +65,12 @@ function NovaAmostraScreenInner() {
 
   const [modalBleVisivel, setModalBleVisivel] = useState(false);
   const [pesoBleConfirmacao, setPesoBleConfirmacao] = useState(null);
-  const lastBleWeightShown = useRef(null);
 
   const scrollViewRef = useRef(null);
   const scrollOffsetRef = useRef(0);
   const navigation = useNavigation();
 
-  const { bleStatus, weight, readingStatus, resumeMonitor } = useBle();
+  const { bleStatus, readingStatus, leituraEstavel, resumeMonitor } = useBle();
 
   const {
     idProjeto, dataCriacao,
@@ -104,18 +103,12 @@ function NovaAmostraScreenInner() {
     if (companyId) syncReferenceData(companyId);
   }, [companyId]);
 
+  // Reage a cada leitura estável nova, mesmo com o peso igual ao da pesagem anterior
   useEffect(() => {
-    if (
-      readingStatus === 'stable' &&
-      weight !== null &&
-      weight !== lastBleWeightShown.current &&
-      !modalBleVisivel
-    ) {
-      lastBleWeightShown.current = weight;
-      setPesoBleConfirmacao(weight);
-      setModalBleVisivel(true);
-    }
-  }, [readingStatus, weight]);
+    if (!leituraEstavel || readingStatus !== 'stable' || modalBleVisivel) return;
+    setPesoBleConfirmacao(leituraEstavel.peso);
+    setModalBleVisivel(true);
+  }, [leituraEstavel]);
 
   const confirmarPesagemBle = () => {
     setModalBleVisivel(false);
@@ -126,7 +119,6 @@ function NovaAmostraScreenInner() {
 
   const cancelarPesagemBle = () => {
     setModalBleVisivel(false);
-    lastBleWeightShown.current = null;
     resumeMonitor();
   };
 

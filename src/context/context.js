@@ -2,6 +2,9 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, BleErrorCode, State } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
+import { JANELA_DE_ESTABILIDADE_MS, pesoEstavelDaJanela, registrarLeitura } from '../helpers/estabilidadeDaBalanca';
+
+const BIT_EM_MOVIMENTO_FLEXINTER = 0x04;
 
 // ─── PERFIS DE BALANÇAS CONHECIDAS ───────────────────────────────────────────
 const SCALE_PROFILES = [
@@ -29,6 +32,8 @@ const SCALE_PROFILES = [
     decode: (bytes) => {
       return (bytes[3] << 8) | bytes[4];
     },
+    // Byte 6 é 0xCE com o peso mexendo e 0xCA quando a balança estabiliza; depois do 0xCA ela fica em silêncio até o peso mudar
+    balancaEstavel: (bytes) => bytes.length > 6 && (bytes[6] & BIT_EM_MOVIMENTO_FLEXINTER) === 0,
   },
 ];
 
@@ -39,7 +44,6 @@ const KNOWN_SCALE_NAMES = ['my_scale', 'my scale', 'swan'];
 
 const DISCOVERY_MODE = false;
 const WEIGHT_CLEAR_THRESHOLD = 10; // gramas
-const WEIGHT_STABILITY_TOLERANCE = 2; // gramas
 const TEMPO_ESPERANDO_BLUETOOTH_MS = 8000;
 
 // ─── FÓRMULAS CANDIDATAS (modo descoberta) ────────────────────────────────────
@@ -112,6 +116,7 @@ export function BleProvider({ children }) {
   const [weight, setWeight]                   = useState(null);
   const [rawBytes, setRawBytes]               = useState(null);
   const [readingStatus, setReadingStatus]     = useState('idle');
+  const [leituraEstavel, setLeituraEstavel]   = useState(null);
   const [lastUpdate, setLastUpdate]           = useState(null);
   const [errorMsg, setErrorMsg]               = useState('');
   const [activeProfile, setActiveProfile]     = useState(null);
@@ -122,7 +127,7 @@ export function BleProvider({ children }) {
   const discoverySubsRef  = useRef([]);
   const stabilizeTimerRef = useRef(null);
   const pingIntervalRef   = useRef(null);
-  const lastWeightRef     = useRef(null);
+  const leiturasRef       = useRef([]);
   const lastDeviceIdRef   = useRef(null);
   const isReconnectingRef = useRef(false);
   const waitingClearRef   = useRef(false);
@@ -187,7 +192,7 @@ export function BleProvider({ children }) {
     setBleStatus('sleeping');
     setWeight(null);
     setReadingStatus('idle');
-    lastWeightRef.current  = null;
+    leiturasRef.current     = [];
     waitingClearRef.current = false;
   };
 
@@ -197,6 +202,33 @@ export function BleProvider({ children }) {
     console.log('⏰ [BLE] Balança acordou — retomando leituras.');
     setBleStatus('connected');
     setReadingStatus('listening');
+  };
+
+  const _marcarEstavel = (peso) => {
+    if (peso < WEIGHT_CLEAR_THRESHOLD) return;
+    if (stabilizeTimerRef.current) { clearTimeout(stabilizeTimerRef.current); stabilizeTimerRef.current = null; }
+    leiturasRef.current     = [];
+    waitingClearRef.current = true;
+    setLeituraEstavel({ peso, instante: Date.now() });
+    setReadingStatus('stable');
+  };
+
+  const _registrarPeso = (peso) => {
+    const agora = Date.now();
+    leiturasRef.current = registrarLeitura(leiturasRef.current, { instante: agora, peso });
+    const pesoEstavel = pesoEstavelDaJanela(leiturasRef.current, agora);
+    if (pesoEstavel !== null) _marcarEstavel(pesoEstavel);
+  };
+
+  // Balança parada para de mandar pacotes; o silêncio conta como o último peso mantido
+  const _agendarPesoMantido = (peso) => {
+    if (stabilizeTimerRef.current) clearTimeout(stabilizeTimerRef.current);
+    stabilizeTimerRef.current = null;
+    if (waitingClearRef.current || peso < WEIGHT_CLEAR_THRESHOLD) return;
+    stabilizeTimerRef.current = setTimeout(() => {
+      stabilizeTimerRef.current = null;
+      if (!waitingClearRef.current) _registrarPeso(peso);
+    }, JANELA_DE_ESTABILIDADE_MS);
   };
 
   // ── Desconexão real ─────────────────────────────────────────────────────────
@@ -510,7 +542,7 @@ export function BleProvider({ children }) {
   const startWeightMonitor = async (device) => {
     _cleanupSubscriptions();
     setReadingStatus('listening');
-    lastWeightRef.current  = null;
+    leiturasRef.current     = [];
     waitingClearRef.current = false;
     isSleepingRef.current  = false;
     setActiveProfile(null);
@@ -616,26 +648,14 @@ export function BleProvider({ children }) {
         if (waitingClearRef.current) {
           if (pesoArredondado < WEIGHT_CLEAR_THRESHOLD) {
             waitingClearRef.current = false;
-            lastWeightRef.current   = pesoArredondado;
             setReadingStatus('listening');
           }
           return;
         }
-        const diff = lastWeightRef.current === null
-          ? Infinity
-          : Math.abs(pesoArredondado - lastWeightRef.current);
-        if (diff > WEIGHT_STABILITY_TOLERANCE) {
-          lastWeightRef.current = pesoArredondado;
-          setReadingStatus('listening');
-          if (stabilizeTimerRef.current) clearTimeout(stabilizeTimerRef.current);
-          stabilizeTimerRef.current = setTimeout(() => {
-            stabilizeTimerRef.current = null;
-            if (lastWeightRef.current >= WEIGHT_CLEAR_THRESHOLD) {
-              setReadingStatus('stable');
-              waitingClearRef.current = true;
-            }
-          }, 2000);
-        }
+        if (profile.balancaEstavel?.(bytes)) _marcarEstavel(pesoArredondado);
+        if (waitingClearRef.current) return;
+        _registrarPeso(pesoArredondado);
+        _agendarPesoMantido(pesoArredondado);
       }
     );
     subscriptionRef.current = subscription;
@@ -648,7 +668,7 @@ export function BleProvider({ children }) {
       startWeightMonitor(deviceRef.current);
       return;
     }
-    lastWeightRef.current   = null;
+    leiturasRef.current     = [];
     waitingClearRef.current = true;
     if (stabilizeTimerRef.current) { clearTimeout(stabilizeTimerRef.current); stabilizeTimerRef.current = null; }
     setReadingStatus('waitingClear');
@@ -705,6 +725,7 @@ export function BleProvider({ children }) {
       weight,
       rawBytes,
       readingStatus,
+      leituraEstavel,
       lastUpdate,
       errorMsg,
       activeProfile,
