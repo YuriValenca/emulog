@@ -108,6 +108,7 @@ export default function LoginScreen() {
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.buttonText}>Entrar</Text>}
         </TouchableOpacity>
+        <Text style={styles.versao}>Versão: 2.2.2</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -134,4 +135,5 @@ const styles = StyleSheet.create({
   button: { width: '100%', backgroundColor: '#1F6452', padding: 15, borderRadius: 5, alignItems: 'center' },
   buttonDesabilitado: { backgroundColor: '#b0b0b0' },
   buttonText: { color: '#FFFFFF', fontSize: 20 },
+  versao: { color: '#505050', fontSize: 9, textAlign: 'center', marginTop: 16 },
 });

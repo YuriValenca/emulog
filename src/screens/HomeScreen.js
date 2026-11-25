@@ -209,8 +209,6 @@ export default function HomeScreen({ navigation }) {
         onIniciarNovo={abrirTelaDoProjeto}
         onFechar={() => setModalProjetoVisivel(false)}
       />
-
-      <Text style={styles.versionText}>Versão: 2.2.1</Text>
     </View>
   );
 }
@@ -275,11 +273,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     marginLeft: 10,
-  },
-  versionText: {
-    color: '#505050',
-    fontSize: 9,
-    textAlign: 'center',
-    marginTop: 16,
   },
 });
